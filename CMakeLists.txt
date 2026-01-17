@@ -1,19 +1,29 @@
-cmake_minimum_required(VERSION 3.10)
-project(SwarmEvolution)
+cmake_minimum_required(VERSION 3.14)
+
+project(SwarmMechanics)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Trova SFML (Graphics, Window, System)
-find_package(SFML 2.5 COMPONENTS graphics window system REQUIRED)
+include(FetchContent)
+message(STATUS "Scaricando SFML...")
 
-# Includi la cartella header
+FetchContent_Declare(
+  sfml
+  GIT_REPOSITORY https://github.com/SFML/SFML.git
+  GIT_TAG        2.6.1
+)
+
+# Questo rende disponibili i target sfml-graphics, sfml-window, ecc.
+FetchContent_MakeAvailable(sfml)
+
 include_directories(include)
 
-# Trova tutti i file .cpp dentro src e sottocartelle
+# Trova tutti i tuoi file sorgente (.cpp) in src/ e sottocartelle
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 # Crea l'eseguibile
 add_executable(SwarmSim ${SOURCES})
 
-# Linka SFML all'eseguibile
-target_link_libraries(SwarmSim sfml-graphics sfml-window sfml-system)
+# Linka le librerie SFML scaricate all'eseguibile
+target_link_libraries(SwarmSim PRIVATE sfml-graphics sfml-window sfml-system)
