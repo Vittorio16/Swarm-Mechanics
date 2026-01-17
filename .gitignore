@@ -1,0 +1,17 @@
+# Compilazione C++
+/bin/
+/build/
+*.o
+*.obj
+*.exe
+
+# IDE specifici
+.vscode/
+.idea/
+*.sln
+*.vcxproj
+*.user
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
