@@ -3,31 +3,59 @@
 using namespace std;
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode(800, 600), "Sim");
+    // Standard fixed step (1/60th of a second)
+    const float FIXED_TIME_STEP = 1.0f / 60.0f;
+    constexpr int MAX_FPS = 170;
     
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Sim");
+    bool renderingEnabled = true; // Toggle this to run faster evolution
+
+    sf::Clock clock;
     World myWorld;
-    bool renderingEnabled = true; // Toggle this to turn off graphics
+    window.setFramerateLimit(MAX_FPS);
 
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) window.close();
             
-            // PRESS 'R' TO TOGGLE RENDERING
+            if (event.type == sf::Event::Resized) {
+                // Update the view to the new window size
+                sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
+                window.setView(sf::View(visibleArea));
+            }
+            // TOGGLE MODES
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::R) {
                 renderingEnabled = !renderingEnabled;
-                window.setTitle(renderingEnabled ? "Sim (Visible)" : "Sim (Headless - Fast!)");
+                
+                if (renderingEnabled) {
+                    window.setTitle("Sim (Real-Time)");
+                    window.setFramerateLimit(MAX_FPS); 
+                } else {
+                    window.setTitle("Sim (Training)");
+                    window.setFramerateLimit(0);
+                }
             }
         }
 
         // --- 1. ALWAYS UPDATE LOGIC ---
         // Even if we don't draw, the simulation continues.
-        // myWorld.update();
+        float dt;
+
+        if (renderingEnabled) {
+            // MODE A: Real-Time
+            dt = clock.restart().asSeconds();
+        } else {
+            // MODE B: Training
+            dt = FIXED_TIME_STEP;
+            clock.restart(); 
+        }
+        myWorld.update(dt);
 
         // --- 2. CONDITIONALLY DRAW ---
         if (renderingEnabled) {
             window.clear();
-            myWorld.draw(window); // Pass the window here!
+            myWorld.draw(window);
             window.display();
         } else {
             // Optional: Sleep a tiny bit to prevent CPU burning if you don't want max speed

@@ -1,12 +1,14 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <vector>
+#include <memory>
 #include "Entities/Agent.h"
 using namespace std;
 
-constexpr int NUM_CELLE_X = 600;
-constexpr int NUM_CELLE_Y = 400;
-
+constexpr int NUM_CELLE_X = 175;
+constexpr int NUM_CELLE_Y = 100;
+constexpr int NUM_PREDATOR = 25;
+constexpr int NUM_PREY = 50;
 enum Terrain {Standard};
 
 struct Cell{
@@ -18,12 +20,12 @@ struct Cell{
 class World{
     private:
     vector<vector<Cell>> grid;
-    vector<Agent> agents;
+    vector<unique_ptr<Agent>> agents;
 
     public:
 
-    World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)) {}
+    World();
 
-    void run();
+    void update(float dt);
     void draw(sf::RenderWindow& window);
 };
