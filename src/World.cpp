@@ -31,7 +31,28 @@ World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)) {
 
 // Updates the world each tick of the simulation
 void World::update(float dt){
+    // First it checks the system state and lets agents decide
+    for (auto& agent : agents){
+        agent->updateSensoryData();
+        agent->think();
+    }
 
+    // Then updates everything at the same time
+    for (auto& agent : agents){
+        agent->move(dt);
+
+        // Creates pacman style world
+        if (agent->x > NUM_CELLE_X){
+            agent->x -= NUM_CELLE_X;
+        } else if (agent->x < 0){
+            agent->x += NUM_CELLE_X;
+        }
+        if (agent->y > NUM_CELLE_Y){
+            agent->y -= NUM_CELLE_Y;
+        } else if (agent->y < 0){
+            agent->y += NUM_CELLE_Y;
+        }
+    }
 }
 
 // Draws World with all cells and entities in a window
