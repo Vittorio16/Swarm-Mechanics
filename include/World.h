@@ -22,6 +22,7 @@ class World{
     vector<vector<Cell>> grid;
     vector<unique_ptr<Agent>> agents;
 
+    vector<Observation> getObservation(const Agent* observer); 
     public:
 
     World();

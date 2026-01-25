@@ -33,7 +33,9 @@ World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)) {
 void World::update(float dt){
     // First it checks the system state and lets agents decide
     for (auto& agent : agents){
-        agent->updateSensoryData();
+        vector<Observation> agentsInFOV = getObservation(agent.get());
+
+        agent->updateSensoryData(agentsInFOV);
         agent->think();
     }
 
@@ -137,4 +139,11 @@ void World::draw(sf::RenderWindow& window){
         }
         window.draw(boidShape);
     }
+}
+
+// Given an observer, returns a vector of pointers to all the agents it can see
+vector<Observation> World::getObservation(const Agent* observer){
+    vector<Observation> obsList;
+
+    return obsList;
 }
