@@ -8,10 +8,10 @@ class World;
 struct Observation{
     float dx, dy;
     float vx, vy;
-    int type;
+    int speciesID;
     float distSq;
 
-    Observation(float x, float y, float x_v, float y_v, int t, float dist) : dx(x), dy(y), vx(x_v), vy(y_v), type(t), distSq(dist) {}
+    Observation(float x, float y, float x_v, float y_v, int t, float dist) : dx(x), dy(y), vx(x_v), vy(y_v), speciesID(t), distSq(dist) {}
 
 };
 
@@ -30,13 +30,16 @@ class Agent{
 
     protected:
     // Physics variables
-    float ax, ay;
-    float force;
-    float max_speed;
     float friction;
-
+    float force;
+    float maxSpeed;
+    float ax, ay;
+    
     public:
+    float viewRadius;
+    float fovAngle;
     // State variables
+    int speciesID;
     bool isAlive;
     float x, y;
     float vx, vy;

@@ -3,6 +3,7 @@
 #include "World.h"
 #include "Entities/Predator.h"
 #include "Entities/Prey.h"
+#include "Core/Physics.h"
 
 using namespace std;
 
@@ -115,11 +116,11 @@ void World::draw(sf::RenderWindow& window){
     boidShape.setOutlineThickness(1.0f);
     
     for (const auto& agent : agents) {
-        if (dynamic_cast<Predator*>(agent.get())) {
+        if (agent->speciesID == 1) {
             boidShape.setFillColor(sf::Color::Red);
             boidShape.setOutlineColor(sf::Color(139, 0, 0));
         } 
-        else if (dynamic_cast<Prey*>(agent.get())) {
+        else if (agent->speciesID == -1) {
             boidShape.setFillColor(sf::Color::Green);
             boidShape.setOutlineColor(sf::Color(0, 100, 0));
 
@@ -143,7 +144,34 @@ void World::draw(sf::RenderWindow& window){
 
 // Given an observer, returns a vector of pointers to all the agents it can see
 vector<Observation> World::getObservation(const Agent* observer){
-    vector<Observation> obsList;
+    vector<Observation> observations;
 
-    return obsList;
+    float observerHeading = atan2(observer->vy, observer->vx);
+    for (const auto& otherUnique : agents){
+        Agent* otherAgent = otherUnique.get();
+
+        if (otherAgent == observer) continue;
+
+        vector<float> coords = getThoroidalCoordinates(
+            observer->x, observer->y, otherAgent->x, otherAgent->y, NUM_CELLE_X, NUM_CELLE_Y
+        );
+
+        float distSq = coords[0];
+        float angleToTarget = coords[1];
+        float dx = coords[2];
+        float dy = coords[3];
+
+        if (distSq > observer->viewRadius) continue;
+
+        float angleDiff = angleToTarget - observerHeading;
+        // Normalize angle difference to be between -PI and PI
+        while (angleDiff <= -M_PI) angleDiff += 2 * M_PI;
+        while (angleDiff > M_PI) angleDiff -= 2 * M_PI;
+
+        if (abs(angleDiff) < observer->fovAngle * M_PI / 360.0f){
+            observations.emplace_back(dx, dy, 
+                            otherAgent->vx, otherAgent->vy, otherAgent->speciesID, distSq);
+        }
+    }
+    return observations;
 }

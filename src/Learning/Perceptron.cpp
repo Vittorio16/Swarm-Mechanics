@@ -47,10 +47,10 @@ vector<float> SimplePerceptron::feedForward(const vector<float>& inputs){
     
     // Updates the neurons of the output layer
     vector<float> outputValues(outputNodes);
-
+    
     for (int i = 0; i < outputNodes; i++){
         float sum = 0.0f;
-
+        
         for (int j = 0; j < hiddenNodes; j++){
             sum += hiddenValues[j] * w12[j * outputNodes + i];
         }

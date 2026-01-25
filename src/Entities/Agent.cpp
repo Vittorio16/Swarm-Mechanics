@@ -1,6 +1,6 @@
 #include <cmath>
+#include <algorithm>
 #include "Entities/Agent.h"
-#include <iostream>
 
 // Constructor
 Agent::Agent(float startX, float startY) : 
@@ -9,8 +9,33 @@ Agent::Agent(float startX, float startY) :
 
 // Transforms an array of observations (1 per visible agent) 
 // into sensory data processable by the brain
+// It returns the data about the closest agent of a different species
 void Agent::updateSensoryData(const vector<Observation>& observations){
-
+    if(observations.empty()){
+        sensors.closestPredatorX = 0;
+        sensors.closestPredatorY = 0;
+        sensors.closestPredatorVx = 0;
+        sensors.closestPredatorVy = 0;
+    
+        return;
+    }
+    const Observation* closestEnemy = nullptr;
+    float minDistSq = INFINITY;
+    
+    for (const auto& obs : observations){
+        if (obs.speciesID != this->speciesID && obs.distSq < minDistSq){
+            minDistSq = obs.distSq;
+            closestEnemy = &obs;
+        }
+    }
+    if (closestEnemy != nullptr){
+        sensors.closestPredatorX = closestEnemy->dx;
+        sensors.closestPredatorY = closestEnemy->dy;
+        sensors.closestPredatorVx = closestEnemy->vx;
+        sensors.closestPredatorVy = closestEnemy->vy;
+    }
+    
+    return;
 }
 
 void Agent::think(){
@@ -18,7 +43,7 @@ void Agent::think(){
                                 sensors.closestPredatorVx, sensors.closestPredatorVy};
     
     vector<float> neuralOutput = brain.feedForward(neualInputs);
-    cout << "ax: " << ax << ", ay: " << ay << endl;
+
     ax = force * neuralOutput[0];
     ay = force * neuralOutput[1];
 }
@@ -35,8 +60,8 @@ void Agent::move(float dt){
     // Checks constraint on speed
     float speed = hypot(vx, vy);
 
-    if (speed > max_speed){
-        float excessRatio = max_speed / speed;
+    if (speed > maxSpeed){
+        float excessRatio = maxSpeed / speed;
         vx *= excessRatio;
         vy *= excessRatio;
     }
