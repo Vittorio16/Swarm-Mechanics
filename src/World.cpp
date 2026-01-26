@@ -1,5 +1,6 @@
 #include <random>
 #include <cmath>
+#include <algorithm>
 #include "World.h"
 #include "Entities/Predator.h"
 #include "Entities/Prey.h"
@@ -34,6 +35,8 @@ World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)) {
 void World::update(float dt){
     // First it checks the system state and lets agents decide
     for (auto& agent : agents){
+        if (!agent->isAlive) continue;
+    
         vector<Observation> agentsInFOV = getObservation(agent.get());
 
         agent->updateSensoryData(agentsInFOV);
@@ -42,6 +45,8 @@ void World::update(float dt){
 
     // Then updates everything at the same time
     for (auto& agent : agents){
+        if (!agent->isAlive) continue;
+
         agent->move(dt);
 
         // Creates pacman style world
@@ -56,6 +61,15 @@ void World::update(float dt){
             agent->y += NUM_CELLE_Y;
         }
     }
+    
+    // Erases dead agents
+    agents.erase(
+        remove_if(agents.begin(), agents.end(), 
+            [](const std::unique_ptr<Agent>& a) {
+                return !a->isAlive; 
+            }),
+        agents.end()
+    );
 }
 
 // Draws World with all cells and entities in a window
@@ -126,8 +140,8 @@ void World::draw(sf::RenderWindow& window){
 
         }
 
-        int pixelX = agent->x * scaleX;
-        int pixelY = agent->y * scaleY; 
+        float pixelX = agent->x * scaleX;
+        float pixelY = agent->y * scaleY; 
 
         boidShape.setPosition(pixelX, pixelY);
         
@@ -138,6 +152,87 @@ void World::draw(sf::RenderWindow& window){
             
             boidShape.setRotation(angleDegrees);
         }
+
+        // // --- FOV VISUALIZATION START ---
+
+        // float fovRadius = agent->viewRadius * scaleX;
+        // float fovAngle = agent->fovAngle * (M_PI / 180.0f);
+        // int triangleCount = 20; // Resolution of the arc
+
+        // float heading = 0.0f;
+        // if (agent->vx != 0 || agent->vy != 0) {
+        //     heading = std::atan2(agent->vy, agent->vx);
+        // }
+
+        // // Size = Center + (Points on arc)
+        // sf::VertexArray fovShape(sf::TriangleFan, triangleCount + 1);
+
+        // // Center Vertex (Agent Position)
+        // float px = agent->x * scaleX;
+        // float py = agent->y * scaleY;
+        // fovShape[0].position = sf::Vector2f(px, py);
+
+        // // Set Color based on species (with transparency)
+        // sf::Color fovColor;
+        // if (agent->speciesID == 1) fovColor = sf::Color(255, 0, 0, 30); // Faint Red
+        // else fovColor = sf::Color(0, 255, 0, 30); // Faint Green
+
+        // fovShape[0].color = fovColor;
+
+        // // 4. Calculate Arc Vertices
+        // float startAngle = heading - (fovAngle / 2.0f);
+        // float angleStep = fovAngle / (float)(triangleCount - 1);
+
+        // for (int i = 0; i < triangleCount; ++i) {
+        //     float currentAngle = startAngle + (angleStep * i);
+            
+        //     // Polar coordinates to Cartesian: x = r * cos(theta), y = r * sin(theta)
+        //     float vx = px + cos(currentAngle) * fovRadius;
+        //     float vy = py + sin(currentAngle) * fovRadius;
+
+        //     fovShape[i + 1].position = sf::Vector2f(vx, vy);
+        //     fovShape[i + 1].color = fovColor;
+        // }
+
+        // // DRAWING WITH PAC-MAN LOGIC ---
+
+        // // Helper lists for offsets
+        // std::vector<float> xOffsets = {0.0f};
+        // std::vector<float> yOffsets = {0.0f};
+
+        // float winW = (float)windowSize.x;
+        // float winH = (float)windowSize.y;
+        // float fovPixelRadius = fovRadius; // Calculate this once outside loops if possible
+
+        // // Check X-Axis Wrapping
+        // if (px < fovPixelRadius) {
+        //     xOffsets.push_back(winW);
+        // }
+        // else if (px > winW - fovPixelRadius) {
+        //     xOffsets.push_back(-winW);
+        // }
+
+        // // Check Y-Axis Wrapping
+        // // If I am close to the TOP edge, draw a ghost on the BOTTOM
+        // if (py < fovPixelRadius) {
+        //     yOffsets.push_back(winH);
+        // }
+        // // If I am close to the BOTTOM edge, draw a ghost on the TOP
+        // else if (py > winH - fovPixelRadius) {
+        //     yOffsets.push_back(-winH);
+        // }
+
+        // // Draw the shape for every required offset (Original + Ghosts)
+        // for (float ox : xOffsets) {
+        //     for (float oy : yOffsets) {
+                
+        //         // Use RenderStates to apply the offset efficiently
+        //         sf::RenderStates states = sf::RenderStates::Default;
+        //         states.transform.translate(ox, oy);
+                
+        //         window.draw(fovShape, states);
+        //     }
+        // }
         window.draw(boidShape);
     }
 }
@@ -170,7 +265,7 @@ vector<Observation> World::getObservation(const Agent* observer){
 
         if (abs(angleDiff) < observer->fovAngle * M_PI / 360.0f){
             observations.emplace_back(dx, dy, 
-                            otherAgent->vx, otherAgent->vy, otherAgent->speciesID, distSq);
+                            otherAgent->vx, otherAgent->vy, otherAgent->speciesID, distSq, otherAgent);
         }
     }
     return observations;

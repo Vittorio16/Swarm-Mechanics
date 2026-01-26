@@ -6,4 +6,6 @@ class Prey: public Agent{
 
     public:
     Prey(float x, float y);
+
+    void updateEnergy(float ax, float ay, float dt) override;
 };

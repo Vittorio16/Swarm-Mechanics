@@ -7,7 +7,7 @@ using namespace std;
 
 constexpr int NUM_CELLE_X = 175;
 constexpr int NUM_CELLE_Y = 100;
-constexpr int NUM_PREDATOR = 25;
+constexpr int NUM_PREDATOR = 30;
 constexpr int NUM_PREY = 50;
 enum Terrain {Standard};
 

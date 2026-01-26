@@ -2,10 +2,25 @@
 #include <algorithm>
 #include "Entities/Agent.h"
 
+// Helper function to find the closest enemy in the observation list
+const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& observations){
+    const Observation* closestEnemy = nullptr;
+    float minDistSq = INFINITY;
+    
+    for (const auto& obs : observations){
+        if (obs.speciesID != this->speciesID && obs.distSq < minDistSq){
+            minDistSq = obs.distSq;
+            closestEnemy = &obs;
+        }
+    }
+
+    return closestEnemy;
+}
 // Constructor
 Agent::Agent(float startX, float startY) : 
         x(startX), y(startY), vx(0), vy(0),
-        ax(0), ay(0), friction(10.0f), isAlive(true) {}
+        ax(0), ay(0), friction(10.0f), 
+        energy(2 * MAX_ENERGY / 3), isAlive(true) {}
 
 // Transforms an array of observations (1 per visible agent) 
 // into sensory data processable by the brain
@@ -16,23 +31,18 @@ void Agent::updateSensoryData(const vector<Observation>& observations){
         sensors.closestPredatorY = 0;
         sensors.closestPredatorVx = 0;
         sensors.closestPredatorVy = 0;
-    
+        sensors.closestEnemy = nullptr;
+
         return;
     }
-    const Observation* closestEnemy = nullptr;
-    float minDistSq = INFINITY;
+    const Observation* closestEnemyObservation = getClosestEnemyObservation(observations);
     
-    for (const auto& obs : observations){
-        if (obs.speciesID != this->speciesID && obs.distSq < minDistSq){
-            minDistSq = obs.distSq;
-            closestEnemy = &obs;
-        }
-    }
-    if (closestEnemy != nullptr){
-        sensors.closestPredatorX = closestEnemy->dx;
-        sensors.closestPredatorY = closestEnemy->dy;
-        sensors.closestPredatorVx = closestEnemy->vx;
-        sensors.closestPredatorVy = closestEnemy->vy;
+    if (closestEnemyObservation != nullptr){
+        sensors.closestPredatorX = closestEnemyObservation->dx;
+        sensors.closestPredatorY = closestEnemyObservation->dy;
+        sensors.closestPredatorVx = closestEnemyObservation->vx;
+        sensors.closestPredatorVy = closestEnemyObservation->vy;
+        sensors.closestEnemy = closestEnemyObservation->otherAgent;
     }
     
     return;
@@ -70,6 +80,12 @@ void Agent::move(float dt){
     x += vx * dt;
     y += vy * dt;
 
+    // Updates the agent's energy
+    
+    updateEnergy(ax, ay, dt);
+
+    isAlive = energy <= 0 ? false : true;
+    
     // Reset acceleration for next frame
     ax = 0;
     ay = 0;
