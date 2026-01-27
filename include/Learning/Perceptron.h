@@ -7,6 +7,9 @@ const int INPUT_LAYER_SIZE = 4;
 const int HIDDEN_LAYER_SIZE = 4;
 const int OUTPUT_LAYER_SIZE = 2;
 
+const float MUTATION_RATE = 0.1;
+const float MUTATION_STRENGTH = 0.2;
+
 class SimplePerceptron{
     private:
     // Sizes of layers
@@ -22,7 +25,13 @@ class SimplePerceptron{
 
     public:
 
+    // Constructor and copy constructor
     SimplePerceptron();
+    SimplePerceptron(const SimplePerceptron& oldObj) = default;
+
     // Given sensory inputs, returns ax and ay between -1 and 1
     vector<float> feedForward(const vector<float>& inputs);
+    
+    // Helper function to mutate brain of newborns
+    void mutate();
 };

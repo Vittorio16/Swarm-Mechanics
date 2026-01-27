@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include "Entities/Agent.h"
 
 const float KILL_RANGE_SQ = 25.0f;
@@ -11,4 +12,5 @@ class Predator : public Agent{
     Predator(float startX, float startY);
 
     void updateEnergy(float speed, float ax, float ay, float dt) override;
+    unique_ptr<Agent> reproduce() override;
 };

@@ -7,6 +7,8 @@
 #include "Core/Physics.h"
 using namespace std;
 
+#include <iostream>
+
 // Constructor
 World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)) {
     // Setup random number generation
@@ -41,11 +43,18 @@ void World::update(float dt){
         agent->think();
     }
 
+    vector<unique_ptr<Agent>> nursery;
+
     // Then updates everything at the same time
     for (auto& agent : agents){
         if (!agent->isAlive) continue;
 
         agent->move(dt);
+
+        // Handles reproduction 
+        if (agent->energy > MAX_ENERGY){
+            nursery.push_back(agent->reproduce());
+        }    
 
         // Creates pacman style world
         if (agent->x > NUM_CELLE_X){
@@ -58,8 +67,13 @@ void World::update(float dt){
         } else if (agent->y < 0){
             agent->y += NUM_CELLE_Y;
         }
+
     }
     
+    // Add newly born agents
+    for (auto& baby : nursery){ 
+        agents.push_back(move(baby));
+    }
     // Erases dead agents
     agents.erase(
         remove_if(agents.begin(), agents.end(), 

@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include "Learning/Perceptron.h"
 
 const float MAX_ENERGY = 100.0f;
@@ -40,10 +41,10 @@ class Agent{
     float force;
     float maxSpeed;
     float ax, ay;
+    
+    public:
     // Energy determines the state of life of the agent
     float energy;
-
-    public:
     float viewRadius;
     float fovAngle;
     // State variables
@@ -62,10 +63,13 @@ class Agent{
     // Updates the agent's state
     void move(float dt);
     virtual void updateEnergy(float speed, float ax, float ay, float dt) = 0;
-
     // Creates a new agent of the same species as the parent
-    void reproduce();
-    
+    virtual unique_ptr<Agent> reproduce() = 0;
+
     // Helper function to get the closes enemy from observations list
     const Observation* getClosestEnemyObservation(const vector<Observation>& observations);
+
+    // Helper function to get and set the brain of the reproducing agent
+    const SimplePerceptron& getBrain() const {return brain;}
+    void setBrain(const SimplePerceptron& babyBrain);
 };

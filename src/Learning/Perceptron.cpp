@@ -1,14 +1,7 @@
 #include <cmath>
 #include <random>
 #include "Learning/Perceptron.h"
-
-// Returns a random float between -1 and 1
-float randomFloat(){
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-    static std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
-    return dis(gen);
-}
+#include "Core/GlobalHelpers.h"
 
 // Passes the value given in an activation function
 float activation(float a){
@@ -57,6 +50,26 @@ vector<float> SimplePerceptron::feedForward(const vector<float>& inputs){
         sum += b1[i];
         outputValues[i] = activation(sum);
     }
-    
     return outputValues;
+}
+
+// Mutates randomly some weights of the network
+void SimplePerceptron::mutate(){
+    // Helper lambda to mutate the weights
+   auto mutateVector = [&](vector<float>& weights){
+        for (float& w : weights){
+            if (randomFloat() < MUTATION_RATE){
+                float change = randomFloat() * MUTATION_STRENGTH * 2 - MUTATION_STRENGTH;
+
+                w += change;
+                if (w > 1.0f) w = 1.0f;
+                if (w < -1.0f) w = -1.0f;
+            }
+        }
+    };
+
+    mutateVector(w01);
+    mutateVector(w12);
+    mutateVector(b0);
+    mutateVector(b1);
 }

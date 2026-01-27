@@ -83,16 +83,12 @@ void Agent::move(float dt){
     updateEnergy(speed, ax, ay, dt);
     isAlive = energy <= 0 ? false : true;
     
-    // Reproduction mechanism
-    if (energy > MAX_ENERGY) reproduce();
     // Reset acceleration for next frame
     ax = 0;
     ay = 0;
 }
 
-// Makes an agent reproduce, diminishing its energy 
-// and creating a new agent with similar weights 
-void Agent::reproduce(){
-    energy -= MAX_ENERGY / 2;
-    
+// Sets the brain's weights like the given one -- for newborns
+void Agent::setBrain(const SimplePerceptron& newBrain){
+    this->brain = newBrain;
 }

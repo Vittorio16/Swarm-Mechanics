@@ -1,12 +1,13 @@
 #include <cmath>
 #include "Entities/Predator.h"
+#include "Core/GlobalHelpers.h"
 
 // Constructor
 Predator::Predator(float x, float y): Agent(x, y) {
     this->speciesID = 1;
     this->maxSpeed = 60.0f;
     this->force = 150.0f;
-    this->viewRadius = 50.0f;
+    this->viewRadius = 30.0f;
     this-> fovAngle = 90.0f;
 }
 
@@ -26,3 +27,22 @@ void Predator::updateEnergy(float speed, float ax, float ay, float dt) {
         }
     }
 };
+
+// Makes an agent reproduce, diminishing its energy 
+// and creating a new agent with similar weights 
+unique_ptr<Agent> Predator::reproduce(){
+    float energyCost = MAX_ENERGY / 2.0f;
+    energy -= energyCost;
+
+    float babyX = this->x + (randomFloat() * 10.0f - 5.0f);
+    float babyY = this->y + (randomFloat() * 10.0f - 5.0f);
+
+    auto baby = make_unique<Predator>(babyX, babyY);
+    
+    SimplePerceptron babyBrain = this->getBrain();
+    babyBrain.mutate();
+
+    baby->setBrain(babyBrain);
+    baby->energy = energyCost;
+    return baby;
+}
