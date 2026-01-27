@@ -61,8 +61,11 @@ class Agent{
 
     // Updates the agent's state
     void move(float dt);
-    virtual void updateEnergy(float ax, float ay, float dt) = 0;
+    virtual void updateEnergy(float speed, float ax, float ay, float dt) = 0;
 
+    // Creates a new agent of the same species as the parent
+    void reproduce();
+    
     // Helper function to get the closes enemy from observations list
     const Observation* getClosestEnemyObservation(const vector<Observation>& observations);
 };

@@ -1,8 +1,7 @@
 #pragma once
 #include "Entities/Agent.h"
 
-const float KILL_RANGE = 5.0f;
-
+const float KILL_RANGE_SQ = 25.0f;
 
 class Predator : public Agent{
     private:
@@ -11,5 +10,5 @@ class Predator : public Agent{
     public:
     Predator(float startX, float startY);
 
-    void updateEnergy(float ax, float ay, float dt) override;
+    void updateEnergy(float speed, float ax, float ay, float dt) override;
 };

@@ -19,7 +19,7 @@ const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& 
 // Constructor
 Agent::Agent(float startX, float startY) : 
         x(startX), y(startY), vx(0), vy(0),
-        ax(0), ay(0), friction(10.0f), 
+        ax(0), ay(0), friction(2.0f), 
         energy(2 * MAX_ENERGY / 3), isAlive(true) {}
 
 // Transforms an array of observations (1 per visible agent) 
@@ -75,18 +75,24 @@ void Agent::move(float dt){
         vx *= excessRatio;
         vy *= excessRatio;
     }
-
     // Update position
     x += vx * dt;
     y += vy * dt;
 
-    // Updates the agent's energy
-    
-    updateEnergy(ax, ay, dt);
-
+    // Updates the agent's energy and checks reproduction
+    updateEnergy(speed, ax, ay, dt);
     isAlive = energy <= 0 ? false : true;
     
+    // Reproduction mechanism
+    if (energy > MAX_ENERGY) reproduce();
     // Reset acceleration for next frame
     ax = 0;
     ay = 0;
+}
+
+// Makes an agent reproduce, diminishing its energy 
+// and creating a new agent with similar weights 
+void Agent::reproduce(){
+    energy -= MAX_ENERGY / 2;
+    
 }
