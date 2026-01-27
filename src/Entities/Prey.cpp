@@ -6,8 +6,8 @@
 // Constructor
 Prey::Prey(float x, float y): Agent(x, y) {
     this->speciesID = -1;
-    this->maxSpeed = 50.0f;
-    this->force = 200.0f;
+    this->maxSpeed =25.0f;
+    this->force = 100.0f;
     this->viewRadius = 20.0f;
     this-> fovAngle = 120.0f;
 }
@@ -19,14 +19,15 @@ void Prey::updateEnergy(float speed, float ax, float ay, float dt) {
     energy -= energyLoss;
 
     // Prey right now gain energy by sgoing slower
-    float energyGain = exp(-speed) * 20;
+    float energyGain = exp(-speed) * 30;
     energy += energyGain;
 };
 
 // Makes an agent reproduce, diminishing its energy 
 // and creating a new agent with similar weights 
 unique_ptr<Agent> Prey::reproduce(){
-    energy -= MAX_ENERGY / 2;
+    float energyCost = MAX_ENERGY / 2.0f;
+    energy -= energyCost;
 
     float babyX = this->x + (randomFloat() * 10.0f - 5.0f);
     float babyY = this->y + (randomFloat() * 10.0f - 5.0f);
@@ -37,6 +38,7 @@ unique_ptr<Agent> Prey::reproduce(){
     babyBrain.mutate();
 
     baby->setBrain(babyBrain);
-
+    baby->energy = energyCost;
+    
     return baby;
 }

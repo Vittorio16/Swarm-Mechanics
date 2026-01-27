@@ -257,7 +257,7 @@ vector<Observation> World::getObservation(const Agent* observer){
     for (const auto& otherUnique : agents){
         Agent* otherAgent = otherUnique.get();
 
-        if (otherAgent == observer) continue;
+        if (otherAgent == observer || !otherAgent->isAlive) continue;
 
         vector<float> coords = getThoroidalCoordinates(
             observer->x, observer->y, otherAgent->x, otherAgent->y, NUM_CELLE_X, NUM_CELLE_Y

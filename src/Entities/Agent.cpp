@@ -19,7 +19,7 @@ const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& 
 // Constructor
 Agent::Agent(float startX, float startY) : 
         x(startX), y(startY), vx(0), vy(0),
-        ax(0), ay(0), friction(2.0f), 
+        ax(0), ay(0), friction(1.0f), 
         energy(2 * MAX_ENERGY / 3), isAlive(true) {}
 
 // Transforms an array of observations (1 per visible agent) 

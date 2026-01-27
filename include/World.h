@@ -7,8 +7,8 @@ using namespace std;
 
 constexpr int NUM_CELLE_X = 175;
 constexpr int NUM_CELLE_Y = 100;
-constexpr int NUM_PREDATOR = 30;
-constexpr int NUM_PREY = 50;
+constexpr int NUM_PREDATOR = 3;
+constexpr int NUM_PREY = 5;
 enum Terrain {Standard};
 
 struct Cell{
