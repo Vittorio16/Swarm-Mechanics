@@ -5,6 +5,8 @@
 const float MAX_ENERGY = 100.0f;
 const float METABOLISM_COST = 0.05f;
 const float MAX_EFFORT_COST = 5.0f;
+const float RANGE_OF_VISION_SQ = 16.0f;
+
 // Forward declaration of the world class
 class World;
 class Agent;
@@ -12,13 +14,11 @@ class Agent;
 // Contains an observation of another agent from the POV of an observer
 struct Observation{
     float dx, dy;
-    float vx, vy;
-    int speciesID;
     float distSq;
     Agent* otherAgent;
 
-    Observation(float x, float y, float x_v, float y_v, int t, float dist, Agent* other) : 
-                dx(x), dy(y), vx(x_v), vy(y_v), speciesID(t), distSq(dist), otherAgent(other) {}
+    Observation(float x, float y, float dist, Agent* other) : 
+                dx(x), dy(y), distSq(dist), otherAgent(other) {}
 };
 
 class Agent{
@@ -29,11 +29,13 @@ class Agent{
     protected:
     // Sensory inputs which guide decisions
     struct SensoryData {
+        float agentVx, agentVy;
         float closestPredatorX, closestPredatorY;
         float closestPredatorVx, closestPredatorVy;
         Agent* closestEnemy;
         
-        SensoryData() : closestPredatorX(0), closestPredatorY(0), 
+        SensoryData() : agentVx(0), agentVy(0),
+                        closestPredatorX(0), closestPredatorY(0), 
                         closestPredatorVx(0), closestPredatorVy(0), closestEnemy(nullptr) {}
     } sensors;
     // Physics variables
@@ -45,6 +47,7 @@ class Agent{
     public:
     // Energy determines the state of life of the agent
     float energy;
+    float rangeOfVision;
     float viewRadius;
     float fovAngle;
     // State variables

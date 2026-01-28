@@ -2,6 +2,8 @@
 #include <SFML/Graphics.hpp>
 using namespace std;
 
+#include <iostream>
+
 int main() {
     // Standard fixed step (1/60th of a second)
     const float FIXED_TIME_STEP = 1.0f / 60.0f;
@@ -23,6 +25,8 @@ int main() {
                 // Update the view to the new window size
                 sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
                 window.setView(sf::View(visibleArea));
+
+                myWorld.resizeGridTexture(event.size.width, event.size.height);
             }
             // TOGGLE MODES
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::R) {
@@ -50,6 +54,7 @@ int main() {
             dt = FIXED_TIME_STEP;
             clock.restart(); 
         }
+
         myWorld.update(dt);
 
         // --- 2. CONDITIONALLY DRAW ---

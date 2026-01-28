@@ -2,6 +2,7 @@
 #include "Entities/Prey.h"
 #include "Core/GlobalHelpers.h"
 
+#include <iostream>
 
 // Constructor
 Prey::Prey(float x, float y): Agent(x, y) {
@@ -19,7 +20,7 @@ void Prey::updateEnergy(float speed, float ax, float ay, float dt) {
     energy -= energyLoss;
 
     // Prey right now gain energy by sgoing slower
-    float energyGain = (1 / speed) * 5;
+    float energyGain = (1 / speed) * 50 * dt;
     energy += energyGain;
 
     if (energy > 3 * MAX_ENERGY / 2) energy = 3 * MAX_ENERGY / 2;
@@ -29,7 +30,7 @@ void Prey::updateEnergy(float speed, float ax, float ay, float dt) {
 // and creating a new agent with similar weights 
 unique_ptr<Agent> Prey::reproduce(){
     float energyCost = MAX_ENERGY / 2.0f;
-    energy -= energyCost;
+    energy -= 2 * energyCost ;
 
     float babyX = this->x + (randomFloat() * 10.0f - 5.0f);
     float babyY = this->y + (randomFloat() * 10.0f - 5.0f);
@@ -41,6 +42,6 @@ unique_ptr<Agent> Prey::reproduce(){
 
     baby->setBrain(babyBrain);
     baby->energy = energyCost;
-    
+
     return baby;
 }

@@ -2,7 +2,7 @@
 #include <memory>
 #include "Entities/Agent.h"
 
-const float KILL_RANGE_SQ = 16.0f;
+const float KILL_RANGE_SQ = 9.0f;
 
 class Predator : public Agent{
     private:

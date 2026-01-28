@@ -8,7 +8,7 @@ const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& 
     float minDistSq = INFINITY;
     
     for (const auto& obs : observations){
-        if (obs.speciesID != this->speciesID && obs.distSq < minDistSq){
+        if (obs.otherAgent->speciesID != this->speciesID && obs.distSq < minDistSq){
             minDistSq = obs.distSq;
             closestEnemy = &obs;
         }
@@ -20,12 +20,14 @@ const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& 
 Agent::Agent(float startX, float startY) : 
         x(startX), y(startY), vx(0), vy(0),
         ax(0), ay(0), friction(1.0f), 
-        energy(2 * MAX_ENERGY / 3), isAlive(true) {}
+        energy(2 * MAX_ENERGY / 3), rangeOfVision(RANGE_OF_VISION_SQ), isAlive(true) {}
 
 // Transforms an array of observations (1 per visible agent) 
 // into sensory data processable by the brain
 // It returns the data about the closest agent of a different species
 void Agent::updateSensoryData(const vector<Observation>& observations){
+    sensors.agentVx = vx;
+    sensors.agentVy = vy;
     sensors.closestPredatorX = 0;
     sensors.closestPredatorY = 0;
     sensors.closestPredatorVx = 0;
@@ -33,14 +35,14 @@ void Agent::updateSensoryData(const vector<Observation>& observations){
     sensors.closestEnemy = nullptr;
     
     if(observations.empty()) return;
-    
+
     const Observation* closestEnemyObservation = getClosestEnemyObservation(observations);
     
     if (closestEnemyObservation != nullptr){
         sensors.closestPredatorX = closestEnemyObservation->dx;
         sensors.closestPredatorY = closestEnemyObservation->dy;
-        sensors.closestPredatorVx = closestEnemyObservation->vx;
-        sensors.closestPredatorVy = closestEnemyObservation->vy;
+        sensors.closestPredatorVx = closestEnemyObservation->otherAgent->vx;
+        sensors.closestPredatorVy = closestEnemyObservation->otherAgent->vy;
         sensors.closestEnemy = closestEnemyObservation->otherAgent;
     } 
     
@@ -48,8 +50,11 @@ void Agent::updateSensoryData(const vector<Observation>& observations){
 }
 
 void Agent::think(){
-    vector<float> neualInputs = {sensors.closestPredatorX, sensors.closestPredatorY, 
-                                sensors.closestPredatorVx, sensors.closestPredatorVy};
+    vector<float> neualInputs = { 
+        sensors.agentVx, sensors.agentVy, 
+        sensors.closestPredatorX, sensors.closestPredatorY, 
+        sensors.closestPredatorVx, sensors.closestPredatorVy
+    };
     
     vector<float> neuralOutput = brain.feedForward(neualInputs);
     ax = force * neuralOutput[0];

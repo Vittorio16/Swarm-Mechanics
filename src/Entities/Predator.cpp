@@ -33,7 +33,7 @@ void Predator::updateEnergy(float speed, float ax, float ay, float dt) {
 // and creating a new agent with similar weights 
 unique_ptr<Agent> Predator::reproduce(){
     float energyCost = MAX_ENERGY / 2.0f;
-    energy -= energyCost;
+    energy -= 3 * energyCost / 2;
 
     float babyX = this->x + (randomFloat() * 10.0f - 5.0f);
     float babyY = this->y + (randomFloat() * 10.0f - 5.0f);

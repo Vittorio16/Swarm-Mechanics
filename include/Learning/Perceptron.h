@@ -3,8 +3,8 @@
 
 using namespace std;
 
-const int INPUT_LAYER_SIZE = 4;
-const int HIDDEN_LAYER_SIZE = 4;
+const int INPUT_LAYER_SIZE = 6;
+const int HIDDEN_LAYER_SIZE = 8;
 const int OUTPUT_LAYER_SIZE = 2;
 
 const float MUTATION_RATE = 0.1;
