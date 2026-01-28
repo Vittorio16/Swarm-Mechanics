@@ -26,15 +26,14 @@ Agent::Agent(float startX, float startY) :
 // into sensory data processable by the brain
 // It returns the data about the closest agent of a different species
 void Agent::updateSensoryData(const vector<Observation>& observations){
-    if(observations.empty()){
-        sensors.closestPredatorX = 0;
-        sensors.closestPredatorY = 0;
-        sensors.closestPredatorVx = 0;
-        sensors.closestPredatorVy = 0;
-        sensors.closestEnemy = nullptr;
-
-        return;
-    }
+    sensors.closestPredatorX = 0;
+    sensors.closestPredatorY = 0;
+    sensors.closestPredatorVx = 0;
+    sensors.closestPredatorVy = 0;
+    sensors.closestEnemy = nullptr;
+    
+    if(observations.empty()) return;
+    
     const Observation* closestEnemyObservation = getClosestEnemyObservation(observations);
     
     if (closestEnemyObservation != nullptr){
@@ -43,7 +42,7 @@ void Agent::updateSensoryData(const vector<Observation>& observations){
         sensors.closestPredatorVx = closestEnemyObservation->vx;
         sensors.closestPredatorVy = closestEnemyObservation->vy;
         sensors.closestEnemy = closestEnemyObservation->otherAgent;
-    }
+    } 
     
     return;
 }
@@ -53,7 +52,6 @@ void Agent::think(){
                                 sensors.closestPredatorVx, sensors.closestPredatorVy};
     
     vector<float> neuralOutput = brain.feedForward(neualInputs);
-
     ax = force * neuralOutput[0];
     ay = force * neuralOutput[1];
 }

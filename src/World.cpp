@@ -67,12 +67,11 @@ void World::update(float dt){
         } else if (agent->y < 0){
             agent->y += NUM_CELLE_Y;
         }
-
     }
     
     // Add newly born agents
     for (auto& baby : nursery){ 
-        agents.push_back(move(baby));
+        agents.push_back(std::move(baby));
     }
     // Erases dead agents
     agents.erase(
