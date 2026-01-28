@@ -5,10 +5,10 @@
 #include "Entities/Agent.h"
 using namespace std;
 
-constexpr int NUM_CELLE_X = 175;
-constexpr int NUM_CELLE_Y = 100;
-constexpr int NUM_PREDATOR = 3;
-constexpr int NUM_PREY = 5;
+constexpr int NUM_CELLE_X = 350;
+constexpr int NUM_CELLE_Y = 200;
+constexpr int NUM_PREDATOR = 6;
+constexpr int NUM_PREY = 10;
 enum Terrain {Standard};
 
 struct Cell{

@@ -18,7 +18,7 @@ void Predator::updateEnergy(float speed, float ax, float ay, float dt) {
     energy -= energyLoss;
 
     // Predators gain energy by eating prey
-    if (sensors.closestEnemy != nullptr){
+    if (sensors.closestEnemy != nullptr && sensors.closestEnemy->isAlive){
         float distSq = sensors.closestPredatorX*sensors.closestPredatorX + sensors.closestPredatorY*sensors.closestPredatorY;
         if (distSq < KILL_RANGE_SQ && sensors.closestEnemy->isAlive){
             energy += MAX_ENERGY / 2;
@@ -26,6 +26,7 @@ void Predator::updateEnergy(float speed, float ax, float ay, float dt) {
             sensors.closestEnemy->isAlive = false;
         }
     }
+    if (energy > 3 * MAX_ENERGY / 2) energy = 3 * MAX_ENERGY / 2;
 };
 
 // Makes an agent reproduce, diminishing its energy 

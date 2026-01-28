@@ -81,7 +81,7 @@ void Agent::move(float dt){
 
     // Updates the agent's energy and checks reproduction
     updateEnergy(speed, ax, ay, dt);
-    isAlive = energy <= 0 ? false : true;
+    if (energy <= 0) isAlive = false;
     
     // Reset acceleration for next frame
     ax = 0;

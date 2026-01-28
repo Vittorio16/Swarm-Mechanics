@@ -19,8 +19,10 @@ void Prey::updateEnergy(float speed, float ax, float ay, float dt) {
     energy -= energyLoss;
 
     // Prey right now gain energy by sgoing slower
-    float energyGain = exp(-speed) * 30;
+    float energyGain = (1 / speed) * 5;
     energy += energyGain;
+
+    if (energy > 3 * MAX_ENERGY / 2) energy = 3 * MAX_ENERGY / 2;
 };
 
 // Makes an agent reproduce, diminishing its energy 
