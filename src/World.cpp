@@ -1,4 +1,3 @@
-#include <random>
 #include <cmath>
 #include <algorithm>
 #include "World.h"
@@ -7,14 +6,11 @@
 #include "Core/Physics.h"
 using namespace std;
 
-// Constructor
-World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)) {
-    // Setup random number generation
-    random_device rd;
-    mt19937 gen(rd());
-    uniform_real_distribution<float> disX(0.0f, static_cast<float>(NUM_CELLE_X));
-    uniform_real_distribution<float> disY(0.0f, static_cast<float>(NUM_CELLE_Y));
+#include <iostream>
 
+// Constructor
+World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)), 
+                gen(random_device{}()), disX(0, NUM_CELLE_X - 1), disY(0, NUM_CELLE_Y - 1) {
     // Puts set number of predators and preys in random positions
     for (int i = 0; i < NUM_PREDATOR; i++){
         float randX = disX(gen);
@@ -79,6 +75,25 @@ void World::update(float dt){
             }),
         agents.end()
     );
+
+    // Grass growth
+    float spawnChance = 0.005f;
+    int growthAttempts = 10;
+    float growthAmount = 1000.0f * dt;
+
+    static std::uniform_real_distribution<float> chance(0.0f, 1.0f);
+
+    for (int i = 0; i < growthAttempts; i++){
+        if (chance(gen) < spawnChance){
+            int cx = disX(gen);
+            int cy = disY(gen);
+    
+            grid[cx][cy].foodAmount = grid[cx][cy].foodAmount + growthAmount > MAX_FOOD ?
+                                        MAX_FOOD : grid[cx][cy].foodAmount + growthAmount;  
+    
+            cout << grid[cx][cy].foodAmount << endl;
+        }
+    }
 }
 
 // Given an observer, returns a vector of pointers to all the agents it can see
@@ -156,6 +171,32 @@ void World::remapBackground(sf::Vector2u windowSize, float scaleX, float scaleY)
         gridTextureValid = true;
 }
 
+// Draws the layer of grass
+sf::VertexArray drawGrass(const vector<vector<Cell>>& grid, float scaleX, float scaleY){
+    sf::VertexArray grassLayer(sf::Quads);
+
+    for (int i = 0; i < NUM_CELLE_X; i++){
+        for (int j = 0; j < NUM_CELLE_Y; j++){
+            if (grid[i][j].foodAmount > 0){
+                float x = scaleX * i;
+                float y = scaleY * j;
+
+                // Create a color based on how grown the grass is
+                sf::Uint8 alpha = static_cast<sf::Uint8>((grid[i][j].foodAmount / MAX_FOOD) * 255);
+                sf::Color grassColor(0, 200, 0, alpha); 
+
+                // Define the 4 corners of the grass cell
+                grassLayer.append(sf::Vertex(sf::Vector2f(x, y), grassColor));
+                grassLayer.append(sf::Vertex(sf::Vector2f(x + scaleX, y), grassColor));
+                grassLayer.append(sf::Vertex(sf::Vector2f(x + scaleX, y + scaleY), grassColor));
+                grassLayer.append(sf::Vertex(sf::Vector2f(x, y + scaleY), grassColor));
+            }
+        }
+    }
+
+    return grassLayer;
+}
+
 // Creates the boidShape for the agents
 sf::ConvexShape createShape(float scaleX, float scaleY){
     sf::ConvexShape boidShape;
@@ -175,6 +216,7 @@ sf::ConvexShape createShape(float scaleX, float scaleY){
 
     return boidShape;
 }
+
 
 // Sets the shape of the agent to the right color and direction
 void setAgentShapeParameters(sf::ConvexShape& boidShape, const unique_ptr<Agent> &agent, float scaleX, float scaleY){
@@ -307,6 +349,10 @@ void World::draw(sf::RenderWindow& window){
     // Draws the background
     sf::Sprite backgroundSprite(gridTexture.getTexture());
     window.draw(backgroundSprite);
+
+    // Draws the food for prey
+    sf::VertexArray grassLayer = drawGrass(grid, scaleX, scaleY);
+    window.draw(grassLayer);
 
     // Draw the agents
     sf::ConvexShape boidShape = createShape(scaleX, scaleY);

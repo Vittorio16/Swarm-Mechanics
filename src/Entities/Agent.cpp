@@ -2,6 +2,8 @@
 #include <algorithm>
 #include "Entities/Agent.h"
 
+#include <iostream>
+
 // Helper function to find the closest enemy in the observation list
 const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& observations){
     const Observation* closestEnemy = nullptr;
@@ -39,6 +41,11 @@ void Agent::updateSensoryData(const vector<Observation>& observations){
     const Observation* closestEnemyObservation = getClosestEnemyObservation(observations);
     
     if (closestEnemyObservation != nullptr){
+        if (this->speciesID == -1){
+            cout << "prey detecting predator:" << endl;
+            cout <<  "x: " << closestEnemyObservation->dx<< ", y:" <<  closestEnemyObservation->dy << endl;
+            cout << "vx: " <<  closestEnemyObservation->otherAgent->vx << ", vy: "  <<  closestEnemyObservation->otherAgent->vy << endl;
+        }
         sensors.closestPredatorX = closestEnemyObservation->dx;
         sensors.closestPredatorY = closestEnemyObservation->dy;
         sensors.closestPredatorVx = closestEnemyObservation->otherAgent->vx;

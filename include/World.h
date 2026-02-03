@@ -2,20 +2,23 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <memory>
+#include <random>
 #include "Entities/Agent.h"
 using namespace std;
 
-
+constexpr float MAX_FOOD = 10.0f;
 constexpr int NUM_CELLE_X = 350;
 constexpr int NUM_CELLE_Y = 200;
 constexpr int NUM_PREDATOR = 30;
 constexpr int NUM_PREY = 10;
+
 enum Terrain {Standard};
 
 struct Cell{
     Terrain type;
+    float foodAmount;
 
-    Cell() : type(Terrain::Standard) {};
+    Cell() : type(Terrain::Standard), foodAmount(0.0f) {};
 };
 
 class World{
@@ -27,6 +30,12 @@ class World{
     vector<unique_ptr<Agent>> agents;
 
     vector<Observation> getObservation(const Agent* observer); 
+
+    // RNG for spawning entities and grass
+    mt19937 gen;
+    uniform_int_distribution<int> disX;
+    uniform_int_distribution<int> disY;
+
     public:
 
     World();
