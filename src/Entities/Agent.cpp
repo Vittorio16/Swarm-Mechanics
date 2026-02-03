@@ -27,7 +27,7 @@ Agent::Agent(float startX, float startY) :
 // Transforms an array of observations (1 per visible agent) 
 // into sensory data processable by the brain
 // It returns the data about the closest agent of a different species
-void Agent::updateSensoryData(const vector<Observation>& observations){
+void Agent::updateSensoryData(const vector<Observation>& observations, const vector<float>& scents){
     sensors.agentVx = vx;
     sensors.agentVy = vy;
     sensors.closestPredatorX = 0;
@@ -41,11 +41,6 @@ void Agent::updateSensoryData(const vector<Observation>& observations){
     const Observation* closestEnemyObservation = getClosestEnemyObservation(observations);
     
     if (closestEnemyObservation != nullptr){
-        if (this->speciesID == -1){
-            cout << "prey detecting predator:" << endl;
-            cout <<  "x: " << closestEnemyObservation->dx<< ", y:" <<  closestEnemyObservation->dy << endl;
-            cout << "vx: " <<  closestEnemyObservation->otherAgent->vx << ", vy: "  <<  closestEnemyObservation->otherAgent->vy << endl;
-        }
         sensors.closestPredatorX = closestEnemyObservation->dx;
         sensors.closestPredatorY = closestEnemyObservation->dy;
         sensors.closestPredatorVx = closestEnemyObservation->otherAgent->vx;

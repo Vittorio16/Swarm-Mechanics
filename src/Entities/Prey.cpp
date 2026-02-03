@@ -13,17 +13,73 @@ Prey::Prey(float x, float y): Agent(x, y) {
     this-> fovAngle = 120.0f;
 }
 
+// Private Helper: Get food at 1 specific pixel
+float Prey::getFoodAt(float x, float y, const vector<vector<Cell>>& grid) {
+    int ix = static_cast<int>(x);
+    int iy = static_cast<int>(y);
+    
+    // Wrap coordinates (Pac-man)
+    if (ix < 0) ix += NUM_CELLE_X;
+    else if (ix >= NUM_CELLE_X) ix -= NUM_CELLE_X;
+    
+    if (iy < 0) iy += NUM_CELLE_Y;
+    else if (iy >= NUM_CELLE_Y) iy -= NUM_CELLE_Y;
+
+    // Safety check
+    if (ix >= 0 && ix < NUM_CELLE_X && iy >= 0 && iy < NUM_CELLE_Y) {
+        return grid[ix][iy].foodAmount / MAX_FOOD;
+    }
+    return 0.0f;
+}
+
+// Private Helper: Trace a line
+float Prey::castFoodRay(float angle, float dist, const vector<vector<Cell>>& grid) {
+    float totalSmell = 0.0f;
+    int samples = 10;
+    
+    // Check points along the line
+    for (int i = 1; i <= samples; i++) {
+        float t = (float)i / samples;
+        float currentDist = dist * t;
+
+        float sampleX = this->x + cos(angle) * currentDist;
+        float sampleY = this->y + sin(angle) * currentDist;
+
+        totalSmell += getFoodAt(sampleX, sampleY, grid);
+    }
+    return totalSmell / samples;
+}
+
+// Called by update, get scents for a prey
+vector<float> Prey::senseFood(const vector<vector<Cell>>& grid) {
+    float heading = atan2(vy, vx);
+
+    float halfFovRad = (this->fovAngle) * (M_PI / 360.0f);
+    float angleOffset = halfFovRad * 0.75f;
+
+    float center = castFoodRay(heading, viewRadius, grid);
+    float left   = castFoodRay(heading - angleOffset, viewRadius, grid); // -30 deg
+    float right  = castFoodRay(heading + angleOffset, viewRadius, grid); // +30 deg
+
+    return {left, center, right};
+}
+
+// Updates the prey's sensory data with info about smell
+void Prey::updateSensoryData(const vector<Observation>& observations, const vector<float>& scentVals){
+    Agent::updateSensoryData(observations, scentVals);
+
+    sensors.foodSenseLeft = scentVals[0];
+    sensors.foodSenseLeft = scentVals[1];
+    sensors.foodSenseLeft = scentVals[2];
+}
+
 // Updates the energy of the prey
 void Prey::updateEnergy(float speed, float ax, float ay, float dt) {
     float actionEnergyCost = hypot(ax, ay) / this->force;
     float energyLoss = METABOLISM_COST * dt + actionEnergyCost * MAX_EFFORT_COST * dt;
     energy -= energyLoss;
 
-    // Prey right now gain energy by sgoing slower
-    float energyGain = (1 / speed) * 50 * dt;
-    energy += energyGain;
-
-    if (energy > 3 * MAX_ENERGY / 2) energy = 3 * MAX_ENERGY / 2;
+    // Prey gain energy by eating grass -- handled in world.update
 };
 
 // Makes an agent reproduce, diminishing its energy 

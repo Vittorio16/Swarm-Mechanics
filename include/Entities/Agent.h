@@ -32,10 +32,12 @@ class Agent{
         float agentVx, agentVy;
         float closestPredatorX, closestPredatorY;
         float closestPredatorVx, closestPredatorVy;
+        float foodSenseLeft, foodSenseCenter, foodSenseRight;
         Agent* closestEnemy;
         
         SensoryData() : agentVx(0), agentVy(0),
                         closestPredatorX(0), closestPredatorY(0), 
+                        foodSenseLeft(0), foodSenseCenter(0), foodSenseRight(0),
                         closestPredatorVx(0), closestPredatorVy(0), closestEnemy(nullptr) {}
     } sensors;
     // Physics variables
@@ -60,7 +62,7 @@ class Agent{
     virtual ~Agent() = default;
 
     // Makes decisions based on observation
-    void updateSensoryData(const vector<Observation>& observations);
+    virtual void updateSensoryData(const vector<Observation>& observations, const vector<float>& scents);
     void think();
 
     // Updates the agent's state

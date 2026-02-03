@@ -33,7 +33,14 @@ void World::update(float dt){
         if (!agent->isAlive) continue;
         vector<Observation> agentsInFOV = getObservation(agent.get());
 
-        agent->updateSensoryData(agentsInFOV);
+        // Update scents if the agent is a prey
+        vector<float> scents = {0.0f, 0.0f, 0.0f};
+        if (agent->speciesID == -1){
+            Prey* p = static_cast<Prey*>(agent.get());
+            scents = p->senseFood(this->grid);
+        }
+
+        agent->updateSensoryData(agentsInFOV, scents);
         agent->think();
     }
 
@@ -45,10 +52,6 @@ void World::update(float dt){
 
         // May want to separate movement from feeding
         agent->move(dt);
-        // Handles reproduction 
-        if (agent->energy > MAX_ENERGY){
-            nursery.push_back(agent->reproduce());
-        }    
 
         // Creates pacman style world
         if (agent->x > NUM_CELLE_X){
@@ -60,6 +63,27 @@ void World::update(float dt){
             agent->y -= NUM_CELLE_Y;
         } else if (agent->y < 0){
             agent->y += NUM_CELLE_Y;
+        }
+        
+        // Handles eating grass for prey
+        if (agent->speciesID == -1){
+            int cx = (int)agent->x;
+            int cy = (int)agent->y;
+
+            if (grid[cx][cy].foodAmount > 0){
+                // Amount eaten for time spent on cell
+                
+                //float amount = 20.0*dt;
+                if (grid[cx][cy].foodAmount != 0) cout << "Amount eaten: " << grid[cx][cy].foodAmount << endl;
+                agent->energy += grid[cx][cy].foodAmount * 10.0f;
+                grid[cx][cy].foodAmount = 0;
+
+            }
+        }
+        
+        // Handles reproduction 
+        if (agent->energy > MAX_ENERGY){
+            nursery.push_back(agent->reproduce());
         }
     }
     
@@ -77,7 +101,7 @@ void World::update(float dt){
     );
 
     // Grass growth
-    float spawnChance = 0.005f;
+    float spawnChance = 0.01f;
     int growthAttempts = 10;
     float growthAmount = 1000.0f * dt;
 
@@ -89,9 +113,7 @@ void World::update(float dt){
             int cy = disY(gen);
     
             grid[cx][cy].foodAmount = grid[cx][cy].foodAmount + growthAmount > MAX_FOOD ?
-                                        MAX_FOOD : grid[cx][cy].foodAmount + growthAmount;  
-    
-            cout << grid[cx][cy].foodAmount << endl;
+                                        MAX_FOOD : grid[cx][cy].foodAmount + growthAmount;
         }
     }
 }
