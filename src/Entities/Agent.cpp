@@ -55,7 +55,8 @@ void Agent::think(){
     vector<float> neualInputs = { 
         sensors.agentVx, sensors.agentVy, 
         sensors.closestPredatorX, sensors.closestPredatorY, 
-        sensors.closestPredatorVx, sensors.closestPredatorVy
+        sensors.closestPredatorVx, sensors.closestPredatorVy,
+        sensors.foodSenseLeft, sensors.foodSenseCenter, sensors.foodSenseRight
     };
     
     vector<float> neuralOutput = brain.feedForward(neualInputs);

@@ -74,7 +74,6 @@ void World::update(float dt){
                 // Amount eaten for time spent on cell
                 
                 //float amount = 20.0*dt;
-                if (grid[cx][cy].foodAmount != 0) cout << "Amount eaten: " << grid[cx][cy].foodAmount << endl;
                 agent->energy += grid[cx][cy].foodAmount * 10.0f;
                 grid[cx][cy].foodAmount = 0;
 
@@ -101,7 +100,7 @@ void World::update(float dt){
     );
 
     // Grass growth
-    float spawnChance = 0.01f;
+    float spawnChance = 0.005f;
     int growthAttempts = 10;
     float growthAmount = 1000.0f * dt;
 
