@@ -6,6 +6,7 @@ const float MAX_ENERGY = 100.0f;
 const float METABOLISM_COST = 0.05f;
 const float MAX_EFFORT_COST = 5.0f;
 const float RANGE_OF_VISION_SQ = 16.0f;
+const float DIGESTION_TIME = 4.0f;
 
 // Forward declaration of the world class
 class World;
@@ -33,12 +34,13 @@ class Agent{
         float closestEnemyX, closestEnemyY;
         float enemyClosingSpeed, enemyTangentialSpeed;
         float foodSenseX, foodSenseY;
+        float foodClosingVelocity, foodTangentialVelocity;
         Agent* closestEnemy;
         
         SensoryData() : agentSpeed(0),
                         closestEnemyX(0), closestEnemyY(0), 
                         enemyClosingSpeed(0), enemyTangentialSpeed(0), closestEnemy(nullptr),
-                        foodSenseX(0), foodSenseY(0) {}
+                        foodSenseX(0), foodSenseY(0), foodClosingVelocity(0), foodTangentialVelocity(0) {}
     } sensors;
     // Physics variables
     float friction;
@@ -49,6 +51,8 @@ class Agent{
     public:
     // Energy determines the state of life of the agent
     float energy;
+    float remainingDigestion;
+
     float rangeOfVision;
     float viewRadius;
     float fovAngle;
@@ -57,6 +61,7 @@ class Agent{
     bool isAlive;
     float x, y;
     float vx, vy, speed;
+    float facingAngle;
     
     Agent(float startX, float startY);
     virtual ~Agent() = default;

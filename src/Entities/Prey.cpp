@@ -28,10 +28,11 @@ float Prey::getFoodAt(int x, int y, const vector<vector<Cell>>& grid) {
 
 // Senses food in an area around the agent, and returns its relative center of mass
 vector<float> Prey::senseFood(const vector<vector<Cell>>& grid) {
-    float maxFoodX = 0.0f;
-    float maxFoodY = 0.0f;
-    float maxFood = 0.0f;
-    int radius = 5; //
+    float maxFoodCellX = 0.0f;
+    float maxFoodCellY = 0.0f;
+    float maxFood = -1.0f;
+    float bestDistSq = 99999;
+    int radius = 9;
 
     // Accumulate Global Vectors
     for (int i = -radius; i <= radius; i++) {
@@ -42,38 +43,67 @@ vector<float> Prey::senseFood(const vector<vector<Cell>>& grid) {
             int cy = (int)y + j;
             
             float food = getFoodAt(cx, cy, grid); 
-            
-            if (food > maxFood || (food == maxFood && (i*i + j*j < maxFoodX*maxFoodX + maxFoodY*maxFoodY))) {
-                maxFoodX = i;
-                maxFoodY = j;
-                maxFood = food;
+    
+            if (food > 0){
+                float distSq = (float)(i*i + j*j);
+
+                if (food > maxFood || (food == maxFood && distSq < bestDistSq )) {
+                    maxFoodCellX = i;
+                    maxFoodCellY = j;
+                    bestDistSq = distSq;
+                    maxFood = food;
+                }
             }
         }
     }
 
+    if (maxFood < 0) return {0, 0};
+
     // Rotate to Local Space (Agent's Perspective)
-    float heading = atan2(vy, vx);
+    float maxFoodX = maxFoodCellX + ((int)x - x) + 0.5f;
+    float maxFoodY = maxFoodCellY + ((int)y - y) + 0.5f;
+    
+    float heading = facingAngle;
     float c = cos(-heading);
     float s = sin(-heading);
 
     float localX = maxFoodX * c - maxFoodY * s;
     float localY = maxFoodX * s + maxFoodY * c;
 
-    // Normalize inputs for the Brain
-    float normalization = 10.0f; // Tune this based on typical food density
-
-    return { 
-        clamp(localX / normalization, -1.0f, 1.0f), 
-        clamp(localY / normalization, -1.0f, 1.0f) 
-    };
+    return {localX, localY};
 }
 
 // Updates the prey's sensory data with info about smell
 void Prey::updateSensoryData(const vector<Observation>& observations, const vector<float>& scentVals){
     Agent::updateSensoryData(observations, scentVals);
 
-    sensors.foodSenseX = scentVals[0];
-    sensors.foodSenseY= scentVals[1];
+    // Normalize inputs for the Brain    
+    float normalization = 10.0f;
+    sensors.foodSenseX = clamp(scentVals[0] / normalization, -1.0f, 1.0f);
+    sensors.foodSenseY = clamp(scentVals[1] / normalization, -1.0f, 1.0f);
+
+    if (abs(sensors.foodSenseX) < 0.001f && abs(sensors.foodSenseY) < 0.001f) {
+        sensors.foodClosingVelocity = 0.0f;
+        sensors.foodTangentialVelocity = 0.0f;
+        return;
+    }
+
+    float angleToFood = atan2(scentVals[1], scentVals[0]);
+    float c = cos(-facingAngle);
+    float s = sin(-facingAngle);
+
+    float vLongitudinal = vx * c - vy * s;
+    float vTangential = vx * s + vy * c;
+    
+    float ca = cos(angleToFood);
+    float sa = sin(angleToFood);
+
+    float closingVelocity = vLongitudinal * ca + vTangential * sa;
+    float tangentialVelocity = -vLongitudinal * sa + vTangential * ca;
+
+    sensors.foodClosingVelocity = closingVelocity / maxSpeed;
+    sensors.foodTangentialVelocity = tangentialVelocity / maxSpeed;
+
 }
 
 // Updates the energy of the prey
@@ -89,7 +119,7 @@ void Prey::updateEnergy(float ax, float ay, float dt) {
 // and creating a new agent with similar weights 
 unique_ptr<Agent> Prey::reproduce(){
     float energyCost = MAX_ENERGY / 2.0f;
-    energy -= 2 * energyCost ;
+    energy -= energyCost * 1.2f;
 
     float babyX = this->x + (randomFloat() * 10.0f - 5.0f);
     float babyY = this->y + (randomFloat() * 10.0f - 5.0f);

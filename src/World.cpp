@@ -54,31 +54,83 @@ void World::update(float dt){
         agent->move(dt);
 
         // Creates pacman style world
-        if (agent->x >= NUM_CELLE_X){
-            agent->x -= NUM_CELLE_X;
-        } else if (agent->x < 0){
-            agent->x += NUM_CELLE_X;
-        }
-        if (agent->y >= NUM_CELLE_Y){
-            agent->y -= NUM_CELLE_Y;
-        } else if (agent->y < 0){
-            agent->y += NUM_CELLE_Y;
-        }
+        while (agent->x >= NUM_CELLE_X) agent->x -= NUM_CELLE_X;
+        while (agent->x < 0) agent->x += NUM_CELLE_X;
+
+        while (agent->y >= NUM_CELLE_Y) agent->y -= NUM_CELLE_Y;
+        while (agent->y < 0) agent->y += NUM_CELLE_Y;
         
         // Handles eating grass for prey
         if (agent->speciesID == -1){
-            int cx = (int)agent->x;
-            int cy = (int)agent->y;
+            // Define Eat Range 
+            // 1.2 allows eating even if skimming the edge of the cell
+            float eatRadiusSq = 1.0f * 1.0f; 
 
-            if (grid[cx][cy].foodAmount > 0){
-                // Amount eaten for time spent on cell
-                
-                //float amount = 20.0*dt;
-                agent->energy += grid[cx][cy].foodAmount * 10.0f;
-                grid[cx][cy].foodAmount = 0;
+            int centerIndexX = (int)agent->x;
+            int centerIndexY = (int)agent->y;
 
+            // Check the 3x3 grid around the agent
+            // This ensures we can eat from a cell even if we drifted into its neighbor
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    
+                    // ACalculate Neighbor Coordinates (with wrapping)
+                    int tx = centerIndexX + dx;
+                    int ty = centerIndexY + dy;
+                    
+                    while (tx >= NUM_CELLE_X) tx -= NUM_CELLE_X;
+                    while (tx < 0)            tx += NUM_CELLE_X;
+                    while (ty >= NUM_CELLE_Y) ty -= NUM_CELLE_Y;
+                    while (ty < 0)            ty += NUM_CELLE_Y;
+
+                    // Skip empty cells
+                    if (grid[tx][ty].foodAmount <= 0) continue;
+
+                    // Calculate Distance to the CENTER of that target cell
+                    // Note: We use the relative (dx, dy) to calculate distance 
+                    // This handles the edge-of-world cases automatically.
+                    
+                    // Agent relative position in its current cell
+                    float fracX = agent->x - (int)agent->x; 
+                    float fracY = agent->y - (int)agent->y;
+                    
+                    // Vector from Agent to Target Cell Center
+                    // (Target Cell Offset) - (Agent Fractional Pos) + (Center Bias)
+                    float vecX = dx - fracX + 0.5f;
+                    float vecY = dy - fracY + 0.5f;
+
+                    float distSq = vecX*vecX + vecY*vecY;
+
+                    if (distSq < eatRadiusSq) {
+                        agent->energy += grid[tx][ty].foodAmount * 5.0f; 
+                        grid[tx][ty].foodAmount = 0;
+                        
+                        // Break here if you only want to eat 1 cell per frame
+                        goto finished_eating; 
+                    }
+                }
             }
+            finished_eating:;
         }
+        // if (agent->speciesID == -1){
+        //     int cx = (int)agent->x;
+        //     int cy = (int)agent->y;
+
+        //     if (cx >= NUM_CELLE_X) cx = NUM_CELLE_X - 1;
+        //     if (cx < 0) cx = 0;
+
+        //     if (cy >= NUM_CELLE_Y) cy = NUM_CELLE_Y - 1;
+        //     if (cy < 0) cy = 0;
+
+        //     if (grid[cx][cy].foodAmount > 0){
+        //         // Amount eaten for time spent on cell
+                
+        //         //float amount = 20.0*dt;
+        //         agent->energy += grid[cx][cy].foodAmount * 10.0f;
+        //         grid[cx][cy].foodAmount = 0;
+
+        //     }
+        // }
         
         // Handles reproduction 
         if (agent->energy > MAX_ENERGY){
@@ -381,7 +433,7 @@ void World::draw(sf::RenderWindow& window){
     for (const auto& agent : agents) {
         setAgentShapeParameters(boidShape, agent, scaleX, scaleY);
 
-        drawFOV(window, windowSize, agent, scaleX, scaleY);
+        //drawFOV(window, windowSize, agent, scaleX, scaleY);
         window.draw(boidShape);
     }
 }

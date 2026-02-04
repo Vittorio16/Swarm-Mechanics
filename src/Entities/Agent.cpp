@@ -20,9 +20,10 @@ const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& 
 }
 // Constructor
 Agent::Agent(float startX, float startY) : 
-        x(startX), y(startY), vx(0), vy(0),
-        ax(0), ay(0), friction(1.0f), 
-        energy(2 * MAX_ENERGY / 3), rangeOfVision(RANGE_OF_VISION_SQ), isAlive(true) {}
+        x(startX), y(startY), vx(0), vy(0), facingAngle(0),
+        ax(0), ay(0), friction(5.0f), 
+        energy(2 * MAX_ENERGY / 3), remainingDigestion(DIGESTION_TIME),
+        rangeOfVision(RANGE_OF_VISION_SQ), isAlive(true) {}
 
 // Transforms an array of observations (1 per visible agent) 
 // into sensory data processable by the brain
@@ -40,7 +41,7 @@ void Agent::updateSensoryData(const vector<Observation>& observations, const vec
     const Observation* closestEnemyObservation = getClosestEnemyObservation(observations);
     
     if (closestEnemyObservation != nullptr){
-        float heading = atan2(vy, vx);
+        float heading = facingAngle;
         float c = cos(-heading);
         float s = sin(-heading);
 
@@ -69,17 +70,25 @@ void Agent::updateSensoryData(const vector<Observation>& observations, const vec
 }
 
 void Agent::think(){
-    if (speciesID == -1 && (sensors.foodSenseX != 0 || sensors.foodSenseY != 0)) cout << "x: " << sensors.foodSenseX << ", y: " << sensors.foodSenseY << endl;
     vector<float> neuralInputs = { 
         sensors.agentSpeed / maxSpeed, 
         sensors.closestEnemyX / viewRadius, sensors.closestEnemyY / viewRadius, 
         sensors.enemyClosingSpeed, sensors.enemyTangentialSpeed,
-        sensors.foodSenseX, sensors.foodSenseY
+        sensors.foodSenseX, sensors.foodSenseY,
+        sensors.foodClosingVelocity, sensors.foodTangentialVelocity
     };
 
     vector<float> neuralOutput = brain.feedForward(neuralInputs);
-    ax = force * neuralOutput[0];
-    ay = force * neuralOutput[1];
+
+    float thrust = force * neuralOutput[0];
+    float strafing = force * neuralOutput[1];
+
+    float heading = facingAngle;
+    float c = cos(heading);
+    float s = sin(heading);
+
+    ax = thrust * c + strafing * s;
+    ay = thrust * s - strafing * c;
 }
 
 // Aggiorna la posizione dell'agente usando accelerazioni e dt
@@ -99,11 +108,19 @@ void Agent::move(float dt){
         vx *= excessRatio;
         vy *= excessRatio;
     }
+
+    if (speed > 0.1f){
+        facingAngle = atan2(vy, vx);
+    }
     // Update position
     x += vx * dt;
     y += vy * dt;
 
     // Updates the agent's energy and checks reproduction
+    if (remainingDigestion != 0){
+        remainingDigestion -= dt;
+        if (remainingDigestion < 0) remainingDigestion = 0; 
+    }
     updateEnergy(ax, ay, dt);
     if (energy <= 0) isAlive = false;
     

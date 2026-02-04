@@ -32,8 +32,10 @@ void Predator::updateEnergy(float ax, float ay, float dt) {
 // Makes an agent reproduce, diminishing its energy 
 // and creating a new agent with similar weights 
 unique_ptr<Agent> Predator::reproduce(){
+    remainingDigestion = DIGESTION_TIME;
+    
     float energyCost = MAX_ENERGY / 2.0f;
-    energy -= 3 * energyCost / 2;
+    energy -= energyCost * 1.2f;
 
     float babyX = this->x + (randomFloat() * 10.0f - 5.0f);
     float babyY = this->y + (randomFloat() * 10.0f - 5.0f);

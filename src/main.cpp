@@ -52,6 +52,7 @@ int main() {
         } else {
             // MODE B: Training
             dt = FIXED_TIME_STEP;
+            // dt = 0;
             clock.restart(); 
         }
 
