@@ -54,12 +54,12 @@ void World::update(float dt){
         agent->move(dt);
 
         // Creates pacman style world
-        if (agent->x > NUM_CELLE_X){
+        if (agent->x >= NUM_CELLE_X){
             agent->x -= NUM_CELLE_X;
         } else if (agent->x < 0){
             agent->x += NUM_CELLE_X;
         }
-        if (agent->y > NUM_CELLE_Y){
+        if (agent->y >= NUM_CELLE_Y){
             agent->y -= NUM_CELLE_Y;
         } else if (agent->y < 0){
             agent->y += NUM_CELLE_Y;

@@ -12,14 +12,14 @@ Predator::Predator(float x, float y): Agent(x, y) {
 }
 
 // Updates the energy of the predator
-void Predator::updateEnergy(float speed, float ax, float ay, float dt) {
+void Predator::updateEnergy(float ax, float ay, float dt) {
     float actionEnergyCost = hypot(ax, ay) / this->force;
     float energyLoss = METABOLISM_COST * dt + actionEnergyCost * MAX_EFFORT_COST * dt;
     energy -= energyLoss;
 
     // Predators gain energy by eating prey
     if (sensors.closestEnemy != nullptr && sensors.closestEnemy->isAlive){
-        float distSq = sensors.closestPredatorX*sensors.closestPredatorX + sensors.closestPredatorY*sensors.closestPredatorY;
+        float distSq = sensors.closestEnemyX*sensors.closestEnemyX + sensors.closestEnemyY*sensors.closestEnemyY;
         if (distSq < KILL_RANGE_SQ && sensors.closestEnemy->isAlive){
             energy += MAX_ENERGY / 2;
 

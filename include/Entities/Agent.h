@@ -29,16 +29,16 @@ class Agent{
     protected:
     // Sensory inputs which guide decisions
     struct SensoryData {
-        float agentVx, agentVy;
-        float closestPredatorX, closestPredatorY;
-        float closestPredatorVx, closestPredatorVy;
-        float foodSenseLeft, foodSenseCenter, foodSenseRight;
+        float agentSpeed;
+        float closestEnemyX, closestEnemyY;
+        float enemyClosingSpeed, enemyTangentialSpeed;
+        float foodSenseX, foodSenseY;
         Agent* closestEnemy;
         
-        SensoryData() : agentVx(0), agentVy(0),
-                        closestPredatorX(0), closestPredatorY(0), 
-                        foodSenseLeft(0), foodSenseCenter(0), foodSenseRight(0),
-                        closestPredatorVx(0), closestPredatorVy(0), closestEnemy(nullptr) {}
+        SensoryData() : agentSpeed(0),
+                        closestEnemyX(0), closestEnemyY(0), 
+                        enemyClosingSpeed(0), enemyTangentialSpeed(0), closestEnemy(nullptr),
+                        foodSenseX(0), foodSenseY(0) {}
     } sensors;
     // Physics variables
     float friction;
@@ -56,7 +56,7 @@ class Agent{
     int speciesID;
     bool isAlive;
     float x, y;
-    float vx, vy;
+    float vx, vy, speed;
     
     Agent(float startX, float startY);
     virtual ~Agent() = default;
@@ -67,7 +67,7 @@ class Agent{
 
     // Updates the agent's state
     void move(float dt);
-    virtual void updateEnergy(float speed, float ax, float ay, float dt) = 0;
+    virtual void updateEnergy(float ax, float ay, float dt) = 0;
     // Creates a new agent of the same species as the parent
     virtual unique_ptr<Agent> reproduce() = 0;
 

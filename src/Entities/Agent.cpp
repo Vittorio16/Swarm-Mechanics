@@ -28,12 +28,11 @@ Agent::Agent(float startX, float startY) :
 // into sensory data processable by the brain
 // It returns the data about the closest agent of a different species
 void Agent::updateSensoryData(const vector<Observation>& observations, const vector<float>& scents){
-    sensors.agentVx = vx;
-    sensors.agentVy = vy;
-    sensors.closestPredatorX = 0;
-    sensors.closestPredatorY = 0;
-    sensors.closestPredatorVx = 0;
-    sensors.closestPredatorVy = 0;
+    sensors.agentSpeed = speed;
+    sensors.closestEnemyX = 0;
+    sensors.closestEnemyY = 0;
+    sensors.enemyClosingSpeed = 0;
+    sensors.enemyTangentialSpeed = 0;
     sensors.closestEnemy = nullptr;
     
     if(observations.empty()) return;
@@ -41,10 +40,28 @@ void Agent::updateSensoryData(const vector<Observation>& observations, const vec
     const Observation* closestEnemyObservation = getClosestEnemyObservation(observations);
     
     if (closestEnemyObservation != nullptr){
-        sensors.closestPredatorX = closestEnemyObservation->dx;
-        sensors.closestPredatorY = closestEnemyObservation->dy;
-        sensors.closestPredatorVx = closestEnemyObservation->otherAgent->vx;
-        sensors.closestPredatorVy = closestEnemyObservation->otherAgent->vy;
+        float heading = atan2(vy, vx);
+        float c = cos(-heading);
+        float s = sin(-heading);
+
+        float relx = closestEnemyObservation->dx;
+        float rely = closestEnemyObservation->dy;
+
+        float localX = relx * c - rely * s;
+        float localY = relx * s + rely * c;
+
+        sensors.closestEnemyX = localX;
+        sensors.closestEnemyY = localY;
+
+        float relvx = closestEnemyObservation->otherAgent->vx - this->vx;
+        float relvy = closestEnemyObservation->otherAgent->vy - this->vy;
+
+        float vLongitudinal = relvx * c - relvy * s;
+        float vTangential = relvx * s + relvy * c;
+
+        // Normalize them here since I don't have access to enemy max speed in think
+        sensors.enemyClosingSpeed = vLongitudinal / closestEnemyObservation->otherAgent->maxSpeed;
+        sensors.enemyTangentialSpeed = vTangential / closestEnemyObservation->otherAgent->maxSpeed;
         sensors.closestEnemy = closestEnemyObservation->otherAgent;
     } 
     
@@ -52,14 +69,15 @@ void Agent::updateSensoryData(const vector<Observation>& observations, const vec
 }
 
 void Agent::think(){
-    vector<float> neualInputs = { 
-        sensors.agentVx, sensors.agentVy, 
-        sensors.closestPredatorX, sensors.closestPredatorY, 
-        sensors.closestPredatorVx, sensors.closestPredatorVy,
-        sensors.foodSenseLeft, sensors.foodSenseCenter, sensors.foodSenseRight
+    if (speciesID == -1 && (sensors.foodSenseX != 0 || sensors.foodSenseY != 0)) cout << "x: " << sensors.foodSenseX << ", y: " << sensors.foodSenseY << endl;
+    vector<float> neuralInputs = { 
+        sensors.agentSpeed / maxSpeed, 
+        sensors.closestEnemyX / viewRadius, sensors.closestEnemyY / viewRadius, 
+        sensors.enemyClosingSpeed, sensors.enemyTangentialSpeed,
+        sensors.foodSenseX, sensors.foodSenseY
     };
-    
-    vector<float> neuralOutput = brain.feedForward(neualInputs);
+
+    vector<float> neuralOutput = brain.feedForward(neuralInputs);
     ax = force * neuralOutput[0];
     ay = force * neuralOutput[1];
 }
@@ -74,7 +92,7 @@ void Agent::move(float dt){
     vy -= vy * friction * dt;
 
     // Checks constraint on speed
-    float speed = hypot(vx, vy);
+    speed = hypot(vx, vy);
 
     if (speed > maxSpeed){
         float excessRatio = maxSpeed / speed;
@@ -86,7 +104,7 @@ void Agent::move(float dt){
     y += vy * dt;
 
     // Updates the agent's energy and checks reproduction
-    updateEnergy(speed, ax, ay, dt);
+    updateEnergy(ax, ay, dt);
     if (energy <= 0) isAlive = false;
     
     // Reset acceleration for next frame
