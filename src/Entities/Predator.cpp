@@ -6,7 +6,7 @@
 Predator::Predator(float x, float y): Agent(x, y) {
     this->speciesID = 1;
     this->maxSpeed = 30.0f;
-    this->force = 75.0f;
+    this->force = 400.0f;
     this->viewRadius = 30.0f;
     this-> fovAngle = 90.0f;
 }
@@ -33,7 +33,7 @@ void Predator::updateEnergy(float ax, float ay, float dt) {
 // and creating a new agent with similar weights 
 unique_ptr<Agent> Predator::reproduce(){
     remainingDigestion = DIGESTION_TIME;
-    
+
     float energyCost = MAX_ENERGY / 2.0f;
     energy -= energyCost * 1.2f;
 

@@ -96,17 +96,18 @@ void Agent::move(float dt){
     // Update velocity using acceleration and friction
     vx += ax * dt;
     vy += ay * dt;
-
+    
     vx -= vx * friction * dt;
     vy -= vy * friction * dt;
-
+    
     // Checks constraint on speed
     speed = hypot(vx, vy);
-
+    
     if (speed > maxSpeed){
         float excessRatio = maxSpeed / speed;
         vx *= excessRatio;
         vy *= excessRatio;
+        speed = maxSpeed;
     }
 
     if (speed > 0.1f){
