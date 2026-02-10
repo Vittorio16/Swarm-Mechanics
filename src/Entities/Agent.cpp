@@ -1,6 +1,7 @@
 #include <cmath>
 #include <algorithm>
 #include "Entities/Agent.h"
+#include "Core/GlobalHelpers.h"
 
 #include <iostream>
 
@@ -21,7 +22,7 @@ const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& 
 // Constructor
 Agent::Agent(float startX, float startY) : 
         x(startX), y(startY), vx(0), vy(0), facingAngle(0),
-        ax(0), ay(0), friction(5.0f), 
+        ax(0), ay(0), friction(10.0f), 
         energy(2 * MAX_ENERGY / 3), remainingDigestion(DIGESTION_TIME),
         rangeOfVision(RANGE_OF_VISION_SQ), isAlive(true) {}
 
@@ -99,7 +100,7 @@ void Agent::move(float dt){
     
     vx -= vx * friction * dt;
     vy -= vy * friction * dt;
-    
+
     // Checks constraint on speed
     speed = hypot(vx, vy);
     
@@ -110,8 +111,16 @@ void Agent::move(float dt){
         speed = maxSpeed;
     }
 
+    // This makes for smooth turning, instead of instantaneous, and avoids crazy standstill rotation
     if (speed > 0.1f){
-        facingAngle = atan2(vy, vx);
+        float targetAngle = atan2(vy, vx);
+    
+        float turnSpeed = 10.0f;
+        // Ensures we never overshoot the wanted angle, no matted dt
+        float factor = turnSpeed * dt;
+        if (factor > 1) factor = 1;
+
+        facingAngle = lerpAngle(facingAngle, targetAngle, factor);
     }
     // Update position
     x += vx * dt;

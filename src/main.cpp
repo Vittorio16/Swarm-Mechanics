@@ -5,8 +5,8 @@ using namespace std;
 #include <iostream>
 
 int main() {
-    // Standard fixed step (1/60th of a second)
-    const float FIXED_TIME_STEP = 1.0f / 60.0f;
+    // Standard fixed step (1/200th of a second)
+    const float FIXED_TIME_STEP = 1.0f / 200.0f;
     constexpr int MAX_FPS = 170;
     
     sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Sim");

@@ -37,8 +37,8 @@ unique_ptr<Agent> Predator::reproduce(){
     float energyCost = MAX_ENERGY / 2.0f;
     energy -= energyCost * 1.2f;
 
-    float babyX = this->x + (randomFloat() * 10.0f - 5.0f);
-    float babyY = this->y + (randomFloat() * 10.0f - 5.0f);
+    float babyX = this->x + (randomFloat() * 2.0f - 1.0f);
+    float babyY = this->y + (randomFloat() * 2.0f - 1.0f);
 
     auto baby = make_unique<Predator>(babyX, babyY);
     

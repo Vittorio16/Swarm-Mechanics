@@ -9,7 +9,7 @@
 Prey::Prey(float x, float y): Agent(x, y) {
     this->speciesID = -1;
     this->maxSpeed = 25.0f;
-    this->force = 500.0f;
+    this->force = 1000.0f;
     this->viewRadius = 20.0f;
     this-> fovAngle = 120.0f;
 }
@@ -30,14 +30,18 @@ float Prey::getFoodAt(int x, int y, const vector<vector<Cell>>& grid) {
 vector<float> Prey::senseFood(const vector<vector<Cell>>& grid) {
     float maxFoodCellX = 0.0f;
     float maxFoodCellY = 0.0f;
-    float maxFood = -1.0f;
+    
     float bestDistSq = 99999;
-    int radius = 9;
+    float bestFoodScore = -1;
+
+    int radius = 20;
 
     // Accumulate Global Vectors
     for (int i = -radius; i <= radius; i++) {
         for (int j = -radius; j <= radius; j++) {
             
+            if (i == 0 && j == 0) continue;
+
             // Calculate actual grid coordinates with wrapping
             int cx = (int)x + i;
             int cy = (int)y + j;
@@ -46,18 +50,20 @@ vector<float> Prey::senseFood(const vector<vector<Cell>>& grid) {
     
             if (food > 0){
                 float distSq = (float)(i*i + j*j);
+                float foodScore = food*food / distSq;
 
-                if (food > maxFood || (food == maxFood && distSq < bestDistSq )) {
+                if (foodScore > bestFoodScore) {
                     maxFoodCellX = i;
                     maxFoodCellY = j;
+
                     bestDistSq = distSq;
-                    maxFood = food;
+                    bestFoodScore = foodScore;
                 }
             }
         }
     }
 
-    if (maxFood < 0) return {0, 0};
+    if (bestFoodScore < 0) return {0, 0};
 
     // Rotate to Local Space (Agent's Perspective)
     float maxFoodX = maxFoodCellX + ((int)x - x) + 0.5f;
@@ -121,8 +127,8 @@ unique_ptr<Agent> Prey::reproduce(){
     float energyCost = MAX_ENERGY / 2.0f;
     energy -= energyCost * 1.2f;
 
-    float babyX = this->x + (randomFloat() * 10.0f - 5.0f);
-    float babyY = this->y + (randomFloat() * 10.0f - 5.0f);
+    float babyX = this->x + (randomFloat() * 2.0f - 1.0f);
+    float babyY = this->y + (randomFloat() * 2.0f - 2.0f);
 
     auto baby = make_unique<Prey>(babyX, babyY);
     

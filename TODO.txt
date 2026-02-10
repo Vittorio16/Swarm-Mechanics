@@ -1,0 +1,35 @@
+In no specific order:
+
+--- Behavioural changes ---
+// The best cell to head to should be a mix of energy and distance
+
+Try to stop spin to win behaviour 
+
+Make predators better
+
+Try to stop orbiting behaviour and "indecision" which causes stalling:
+- add layers to the network?  
+- increasing view radius to 20 seem to fix this
+
+Fix apparent discrepancy in behaviour when fast forward - maybe decrease time interval
+- in display mode, time interval is around 72 / 10 000 of a second
+
+--- Physics changes ---
+Actually work out physics of movement to make some sense of what values to assign
+
+Prevent infinite rotation when standing still:
+- could add maximum angular velocity, but this may worsen skating
+
+
+
+--- Additions ---
+Epoch training:
+- find a way to pool "best agents" from each simulation
+- add a "decreasing change" as generations progress variable
+
+Improve world resource generation
+
+
+In reality, entities learn how to act by copying parent or by reward from environment - could work on this
+
+May try to implement a memory function 
