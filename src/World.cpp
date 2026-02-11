@@ -102,10 +102,12 @@ void World::update(float dt){
                     float distSq = vecX*vecX + vecY*vecY;
 
                     if (distSq < eatRadiusSq) {
+                        agent->energyGained += grid[tx][ty].foodAmount * 5.0f;
+                        
                         agent->energy += grid[tx][ty].foodAmount * 5.0f; 
                         grid[tx][ty].foodAmount = 0;
                         
-                        // Break here if you only want to eat 1 cell per frame
+                        
                         goto finished_eating; 
                     }
                 }
@@ -173,7 +175,7 @@ void World::update(float dt){
 vector<Observation> World::getObservation(const Agent* observer){
     vector<Observation> observations;
 
-    float observerHeading = atan2(observer->vy, observer->vx);
+    float observerHeading = observer->facingAngle;
     for (const auto& otherUnique : agents){
         Agent* otherAgent = otherUnique.get();
 
@@ -287,6 +289,7 @@ sf::ConvexShape createShape(float scaleX, float scaleY){
     
     boidShape.setOutlineThickness(1.0f);
 
+    boidShape.setOrigin(0.0f, 0.0f);
     return boidShape;
 }
 
@@ -308,25 +311,17 @@ void setAgentShapeParameters(sf::ConvexShape& boidShape, const unique_ptr<Agent>
 
     boidShape.setPosition(pixelX, pixelY);
     
-    // Rotation based on velocity
-    if (agent->vx != 0 || agent->vy != 0) {
-        float angleRadians = std::atan2(agent->vy, agent->vx);
-        float angleDegrees = angleRadians * 180.0f / M_PI;
-        
+    // Rotation based on facing angle
+    float angleDegrees = agent->facingAngle * 180.0f / M_PI;
         boidShape.setRotation(angleDegrees);
-    }
 }
-
 // Draws the cone of vision for each agent
 void drawFOV(sf::RenderWindow& window, const sf::Vector2u& windowSize, const unique_ptr<Agent>& agent, float scaleX, float scaleY){
     float fovRadius = agent->viewRadius * scaleX;
     float fovAngle = agent->fovAngle * (M_PI / 180.0f);
     int triangleCount = 20; // Resolution of the arc
 
-    float heading = 0.0f;
-    if (agent->vx != 0 || agent->vy != 0) {
-        heading = std::atan2(agent->vy, agent->vx);
-    }
+    float heading = agent->facingAngle;
 
     // Size = Center + (Points on arc)
     sf::VertexArray fovShape(sf::TriangleFan, triangleCount + 1);

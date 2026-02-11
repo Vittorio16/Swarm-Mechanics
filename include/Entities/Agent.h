@@ -49,6 +49,10 @@ class Agent{
     float ax, ay;
     
     public:
+    // Data to assess fitness
+    float timeLived;
+    float energyGained;
+
     // Energy determines the state of life of the agent
     float energy;
     float remainingDigestion;
@@ -82,4 +86,7 @@ class Agent{
     // Helper function to get and set the brain of the reproducing agent
     const SimplePerceptron& getBrain() const {return brain;}
     void setBrain(const SimplePerceptron& babyBrain);
+
+    // Function to get the agent's fitnes
+    float getFitness() const;
 };

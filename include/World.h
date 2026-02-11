@@ -13,8 +13,6 @@ class World{
     vector<vector<Cell>> grid;
     sf::RenderTexture gridTexture; 
     bool gridTextureValid = false; 
-    
-    vector<unique_ptr<Agent>> agents;
 
     vector<Observation> getObservation(const Agent* observer); 
 
@@ -24,6 +22,7 @@ class World{
     uniform_int_distribution<int> disY;
 
     public:
+    vector<unique_ptr<Agent>> agents;
 
     World();
 

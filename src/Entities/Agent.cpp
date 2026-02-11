@@ -21,6 +21,7 @@ const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& 
 }
 // Constructor
 Agent::Agent(float startX, float startY) : 
+        timeLived(0), energyGained(0),
         x(startX), y(startY), vx(0), vy(0), facingAngle(0),
         ax(0), ay(0), friction(10.0f), 
         energy(2 * MAX_ENERGY / 3), remainingDigestion(DIGESTION_TIME),
@@ -94,6 +95,8 @@ void Agent::think(){
 
 // Aggiorna la posizione dell'agente usando accelerazioni e dt
 void Agent::move(float dt){
+    timeLived += dt;
+
     // Update velocity using acceleration and friction
     vx += ax * dt;
     vy += ay * dt;
@@ -112,7 +115,7 @@ void Agent::move(float dt){
     }
 
     // This makes for smooth turning, instead of instantaneous, and avoids crazy standstill rotation
-    if (speed > 0.1f){
+    if (speed > 0.2f){
         float targetAngle = atan2(vy, vx);
     
         float turnSpeed = 10.0f;
@@ -142,4 +145,9 @@ void Agent::move(float dt){
 // Sets the brain's weights like the given one -- for newborns
 void Agent::setBrain(const SimplePerceptron& newBrain){
     this->brain = newBrain;
+}
+
+// Gets the agent's fitness
+float Agent::getFitness() const {
+    return timeLived + (energyGained * 10.0f);
 }

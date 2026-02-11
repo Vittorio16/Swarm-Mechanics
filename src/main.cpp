@@ -1,19 +1,28 @@
-#include "World.h"
 #include <SFML/Graphics.hpp>
+#include <thread>
+#include <iostream>
+#include "SimulationManager.h"
+
 using namespace std;
 
-#include <iostream>
 
 int main() {
+    int numCores = std::thread::hardware_concurrency();
+    if (numCores == 0) numCores = 4; // Fallback
+
+    cout << "Running on " << numCores - 1 << " logical cores." << endl;
+
     // Standard fixed step (1/200th of a second)
     const float FIXED_TIME_STEP = 1.0f / 200.0f;
     constexpr int MAX_FPS = 170;
     
-    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Sim");
-    bool renderingEnabled = true; // Toggle this to run faster evolution
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Swarm Evolution");
+    bool renderingEnabled = false; // Toggle this to run faster evolution
 
     sf::Clock clock;
-    World myWorld;
+
+    SimulationManager simManager(numCores - 1);
+
     window.setFramerateLimit(MAX_FPS);
 
     while (window.isOpen()) {
@@ -26,7 +35,7 @@ int main() {
                 sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
                 window.setView(sf::View(visibleArea));
 
-                myWorld.resizeGridTexture(event.size.width, event.size.height);
+                simManager.resizeTexture(event.size.width, event.size.height);
             }
             // TOGGLE MODES
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::R) {
@@ -42,26 +51,26 @@ int main() {
             }
         }
 
-        // --- 1. ALWAYS UPDATE LOGIC ---
+        // --- ALWAYS UPDATE LOGIC ---
         // Even if we don't draw, the simulation continues.
         float dt;
 
         if (renderingEnabled) {
             // MODE A: Real-Time
             dt = clock.restart().asSeconds();
+            if (dt > 0.05f) dt = 0.05f;
         } else {
             // MODE B: Training
             dt = FIXED_TIME_STEP;
-            // dt = 0;
             clock.restart(); 
         }
 
-        myWorld.update(dt);
+        simManager.update(dt, renderingEnabled);
 
         // --- 2. CONDITIONALLY DRAW ---
         if (renderingEnabled) {
             window.clear();
-            myWorld.draw(window);
+            simManager.draw(window);
             window.display();
         } else {
             // Optional: Sleep a tiny bit to prevent CPU burning if you don't want max speed

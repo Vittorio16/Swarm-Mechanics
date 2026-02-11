@@ -73,3 +73,14 @@ void SimplePerceptron::mutate(){
     mutateVector(b0);
     mutateVector(b1);
 }
+
+vector<vector<float>> SimplePerceptron::getWeights(){
+    return {w01, w12, b0, b1};
+}
+
+void SimplePerceptron::setWeights(const vector<vector<float>>& newWeights){
+    w01 = newWeights[0];
+    w12 = newWeights[1];
+    b0 = newWeights[2];
+    b1 = newWeights[3];
+}

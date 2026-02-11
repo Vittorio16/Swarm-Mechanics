@@ -5,10 +5,10 @@
 // Constructor
 Predator::Predator(float x, float y): Agent(x, y) {
     this->speciesID = 1;
-    this->maxSpeed = 30.0f;
+    this->maxSpeed = 35.0f;
     this->force = 400.0f;
-    this->viewRadius = 30.0f;
-    this-> fovAngle = 90.0f;
+    this->viewRadius = 40.0f;
+    this-> fovAngle = 120.0f;
 }
 
 // Updates the energy of the predator
@@ -22,6 +22,7 @@ void Predator::updateEnergy(float ax, float ay, float dt) {
         float distSq = sensors.closestEnemyX*sensors.closestEnemyX + sensors.closestEnemyY*sensors.closestEnemyY;
         if (distSq < KILL_RANGE_SQ && sensors.closestEnemy->isAlive){
             energy += MAX_ENERGY / 2;
+            energyGained += MAX_ENERGY / 2;
 
             sensors.closestEnemy->isAlive = false;
         }
