@@ -15,14 +15,12 @@ SimulationManager::SimulationManager(int cores) : numCores(cores) {
 
 // Updates all worlds
 void SimulationManager::update(float dt, bool renderEnabled) {
-    generationTimer += dt;
-
     if (renderEnabled) {
+        generationTimer += dt;
         worlds[0]->update(dt);
     } 
     else {
         vector<future<void>> futures;
-        
         int batchSize = 50;
 
         for (auto& world : worlds) {
@@ -35,17 +33,19 @@ void SimulationManager::update(float dt, bool renderEnabled) {
                 }
             ));
         }
-        
         // Wait for all to finish (Implicitly happens when futures go out of scope, 
         // but getting them ensures synchronization)
         for (auto& f : futures) {
             f.get();
         }
+
+        generationTimer += dt * batchSize;
     }
 
     if (generationTimer >= GENERATION_DURATION) {
-        evolve();
         generationTimer = 0.0f;
+        generationCount++;
+        evolve();
     }
 }
 
@@ -53,11 +53,84 @@ void SimulationManager::update(float dt, bool renderEnabled) {
 void SimulationManager::evolve() {
     cout << "--- Generation " << generationCount << " Complete ---" << endl;
     
-    // Handle getting best ones and merging their weights
+    vector<Prey*> allPrey;
+    vector<Predator*> allPredators;
+
+    //Collection of all agents from all worlds
+    for (auto& world : worlds){
+        // Collect living
+        for (auto& agent : world->agents){
+            if (agent->speciesID == -1){
+                allPrey.push_back(static_cast<Prey*>(agent.get()));
+            } else {
+                allPredators.push_back(static_cast<Predator*>(agent.get()));
+            }
+        }
+        // Collect dead
+        for (auto& agent : world->graveyard){
+            if (agent->speciesID == -1){
+                allPrey.push_back(static_cast<Prey*>(agent.get()));
+            } else {
+                allPredators.push_back(static_cast<Predator*>(agent.get()));
+            }
+        }
+    }
+
+    // Sort for getting the average
+    sort(allPrey.begin(), allPrey.end(),
+        [](Prey* a, Prey* b){
+            return a->getFitness() > b->getFitness();
+        });
+
+    sort(allPredators.begin(), allPredators.end(),
+        [](Predator* a, Predator* b){
+            return a->getFitness() > b->getFitness();
+        });
+
+    // Average and save
+    if (!allPrey.empty()){
+        cout << "Best Prey Fitness: " << allPrey[0]->getFitness() << endl;
+
+        // Take top 10%
+        int eliteCount = max(1, (int)(allPrey.size() * 0.1f));
+        vector<float> sumWeights = allPrey[0]->getBrain().getWeights(); 
+
+        for (int i = 1; i < eliteCount; i++){
+            vector<float> w = allPrey[i]->getBrain().getWeights(); 
+            for (size_t j = 0; j < w.size(); j++){
+                sumWeights[j] += w[j];
+            }
+        }
+
+        // Compute Average
+        for (size_t j = 0; j < sumWeights.size(); j++){
+            sumWeights[j] /= (float)eliteCount;
+        }
+        this->bestWeightsPrey = sumWeights; 
+    }
     
-    // Reset all worlds
+    if (!allPredators.empty()){
+        cout << "Best Predator Fitness: " << allPredators[0]->getFitness() << endl;
+
+        // Take top 10%
+        int eliteCount = max(1, (int)(allPredators.size() * 0.1f));
+        vector<float> sumWeights = allPredators[0]->getBrain().getWeights(); 
+
+        for (int i = 1; i < eliteCount; i++){
+            vector<float> w = allPredators[i]->getBrain().getWeights(); 
+            for (size_t j = 0; j < w.size(); j++){
+                sumWeights[j] += w[j];
+            }
+        }
+
+        // Compute Average
+        for (size_t j = 0; j < sumWeights.size(); j++){
+            sumWeights[j] /= (float)eliteCount;
+        }
+        this->bestWeightsPredator= sumWeights; 
+    }
+    // Reset simulation to apply these new weights
     resetSimulation();
-    generationCount++;
 }
 
 void SimulationManager::resetSimulation() {

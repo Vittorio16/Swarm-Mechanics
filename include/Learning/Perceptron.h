@@ -35,6 +35,6 @@ class SimplePerceptron{
     // Helper function to mutate brain of newborns
     void mutate();
     // Helpers to set weights at the start of the simulation
-    vector<vector<float>> getWeights();
-    void setWeights(const vector<vector<float>>& newWeights);
+    vector<float> getWeights() const;
+    void setWeights(const vector<float>& newWeights);
 };

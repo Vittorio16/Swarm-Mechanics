@@ -58,7 +58,7 @@ void SimplePerceptron::mutate(){
     // Helper lambda to mutate the weights
    auto mutateVector = [&](vector<float>& weights){
         for (float& w : weights){
-            if (randomFloat() < MUTATION_RATE){
+            if (randomFloat(0.0f, 1.0f) < MUTATION_RATE){
                 float change = randomFloat() * MUTATION_STRENGTH * 2 - MUTATION_STRENGTH;
 
                 w += change;
@@ -74,13 +74,36 @@ void SimplePerceptron::mutate(){
     mutateVector(b1);
 }
 
-vector<vector<float>> SimplePerceptron::getWeights(){
-    return {w01, w12, b0, b1};
+vector<float> SimplePerceptron::getWeights() const {
+    vector<float> allWeights;
+    allWeights.reserve(w01.size() + w12.size() + b0.size() + b1.size());
+
+    // Concatenate all vectors into one
+    allWeights.insert(allWeights.end(), w01.begin(), w01.end());
+    allWeights.insert(allWeights.end(), w12.begin(), w12.end());
+    allWeights.insert(allWeights.end(), b0.begin(), b0.end());
+    allWeights.insert(allWeights.end(), b1.begin(), b1.end());
+
+    return allWeights;
 }
 
-void SimplePerceptron::setWeights(const vector<vector<float>>& newWeights){
-    w01 = newWeights[0];
-    w12 = newWeights[1];
-    b0 = newWeights[2];
-    b1 = newWeights[3];
+void SimplePerceptron::setWeights(const vector<float>& newWeights) {
+    // Safety check
+    int expectedSize = w01.size() + w12.size() + b0.size() + b1.size();
+    if (newWeights.size() != expectedSize) {
+        return; 
+    }
+
+    auto it = newWeights.begin();
+
+    copy(it, it + w01.size(), w01.begin());
+    it += w01.size();
+
+    copy(it, it + w12.size(), w12.begin());
+    it += w12.size();
+
+    copy(it, it + b0.size(), b0.begin());
+    it += b0.size();
+    
+    copy(it, it + b1.size(), b1.begin());
 }

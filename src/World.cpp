@@ -26,6 +26,78 @@ World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)),
     }
 }
 
+// Helper to check if prey eats grass
+void World::checkPreyFeeding(unique_ptr<Agent>& agent){
+    // Define Eat Range 
+    float eatRadiusSq = 1.0f * 1.0f; 
+
+    int centerIndexX = (int)agent->x;
+    int centerIndexY = (int)agent->y;
+
+    // Check the 3x3 grid around the agent
+    // This ensures we can eat from a cell even if we drifted into its neighbor
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            
+            // ACalculate Neighbor Coordinates (with wrapping)
+            int tx = centerIndexX + dx;
+            int ty = centerIndexY + dy;
+            
+            while (tx >= NUM_CELLE_X) tx -= NUM_CELLE_X;
+            while (tx < 0)            tx += NUM_CELLE_X;
+            while (ty >= NUM_CELLE_Y) ty -= NUM_CELLE_Y;
+            while (ty < 0)            ty += NUM_CELLE_Y;
+
+            // Skip empty cells
+            if (grid[tx][ty].foodAmount <= 0) continue;
+
+            // Calculate Distance to the CENTER of that target cell
+            // Note: We use the relative (dx, dy) to calculate distance 
+            // This handles the edge-of-world cases automatically.
+            
+            // Agent relative position in its current cell
+            float fracX = agent->x - (int)agent->x; 
+            float fracY = agent->y - (int)agent->y;
+            
+            // Vector from Agent to Target Cell Center
+            // (Target Cell Offset) - (Agent Fractional Pos) + (Center Bias)
+            float vecX = dx - fracX + 0.5f;
+            float vecY = dy - fracY + 0.5f;
+
+            float distSq = vecX*vecX + vecY*vecY;
+
+            if (distSq < eatRadiusSq) {
+                agent->energyGained += grid[tx][ty].foodAmount * 5.0f;
+                
+                agent->energy += grid[tx][ty].foodAmount * 5.0f; 
+                grid[tx][ty].foodAmount = 0;
+                
+                
+                return;
+            }
+        }
+    }
+}
+
+// Grows the grass
+void World::growGrass(float dt){
+    float spawnChance = 0.005f;
+    int growthAttempts = 10;
+    float growthAmount = 1000.0f * dt;
+
+    static std::uniform_real_distribution<float> chance(0.0f, 1.0f);
+
+    for (int i = 0; i < growthAttempts; i++){
+        if (chance(gen) < spawnChance){
+            int cx = disX(gen);
+            int cy = disY(gen);
+    
+            grid[cx][cy].foodAmount = grid[cx][cy].foodAmount + growthAmount > MAX_FOOD ?
+                                        MAX_FOOD : grid[cx][cy].foodAmount + growthAmount;
+        }
+    }
+}
+
 // Updates the world each tick of the simulation
 void World::update(float dt){
     // First it checks the system state and lets agents decide
@@ -49,7 +121,6 @@ void World::update(float dt){
     // Then updates everything at the same time
     for (auto& agent : agents){
         if (!agent->isAlive) continue;
-
         // May want to separate movement from feeding
         agent->move(dt);
 
@@ -62,77 +133,8 @@ void World::update(float dt){
         
         // Handles eating grass for prey
         if (agent->speciesID == -1){
-            // Define Eat Range 
-            // 1.2 allows eating even if skimming the edge of the cell
-            float eatRadiusSq = 1.0f * 1.0f; 
-
-            int centerIndexX = (int)agent->x;
-            int centerIndexY = (int)agent->y;
-
-            // Check the 3x3 grid around the agent
-            // This ensures we can eat from a cell even if we drifted into its neighbor
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dy = -1; dy <= 1; dy++) {
-                    
-                    // ACalculate Neighbor Coordinates (with wrapping)
-                    int tx = centerIndexX + dx;
-                    int ty = centerIndexY + dy;
-                    
-                    while (tx >= NUM_CELLE_X) tx -= NUM_CELLE_X;
-                    while (tx < 0)            tx += NUM_CELLE_X;
-                    while (ty >= NUM_CELLE_Y) ty -= NUM_CELLE_Y;
-                    while (ty < 0)            ty += NUM_CELLE_Y;
-
-                    // Skip empty cells
-                    if (grid[tx][ty].foodAmount <= 0) continue;
-
-                    // Calculate Distance to the CENTER of that target cell
-                    // Note: We use the relative (dx, dy) to calculate distance 
-                    // This handles the edge-of-world cases automatically.
-                    
-                    // Agent relative position in its current cell
-                    float fracX = agent->x - (int)agent->x; 
-                    float fracY = agent->y - (int)agent->y;
-                    
-                    // Vector from Agent to Target Cell Center
-                    // (Target Cell Offset) - (Agent Fractional Pos) + (Center Bias)
-                    float vecX = dx - fracX + 0.5f;
-                    float vecY = dy - fracY + 0.5f;
-
-                    float distSq = vecX*vecX + vecY*vecY;
-
-                    if (distSq < eatRadiusSq) {
-                        agent->energyGained += grid[tx][ty].foodAmount * 5.0f;
-                        
-                        agent->energy += grid[tx][ty].foodAmount * 5.0f; 
-                        grid[tx][ty].foodAmount = 0;
-                        
-                        
-                        goto finished_eating; 
-                    }
-                }
-            }
-            finished_eating:;
+            checkPreyFeeding(agent);
         }
-        // if (agent->speciesID == -1){
-        //     int cx = (int)agent->x;
-        //     int cy = (int)agent->y;
-
-        //     if (cx >= NUM_CELLE_X) cx = NUM_CELLE_X - 1;
-        //     if (cx < 0) cx = 0;
-
-        //     if (cy >= NUM_CELLE_Y) cy = NUM_CELLE_Y - 1;
-        //     if (cy < 0) cy = 0;
-
-        //     if (grid[cx][cy].foodAmount > 0){
-        //         // Amount eaten for time spent on cell
-                
-        //         //float amount = 20.0*dt;
-        //         agent->energy += grid[cx][cy].foodAmount * 10.0f;
-        //         grid[cx][cy].foodAmount = 0;
-
-        //     }
-        // }
         
         // Handles reproduction 
         if (agent->energy > MAX_ENERGY){
@@ -144,31 +146,23 @@ void World::update(float dt){
     for (auto& baby : nursery){ 
         agents.push_back(std::move(baby));
     }
-    // Erases dead agents
-    agents.erase(
-        remove_if(agents.begin(), agents.end(), 
-            [](const std::unique_ptr<Agent>& a) {
-                return !a->isAlive; 
-            }),
-        agents.end()
-    );
+    // Erases dead agents - first moving them to graveyard for scoring purposes
+    auto firstDead = std::partition(agents.begin(), agents.end(), 
+        [](const std::unique_ptr<Agent>& a) {
+            return a->isAlive; 
+        });
 
-    // Grass growth
-    float spawnChance = 0.005f;
-    int growthAttempts = 10;
-    float growthAmount = 1000.0f * dt;
-
-    static std::uniform_real_distribution<float> chance(0.0f, 1.0f);
-
-    for (int i = 0; i < growthAttempts; i++){
-        if (chance(gen) < spawnChance){
-            int cx = disX(gen);
-            int cy = disY(gen);
-    
-            grid[cx][cy].foodAmount = grid[cx][cy].foodAmount + growthAmount > MAX_FOOD ?
-                                        MAX_FOOD : grid[cx][cy].foodAmount + growthAmount;
+    // Move the dead agents into the graveyard
+    for (auto it = firstDead; it != agents.end(); ++it) {
+        // Only save them if they actually did something useful
+        if ((*it)->getFitness() > 5.0f) { 
+            graveyard.push_back(std::move(*it));
         }
     }
+    agents.erase(firstDead, agents.end());
+
+    // Grass growth
+    growGrass(dt);
 }
 
 // Given an observer, returns a vector of pointers to all the agents it can see

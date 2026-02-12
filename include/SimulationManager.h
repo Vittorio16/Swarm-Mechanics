@@ -14,12 +14,12 @@ private:
     
     // Genetic Algorithm Settings
     float generationTimer = 0.0f;
-    const float GENERATION_DURATION = 180.0f; // Seconds per generation
+    const float GENERATION_DURATION = 60.0f; // Seconds per generation
     int generationCount = 0;
     
     // The "Master Brain" (Average of the best from previous gen)
-    vector<vector<float>> bestWeightsPrey;
-    vector<vector<float>> bestWeightsPredator;
+    vector<float> bestWeightsPrey;
+    vector<float> bestWeightsPredator;
 
 public:
     SimulationManager(int cores);
