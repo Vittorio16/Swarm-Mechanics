@@ -149,5 +149,10 @@ void Agent::setBrain(const SimplePerceptron& newBrain){
 
 // Gets the agent's fitness
 float Agent::getFitness() const {
-    return timeLived + (energyGained * 10.0f);
+    float fitness = timeLived + (energyGained + 10.0f);
+
+    if (isnan(fitness) || isinf(fitness)) {
+            return -1.0f; 
+    }
+    return fitness;
 }

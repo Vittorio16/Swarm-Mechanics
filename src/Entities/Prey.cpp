@@ -17,12 +17,14 @@ Prey::Prey(float x, float y): Agent(x, y) {
 // Helper: Safe grid access
 float Prey::getFoodAt(int x, int y, const vector<vector<Cell>>& grid) {
     // Handle Wrapping
-    while (x < 0) x += NUM_CELLE_X;
-    while (x >= NUM_CELLE_X) x -= NUM_CELLE_X;
-    
-    while (y < 0) y += NUM_CELLE_Y;
-    while (y >= NUM_CELLE_Y) y -= NUM_CELLE_Y;
+    if (isnan(x) || isinf(x)) x = 0.0f;
+    x = fmod(x, NUM_CELLE_X);
+    if (x < 0) x += NUM_CELLE_X;
 
+    if (isnan(y) || isinf(y)) y = 0.0f;
+    y = fmod(y, NUM_CELLE_Y);
+    if (y < 0) y += NUM_CELLE_Y;
+    
     return grid[x][y].foodAmount;
 }
 

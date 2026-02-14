@@ -34,6 +34,9 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
     int centerIndexX = (int)agent->x;
     int centerIndexY = (int)agent->y;
 
+    if (isnan(centerIndexX) || isinf(centerIndexX)) centerIndexX = 0.0f;
+    if (isnan(centerIndexY) || isinf(centerIndexY)) centerIndexY = 0.0f;
+
     // Check the 3x3 grid around the agent
     // This ensures we can eat from a cell even if we drifted into its neighbor
     for (int dx = -1; dx <= 1; dx++) {
@@ -43,10 +46,11 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
             int tx = centerIndexX + dx;
             int ty = centerIndexY + dy;
             
-            while (tx >= NUM_CELLE_X) tx -= NUM_CELLE_X;
-            while (tx < 0)            tx += NUM_CELLE_X;
-            while (ty >= NUM_CELLE_Y) ty -= NUM_CELLE_Y;
-            while (ty < 0)            ty += NUM_CELLE_Y;
+            tx = fmod(tx, NUM_CELLE_X);
+            if (tx < 0) tx += NUM_CELLE_X;
+
+            ty = fmod(ty, NUM_CELLE_Y);
+            if (ty < 0) ty += NUM_CELLE_Y;
 
             // Skip empty cells
             if (grid[tx][ty].foodAmount <= 0) continue;
@@ -125,12 +129,14 @@ void World::update(float dt){
         agent->move(dt);
 
         // Creates pacman style world
-        while (agent->x >= NUM_CELLE_X) agent->x -= NUM_CELLE_X;
-        while (agent->x < 0) agent->x += NUM_CELLE_X;
+        if (isnan(agent->x) || isinf(agent->x)) agent->x = 0.0f;
+        agent->x = fmod(agent->x, NUM_CELLE_X);
+        if(agent->x < 0) agent->x += NUM_CELLE_X;
 
-        while (agent->y >= NUM_CELLE_Y) agent->y -= NUM_CELLE_Y;
-        while (agent->y < 0) agent->y += NUM_CELLE_Y;
-        
+        if (isnan(agent->y) || isinf(agent->y)) agent->y = 0.0f;
+        agent->y = fmod(agent->y, NUM_CELLE_Y);
+        if(agent->y < 0) agent->y += NUM_CELLE_Y;
+
         // Handles eating grass for prey
         if (agent->speciesID == -1){
             checkPreyFeeding(agent);
@@ -194,9 +200,12 @@ vector<Observation> World::getObservation(const Agent* observer){
 
         float angleDiff = angleToTarget - observerHeading;
         // Normalize angle difference to be between -PI and PI
-        while (angleDiff <= -M_PI) angleDiff += 2 * M_PI;
-        while (angleDiff > M_PI) angleDiff -= 2 * M_PI;
-        
+        if (isnan(angleDiff) || isinf(angleDiff)) angleDiff = 0.0f;
+
+        angleDiff = fmod(angleDiff, 2*M_PI);
+        if (angleDiff <= M_PI) angleDiff += 2 * M_PI;
+        if (angleDiff > M_PI) angleDiff -= 2 * M_PI;
+
         if (abs(angleDiff) < observer->fovAngle * M_PI / 360.0f){
             observations.emplace_back(dx, dy, distSq, otherAgent);
         }

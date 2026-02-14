@@ -93,12 +93,24 @@ void SimulationManager::evolve() {
 
         // Take top 10%
         int eliteCount = max(1, (int)(allPrey.size() * 0.1f));
+
+        // To minimize influence of randomly bad simulations,
+        // we take the weighted average of the weights based on fitness
+        float totalEliteFitness = 0;
+        for (int i = 0; i < eliteCount; i++){
+            totalEliteFitness = max(0.001f, allPrey[i]->getFitness());
+        }
+
         vector<float> sumWeights = allPrey[0]->getBrain().getWeights(); 
 
         for (int i = 1; i < eliteCount; i++){
             vector<float> w = allPrey[i]->getBrain().getWeights(); 
+
+            float agentFitness = max(0.001f, allPrey[i]->getFitness());
+            float influence = agentFitness / totalEliteFitness;
+
             for (size_t j = 0; j < w.size(); j++){
-                sumWeights[j] += w[j];
+                sumWeights[j] += w[j] * influence;
             }
         }
 
