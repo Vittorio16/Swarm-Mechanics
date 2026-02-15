@@ -203,7 +203,7 @@ vector<Observation> World::getObservation(const Agent* observer){
         if (isnan(angleDiff) || isinf(angleDiff)) angleDiff = 0.0f;
 
         angleDiff = fmod(angleDiff, 2*M_PI);
-        if (angleDiff <= M_PI) angleDiff += 2 * M_PI;
+        if (angleDiff <= -M_PI) angleDiff += 2 * M_PI;
         if (angleDiff > M_PI) angleDiff -= 2 * M_PI;
 
         if (abs(angleDiff) < observer->fovAngle * M_PI / 360.0f){

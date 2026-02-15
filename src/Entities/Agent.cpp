@@ -101,8 +101,10 @@ void Agent::move(float dt){
     vx += ax * dt;
     vy += ay * dt;
     
-    vx -= vx * friction * dt;
-    vy -= vy * friction * dt;
+    // Ensures friction never reverses velocity
+    float retention = max(0.0f, 1.0f - (friction * dt));
+    vx *= retention;
+    vy *= retention;
 
     // Checks constraint on speed
     speed = hypot(vx, vy);

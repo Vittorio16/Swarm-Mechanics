@@ -99,7 +99,7 @@ void SimulationManager::evolve() {
         // we take the weighted average of the weights based on fitness
         float totalEliteFitness = 0;
         for (int i = 0; i < eliteCount; i++){
-            totalEliteFitness = max(0.001f, allPrey[i]->getFitness());
+            totalEliteFitness += max(0.001f, allPrey[i]->getFitness());
         }
 
         vector<float> sumWeights = allPrey[0]->getBrain().getWeights(); 
@@ -129,7 +129,7 @@ void SimulationManager::evolve() {
         // we take the weighted average of the weights based on fitness
         float totalEliteFitness = 0;
         for (int i = 0; i < eliteCount; i++){
-            totalEliteFitness = max(0.001f, allPredators[i]->getFitness());
+            totalEliteFitness += max(0.001f, allPredators[i]->getFitness());
         }
 
         vector<float> sumWeights = allPredators[0]->getBrain().getWeights(); 
