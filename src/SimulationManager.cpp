@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <iostream>
 #include "SimulationManager.h"
-
+#include "Core/GlobalHelpers.h"
 // Constructor
 SimulationManager::SimulationManager(int cores) : numCores(cores) {
     // Initialize N worlds
@@ -66,7 +66,7 @@ void SimulationManager::evolve() {
                 allPredators.push_back(static_cast<Predator*>(agent.get()));
             }
         }
-        // Collect dead
+        // Collect dea
         for (auto& agent : world->graveyard){
             if (agent->speciesID == -1){
                 allPrey.push_back(static_cast<Prey*>(agent.get()));
@@ -91,8 +91,9 @@ void SimulationManager::evolve() {
     if (!allPrey.empty()){
         cout << "Best Prey Fitness: " << allPrey[0]->getFitness() << endl;
 
-        // Take top 10%
+        // Take top 10% -- capped to avoid dilution
         int eliteCount = max(1, (int)(allPrey.size() * 0.1f));
+        eliteCount = min(50, eliteCount);
 
         // To minimize influence of randomly bad simulations,
         // we take the weighted average of the weights based on fitness
@@ -114,10 +115,7 @@ void SimulationManager::evolve() {
             }
         }
 
-        // Compute Average
-        for (size_t j = 0; j < sumWeights.size(); j++){
-            sumWeights[j] /= (float)eliteCount;
-        }
+        // Average already computed using totalEliteFitness
         this->bestWeightsPrey = sumWeights; 
     }
     
@@ -126,19 +124,28 @@ void SimulationManager::evolve() {
 
         // Take top 10%
         int eliteCount = max(1, (int)(allPredators.size() * 0.1f));
+
+        // To minimize influence of randomly bad simulations,
+        // we take the weighted average of the weights based on fitness
+        float totalEliteFitness = 0;
+        for (int i = 0; i < eliteCount; i++){
+            totalEliteFitness = max(0.001f, allPredators[i]->getFitness());
+        }
+
         vector<float> sumWeights = allPredators[0]->getBrain().getWeights(); 
 
         for (int i = 1; i < eliteCount; i++){
             vector<float> w = allPredators[i]->getBrain().getWeights(); 
+
+            float agentFitness = max(0.001f, allPredators[i]->getFitness());
+            float influence = agentFitness / totalEliteFitness;
+
             for (size_t j = 0; j < w.size(); j++){
-                sumWeights[j] += w[j];
+                sumWeights[j] += w[j] * influence;
             }
         }
 
-        // Compute Average
-        for (size_t j = 0; j < sumWeights.size(); j++){
-            sumWeights[j] /= (float)eliteCount;
-        }
+        // Average already computed using totalEliteFitness
         this->bestWeightsPredator= sumWeights; 
     }
     // Reset simulation to apply these new weights
@@ -157,22 +164,34 @@ void SimulationManager::resetSimulation() {
         for (auto& agent : world->agents) {
             if (agent->speciesID == -1 && !bestWeightsPrey.empty()) {
                 Prey* p = static_cast<Prey*>(agent.get());
-                SimplePerceptron brain = p->getBrain();
-                
-                brain.setWeights(bestWeightsPrey);
-                brain.mutate(); 
-                
-                p->setBrain(brain);
+
+                // Randomly sets some agents' brain to avoid local minima
+                if (randomFloat(0.0f, 1.0f) < 0.10f){
+                    p->setBrain(SimplePerceptron());
+                } else {
+                    SimplePerceptron brain = p->getBrain();
+                    
+                    brain.setWeights(bestWeightsPrey);
+                    brain.mutate(); 
+                    
+                    p->setBrain(brain);
+                }
             }
             
             if (agent->speciesID == 1 && !bestWeightsPredator.empty()) {
                 Predator* p = static_cast<Predator*>(agent.get());
-                SimplePerceptron brain = p->getBrain();
-
-                brain.setWeights(bestWeightsPredator);
-                brain.mutate();
-
-                p->setBrain(brain);
+                
+                // Sets some agents' brains randomly to avoid local minima
+                if (randomFloat(0.0f, 1.0f) < 0.10f){
+                    p->setBrain(SimplePerceptron());
+                } else {
+                    SimplePerceptron brain = p->getBrain();
+    
+                    brain.setWeights(bestWeightsPredator);
+                    brain.mutate();
+    
+                    p->setBrain(brain);
+                }
             }
         }
     }

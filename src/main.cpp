@@ -17,7 +17,7 @@ int main() {
     constexpr int MAX_FPS = 170;
     
     sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Swarm Evolution");
-    bool renderingEnabled = false; // Toggle this to run faster evolution
+    bool renderingEnabled = true; // Toggle this to run faster evolution
 
     sf::Clock clock;
 

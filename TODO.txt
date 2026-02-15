@@ -12,6 +12,8 @@ Try to stop orbiting behaviour and "indecision" which causes stalling:
 // Fix apparent discrepancy in behaviour when fast forward - maybe decrease time interval
 // - in display mode, time interval is around 72 / 10 000 of a second
 
+Experiment with different fitness functions -- make kills worth more for predators
+
 --- Physics changes ---
 Actually work out physics of movement to make some sense of what values to assign
 
@@ -19,15 +21,29 @@ Actually work out physics of movement to make some sense of what values to assig
 // - could add maximum angular velocity, but this may worsen skating
 // - fixed by making turning gradual
 
+Fix apparent mismatch in agent generation
 
 --- Additions ---
 Epoch training:
-- find a way to pool "best agents" from each simulation
+// - find a way to pool "best agents" from each simulation
 - add a "decreasing change" as generations progress variable -- could do this across different epochs
+- keep weights at the end
 
 Improve world resource generation
 
 
 In reality, entities learn how to act by copying parent or by reward from environment - could work on this
 
-May try to implement a memory function 
+
+
+--- Experimentation ---
+
+Use velocities as outputs
+Modify agents' frame of reference 
+
+Curriculum Learning
+Different network topologies
+Different species (if agents learn different things)
+
+Memory implementation - pass outputs as inputs
+Randomize some inputs - number of agents, world generation...
