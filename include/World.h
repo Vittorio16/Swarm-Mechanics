@@ -13,16 +13,21 @@ class World{
     vector<vector<Cell>> grid;
     sf::RenderTexture gridTexture; 
     bool gridTextureValid = false; 
-
+    
     vector<Observation> getObservation(const Agent* observer); 
     // Helpers to check for prey eating grass and growing grass
     void checkPreyFeeding(unique_ptr<Agent>& agent);
     void growGrass(float dt);
-
+    
     // RNG for spawning entities and grass
     mt19937 gen;
     uniform_int_distribution<int> disX;
     uniform_int_distribution<int> disY;
+    
+    // Uniform lattice for efficient enemy lookup
+    int lattice_width, lattice_height;
+    vector<vector<Agent*>> spatial_lattice;
+    void update_buckets();
 
     public:
     vector<unique_ptr<Agent>> agents;

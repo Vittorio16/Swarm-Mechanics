@@ -10,7 +10,10 @@ using namespace std;
 
 // Constructor
 World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)), 
+                lattice_width((int)ceil((float)NUM_CELLE_X / LATTICE_CELL_WIDTH)), lattice_height((int)ceil((float)NUM_CELLE_Y / LATTICE_CELL_HEIGHT)),
+                spatial_lattice(lattice_width * lattice_height),
                 gen(random_device{}()), disX(0, NUM_CELLE_X - 1), disY(0, NUM_CELLE_Y - 1) {
+
     // Puts set number of predators and preys in random positions
     for (int i = 0; i < NUM_PREDATOR; i++){
         float randX = disX(gen);
@@ -86,7 +89,7 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
 // Grows the grass
 void World::growGrass(float dt){
     float spawnChance = 0.005f;
-    int growthAttempts = 10;
+    int growthAttempts = 40;
     float growthAmount = 1000.0f * dt;
 
     static std::uniform_real_distribution<float> chance(0.0f, 1.0f);
@@ -102,8 +105,32 @@ void World::growGrass(float dt){
     }
 }
 
+
+// Resets all the buckets of the spatial lattice and updates their contents
+void World::update_buckets(){
+    for (auto& bucket : spatial_lattice){
+        bucket.clear();
+    }
+
+    for (auto& agent : agents){
+        if (!agent->isAlive) continue;
+
+        int bx = (int)(agent->x / LATTICE_CELL_WIDTH);
+        int by = (int)(agent->y / LATTICE_CELL_HEIGHT);
+        
+        bx = (bx % lattice_width + lattice_width) % lattice_width;
+        by = (by % lattice_height + lattice_height) % lattice_height;
+
+        spatial_lattice[by * lattice_width + bx].push_back(agent.get());
+    }
+}
+
+
 // Updates the world each tick of the simulation
 void World::update(float dt){
+    // Place each agent in the correct bucket in the spatial lattice
+    update_buckets();
+
     // First it checks the system state and lets agents decide
     for (auto& agent : agents){
         if (!agent->isAlive) continue;
@@ -176,38 +203,54 @@ vector<Observation> World::getObservation(const Agent* observer){
     vector<Observation> observations;
 
     float observerHeading = observer->facingAngle;
-    for (const auto& otherUnique : agents){
-        Agent* otherAgent = otherUnique.get();
+    
+    int bx = (int)(observer->x / LATTICE_CELL_WIDTH);
+    int by = (int)(observer->y / LATTICE_CELL_HEIGHT);
+    
+    bx = (bx % lattice_width + lattice_width) % lattice_width;
+    by = (by % lattice_height + lattice_height) % lattice_height;
+    
+    int max_x_distance = (int)ceil((float)observer->viewRadius / LATTICE_CELL_WIDTH);
+    int max_y_distance = (int)ceil((float)observer->viewRadius / LATTICE_CELL_HEIGHT);
+    
+    for (int i = - max_x_distance; i <= max_x_distance; i++){
+        for (int j = -max_y_distance; j <= max_y_distance; j++){
+            int temp_bx = ((bx + i) % lattice_width + lattice_width) % lattice_width;
+            int temp_by = ((by + j) % lattice_height + lattice_height) % lattice_height;
 
-        if (otherAgent == observer || !otherAgent->isAlive) continue;
-
-        vector<float> coords = getThoroidalCoordinates(
-            observer->x, observer->y, otherAgent->x, otherAgent->y, NUM_CELLE_X, NUM_CELLE_Y
-        );
-
-        float distSq = coords[0];
-        float angleToTarget = coords[1];
-        float dx = coords[2];
-        float dy = coords[3];
-
-        // Senses an area around the agent
-        if (distSq < observer->rangeOfVision){
-            observations.emplace_back(dx, dy, distSq, otherAgent);
-            continue;
-        }
-
-        if (distSq > (observer->viewRadius*observer->viewRadius)) continue;
-
-        float angleDiff = angleToTarget - observerHeading;
-        // Normalize angle difference to be between -PI and PI
-        if (isnan(angleDiff) || isinf(angleDiff)) angleDiff = 0.0f;
-
-        angleDiff = fmod(angleDiff, 2*M_PI);
-        if (angleDiff <= -M_PI) angleDiff += 2 * M_PI;
-        if (angleDiff > M_PI) angleDiff -= 2 * M_PI;
-
-        if (abs(angleDiff) < observer->fovAngle * M_PI / 360.0f){
-            observations.emplace_back(dx, dy, distSq, otherAgent);
+            for (Agent* otherAgent : spatial_lattice[temp_by * lattice_width + temp_bx]){
+        
+                if (otherAgent == observer || !otherAgent->isAlive) continue;
+        
+                vector<float> coords = getThoroidalCoordinates(
+                    observer->x, observer->y, otherAgent->x, otherAgent->y, NUM_CELLE_X, NUM_CELLE_Y
+                );
+        
+                float distSq = coords[0];
+                float angleToTarget = coords[1];
+                float dx = coords[2];
+                float dy = coords[3];
+        
+                // Senses an area around the agent
+                if (distSq < observer->rangeOfVision){
+                    observations.emplace_back(dx, dy, distSq, otherAgent);
+                    continue;
+                }
+        
+                if (distSq > (observer->viewRadius*observer->viewRadius)) continue;
+        
+                float angleDiff = angleToTarget - observerHeading;
+                // Normalize angle difference to be between -PI and PI
+                if (isnan(angleDiff) || isinf(angleDiff)) angleDiff = 0.0f;
+        
+                angleDiff = fmod(angleDiff, 2*M_PI);
+                if (angleDiff <= -M_PI) angleDiff += 2 * M_PI;
+                if (angleDiff > M_PI) angleDiff -= 2 * M_PI;
+        
+                if (abs(angleDiff) < observer->fovAngle * M_PI / 360.0f){
+                    observations.emplace_back(dx, dy, distSq, otherAgent);
+                }
+            }
         }
     }
     return observations;

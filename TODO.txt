@@ -24,26 +24,37 @@ Actually work out physics of movement to make some sense of what values to assig
 Fix apparent mismatch in agent generation
 
 --- Additions ---
+Spatial Hashing
+
 Epoch training:
 // - find a way to pool "best agents" from each simulation
 - add a "decreasing change" as generations progress variable -- could do this across different epochs
 - keep weights at the end
+- compare multiple generations when scoring fitness 
 
 Improve world resource generation
 
-
+Make everything dynamic according to world dimensions - ie grass growth
 In reality, entities learn how to act by copying parent or by reward from environment - could work on this
 
 
-
 --- Experimentation ---
-
+Find a way to "balance learning" - once predators get good, prey are hardly gonna be able to evolve
 Use velocities as outputs
 Modify agents' frame of reference 
 
+Different network topologies - complexification
+Speciating the population
+
 Curriculum Learning
-Different network topologies
-Different species (if agents learn different things)
 
 Memory implementation - pass outputs as inputs
+
 Randomize some inputs - number of agents, world generation...
+
+
+--- GOAL ---
+Ultimately, want to avoid using any sort of fitness function and base evolution purely on survival
+This requires:
+- a system resistant to extinction
+- a sufficiently well engineered resource generation, reproduction and energy gain logic
