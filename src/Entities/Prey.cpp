@@ -130,7 +130,7 @@ unique_ptr<Agent> Prey::reproduce(){
     energy -= energyCost * 1.2f;
 
     float babyX = this->x + (randomFloat() * 2.0f - 1.0f);
-    float babyY = this->y + (randomFloat() * 2.0f - 2.0f);
+    float babyY = this->y + (randomFloat() * 2.0f - 1.0f);
 
     auto baby = make_unique<Prey>(babyX, babyY);
     

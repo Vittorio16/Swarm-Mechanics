@@ -102,9 +102,9 @@ void SimulationManager::evolve() {
             totalEliteFitness += max(0.001f, allPrey[i]->getFitness());
         }
 
-        vector<float> sumWeights = allPrey[0]->getBrain().getWeights(); 
+        vector<float> sumWeights(allPrey[0]->getBrain().getWeights().size(), 0.0f); 
 
-        for (int i = 1; i < eliteCount; i++){
+        for (int i = 0; i < eliteCount; i++){
             vector<float> w = allPrey[i]->getBrain().getWeights(); 
 
             float agentFitness = max(0.001f, allPrey[i]->getFitness());

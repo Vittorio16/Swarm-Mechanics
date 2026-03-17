@@ -10,8 +10,8 @@ using namespace std;
 
 // Constructor
 World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)), 
-                lattice_width((int)ceil((float)NUM_CELLE_X / LATTICE_CELL_WIDTH)), lattice_height((int)ceil((float)NUM_CELLE_Y / LATTICE_CELL_HEIGHT)),
-                spatial_lattice(lattice_width * lattice_height),
+                lattice_x_cells((int)ceil((float)NUM_CELLE_X / LATTICE_CELL_WIDTH)), lattice_y_cells((int)ceil((float)NUM_CELLE_Y / LATTICE_CELL_HEIGHT)),
+                spatial_lattice(lattice_x_cells * lattice_y_cells),
                 gen(random_device{}()), disX(0, NUM_CELLE_X - 1), disY(0, NUM_CELLE_Y - 1) {
 
     // Puts set number of predators and preys in random positions
@@ -99,6 +99,10 @@ void World::growGrass(float dt){
             int cx = disX(gen);
             int cy = disY(gen);
     
+            if (grid[cx][cy].foodAmount <= 0){
+                activeGrass.push_back(sf::Vector2i(cx, cy));
+            }
+
             grid[cx][cy].foodAmount = grid[cx][cy].foodAmount + growthAmount > MAX_FOOD ?
                                         MAX_FOOD : grid[cx][cy].foodAmount + growthAmount;
         }
@@ -118,10 +122,10 @@ void World::update_buckets(){
         int bx = (int)(agent->x / LATTICE_CELL_WIDTH);
         int by = (int)(agent->y / LATTICE_CELL_HEIGHT);
         
-        bx = (bx % lattice_width + lattice_width) % lattice_width;
-        by = (by % lattice_height + lattice_height) % lattice_height;
+        bx = (bx % lattice_x_cells + lattice_x_cells) % lattice_x_cells;
+        by = (by % lattice_y_cells + lattice_y_cells) % lattice_y_cells;
 
-        spatial_lattice[by * lattice_width + bx].push_back(agent.get());
+        spatial_lattice[by * lattice_x_cells + bx].push_back(agent.get());
     }
 }
 
@@ -196,6 +200,14 @@ void World::update(float dt){
 
     // Grass growth
     growGrass(dt);
+
+    // Remove element from activeGrass if its food got eaten
+    activeGrass.erase(
+        remove_if(activeGrass.begin(), activeGrass.end(), 
+            [&](const sf::Vector2i& pos) {
+            return grid[pos.x][pos.y].foodAmount <= 0;}),
+            activeGrass.end()
+    );
 }
 
 // Given an observer, returns a vector of pointers to all the agents it can see
@@ -207,29 +219,29 @@ vector<Observation> World::getObservation(const Agent* observer){
     int bx = (int)(observer->x / LATTICE_CELL_WIDTH);
     int by = (int)(observer->y / LATTICE_CELL_HEIGHT);
     
-    bx = (bx % lattice_width + lattice_width) % lattice_width;
-    by = (by % lattice_height + lattice_height) % lattice_height;
+    bx = (bx % lattice_x_cells + lattice_x_cells) % lattice_x_cells;
+    by = (by % lattice_y_cells + lattice_y_cells) % lattice_y_cells;
     
     int max_x_distance = (int)ceil((float)observer->viewRadius / LATTICE_CELL_WIDTH);
     int max_y_distance = (int)ceil((float)observer->viewRadius / LATTICE_CELL_HEIGHT);
     
     for (int i = - max_x_distance; i <= max_x_distance; i++){
         for (int j = -max_y_distance; j <= max_y_distance; j++){
-            int temp_bx = ((bx + i) % lattice_width + lattice_width) % lattice_width;
-            int temp_by = ((by + j) % lattice_height + lattice_height) % lattice_height;
+            int temp_bx = ((bx + i) % lattice_x_cells + lattice_x_cells) % lattice_x_cells;
+            int temp_by = ((by + j) % lattice_y_cells + lattice_y_cells) % lattice_y_cells;
 
-            for (Agent* otherAgent : spatial_lattice[temp_by * lattice_width + temp_bx]){
+            for (Agent* otherAgent : spatial_lattice[temp_by * lattice_x_cells + temp_bx]){
         
                 if (otherAgent == observer || !otherAgent->isAlive) continue;
         
-                vector<float> coords = getThoroidalCoordinates(
+                ThoroidalData coords = getThoroidalCoordinates(
                     observer->x, observer->y, otherAgent->x, otherAgent->y, NUM_CELLE_X, NUM_CELLE_Y
                 );
         
-                float distSq = coords[0];
-                float angleToTarget = coords[1];
-                float dx = coords[2];
-                float dy = coords[3];
+                float distSq = coords.distSq;
+                float angleToTarget = coords.angleToTarget;
+                float dx = coords.dx;
+                float dy = coords.dy;
         
                 // Senses an area around the agent
                 if (distSq < observer->rangeOfVision){
@@ -293,28 +305,28 @@ void World::remapBackground(sf::Vector2u windowSize, float scaleX, float scaleY)
 }
 
 // Draws the layer of grass
-sf::VertexArray drawGrass(const vector<vector<Cell>>& grid, float scaleX, float scaleY){
+sf::VertexArray drawGrass(const vector<vector<Cell>>& grid, const vector<sf::Vector2i>& activeGrass, float scaleX, float scaleY){
     sf::VertexArray grassLayer(sf::Quads);
 
-    for (int i = 0; i < NUM_CELLE_X; i++){
-        for (int j = 0; j < NUM_CELLE_Y; j++){
-            if (grid[i][j].foodAmount > 0){
-                float x = scaleX * i;
-                float y = scaleY * j;
+    for (const auto& pos : activeGrass){
+        int i = pos.x;
+        int j = pos.y;
 
-                // Create a color based on how grown the grass is
-                sf::Uint8 alpha = static_cast<sf::Uint8>((grid[i][j].foodAmount / MAX_FOOD) * 255);
-                sf::Color grassColor(0, 200, 0, alpha); 
+        if (grid[i][j].foodAmount > 0){
+            float x = scaleX * i;
+            float y = scaleY * j;
 
-                // Define the 4 corners of the grass cell
-                grassLayer.append(sf::Vertex(sf::Vector2f(x, y), grassColor));
-                grassLayer.append(sf::Vertex(sf::Vector2f(x + scaleX, y), grassColor));
-                grassLayer.append(sf::Vertex(sf::Vector2f(x + scaleX, y + scaleY), grassColor));
-                grassLayer.append(sf::Vertex(sf::Vector2f(x, y + scaleY), grassColor));
-            }
+            // Create a color based on how grown the grass is
+            sf::Uint8 alpha = static_cast<sf::Uint8>((grid[i][j].foodAmount / MAX_FOOD) * 255);
+            sf::Color grassColor(0, 200, 0, alpha); 
+
+            // Define the 4 corners of the grass cell
+            grassLayer.append(sf::Vertex(sf::Vector2f(x, y), grassColor));
+            grassLayer.append(sf::Vertex(sf::Vector2f(x + scaleX, y), grassColor));
+            grassLayer.append(sf::Vertex(sf::Vector2f(x + scaleX, y + scaleY), grassColor));
+            grassLayer.append(sf::Vertex(sf::Vector2f(x, y + scaleY), grassColor));
         }
     }
-
     return grassLayer;
 }
 
@@ -465,7 +477,7 @@ void World::draw(sf::RenderWindow& window){
     window.draw(backgroundSprite);
 
     // Draws the food for prey
-    sf::VertexArray grassLayer = drawGrass(grid, scaleX, scaleY);
+    sf::VertexArray grassLayer = drawGrass(grid, activeGrass, scaleX, scaleY);
     window.draw(grassLayer);
 
     // Draw the agents

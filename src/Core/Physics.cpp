@@ -8,7 +8,7 @@
 using namespace std;
 
 // Returns {distanceSquared, angle}
-vector<float> getThoroidalCoordinates(float obsX, float obsY, float targetX, float targetY, int worldWidth, int worldHeight){
+ThoroidalData getThoroidalCoordinates(float obsX, float obsY, float targetX, float targetY, int worldWidth, int worldHeight){
 
     float dx = targetX - obsX;
     float dy = targetY - obsY;
@@ -32,5 +32,5 @@ vector<float> getThoroidalCoordinates(float obsX, float obsY, float targetX, flo
 
     vector<float> info = {distSq, angleToTarget, dx, dy};
     
-    return info;
+    return {distSq, angleToTarget, dx, dy};
 }

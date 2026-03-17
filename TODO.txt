@@ -23,8 +23,18 @@ Actually work out physics of movement to make some sense of what values to assig
 
 Fix apparent mismatch in agent generation
 
+
+--- Optimizations ---
+// - Spatial Hashing of prey sensing food
+- organize grid in a lattice
+- for each cell, calculate the total food within (can do it when growing food)
+- for each cell, calculate relative "center of mass" of food -- could be too intensive
+- for each cell, save vector of active food
+- in world for each prey, find the "reacheable" cell with the best score
+- in world loop through each activeFood in the best cell, 
+        and pass the best scent to the agent
+
 --- Additions ---
-Spatial Hashing
 
 Epoch training:
 // - find a way to pool "best agents" from each simulation

@@ -11,23 +11,28 @@ using namespace std;
 class World{
     private:
     vector<vector<Cell>> grid;
+    vector<sf::Vector2i> activeGrass;
+
+    // Uniform lattices for efficient enemy lookup and prey feeding
+    int lattice_x_cells, lattice_y_cells;
+    vector<vector<Agent*>> spatial_lattice;
+
+
+    void update_buckets();
+    
     sf::RenderTexture gridTexture; 
     bool gridTextureValid = false; 
-    
-    vector<Observation> getObservation(const Agent* observer); 
-    // Helpers to check for prey eating grass and growing grass
-    void checkPreyFeeding(unique_ptr<Agent>& agent);
-    void growGrass(float dt);
     
     // RNG for spawning entities and grass
     mt19937 gen;
     uniform_int_distribution<int> disX;
     uniform_int_distribution<int> disY;
     
-    // Uniform lattice for efficient enemy lookup
-    int lattice_width, lattice_height;
-    vector<vector<Agent*>> spatial_lattice;
-    void update_buckets();
+    vector<Observation> getObservation(const Agent* observer); 
+    
+    // Helpers to check for prey eating grass and growing grass
+    void checkPreyFeeding(unique_ptr<Agent>& agent);
+    void growGrass(float dt);
 
     public:
     vector<unique_ptr<Agent>> agents;
