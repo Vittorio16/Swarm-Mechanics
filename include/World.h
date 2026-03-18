@@ -5,18 +5,20 @@
 #include <random>
 #include "Core/Config.h"
 #include "Entities/Agent.h"
+#include "Entities/Prey.h"
 
 using namespace std;
 
 class World{
     private:
     vector<vector<Cell>> grid;
-    vector<sf::Vector2i> activeGrass;
-
+    
     // Uniform lattices for efficient enemy lookup and prey feeding
     int lattice_x_cells, lattice_y_cells;
     vector<vector<Agent*>> spatial_lattice;
-
+    
+    int food_lattice_x_cells, food_lattice_y_cells;
+    vector<FoodChunk> food_lattice;
 
     void update_buckets();
     
@@ -31,6 +33,7 @@ class World{
     vector<Observation> getObservation(const Agent* observer); 
     
     // Helpers to check for prey eating grass and growing grass
+    vector<float> getBestFoodScent(const Prey* prey); 
     void checkPreyFeeding(unique_ptr<Agent>& agent);
     void growGrass(float dt);
 

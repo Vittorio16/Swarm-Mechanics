@@ -68,3 +68,11 @@ Ultimately, want to avoid using any sort of fitness function and base evolution 
 This requires:
 - a system resistant to extinction
 - a sufficiently well engineered resource generation, reproduction and energy gain logic
+
+
+--- PROJECT TIMELINE ---
+- Created the basic framework
+- Experimented with different frames of reference for the agents, landed on "local perspecive of the world"
+- Worked out physics necessary to try and avoid orbiting
+- Implemented multi-threading to parallelize training
+- Optimized enemy lookup and prey feeding mechanics using lattices, to allow for bigger simulation (which in turn diminished variability)

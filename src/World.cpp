@@ -2,7 +2,6 @@
 #include <algorithm>
 #include "World.h"
 #include "Entities/Predator.h"
-#include "Entities/Prey.h"
 #include "Core/Physics.h"
 using namespace std;
 
@@ -12,6 +11,8 @@ using namespace std;
 World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)), 
                 lattice_x_cells((int)ceil((float)NUM_CELLE_X / LATTICE_CELL_WIDTH)), lattice_y_cells((int)ceil((float)NUM_CELLE_Y / LATTICE_CELL_HEIGHT)),
                 spatial_lattice(lattice_x_cells * lattice_y_cells),
+                food_lattice_x_cells((int)ceil((float)NUM_CELLE_X / FOOD_CELL_WIDTH)), food_lattice_y_cells((int)ceil((float)NUM_CELLE_Y / FOOD_CELL_HEIGHT)),
+                food_lattice(food_lattice_x_cells * food_lattice_y_cells),
                 gen(random_device{}()), disX(0, NUM_CELLE_X - 1), disY(0, NUM_CELLE_Y - 1) {
 
     // Puts set number of predators and preys in random positions
@@ -27,6 +28,102 @@ World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)),
 
         agents.push_back(make_unique<Prey>(randX, randY));
     }
+}
+
+// Helper to return to a prey the food scent (x, y) of the best food cell in its vision range
+vector<float> World::getBestFoodScent(const Prey* prey) {
+    int cx = (int)(prey->x / FOOD_CELL_WIDTH);
+    int cy = (int)(prey->y / FOOD_CELL_HEIGHT);
+    
+    int max_distance = ceil(prey->viewRadius / FOOD_CELL_WIDTH);
+    
+    float bestFoodScore = -1.0f;
+    int bestChunkIndex = -1;
+
+    // Loop through nearby chunks in the food lattice
+    for (int i = -max_distance; i <= max_distance; i++) {
+        for (int j = -max_distance; j <= max_distance; j++) {
+            int tx = ((cx + i) % food_lattice_x_cells + food_lattice_x_cells) % food_lattice_x_cells;
+            int ty = ((cy + j) % food_lattice_y_cells + food_lattice_y_cells) % food_lattice_y_cells;
+
+            int chunk_index = ty * food_lattice_x_cells + tx;   
+            FoodChunk& chunk = food_lattice[chunk_index];
+
+            if (chunk.totalFood > 0.001f){
+                float centerX = chunk.sumFoodX / chunk.totalFood;
+                float centerY = chunk.sumFoodY / chunk.totalFood;
+
+                // Calculate distance from prey to this chunk's center of mass
+                float dx = centerX - prey->x;
+                float dy = centerY - prey->y;
+
+                // Handle wrapping for distance calculation
+                if (dx > NUM_CELLE_X * 0.5f) dx -= NUM_CELLE_X;
+                if (dx < -NUM_CELLE_X * 0.5f) dx += NUM_CELLE_X;
+
+                if (dy > NUM_CELLE_Y * 0.5f) dy -= NUM_CELLE_Y;
+                if (dy < -NUM_CELLE_Y * 0.5f) dy += NUM_CELLE_Y;
+
+                float distSq = dx*dx + dy*dy;
+                if (distSq < 0.1f) distSq = 0.1f; // Avoid division by zero
+
+                if (distSq < prey->viewRadius * prey->viewRadius){
+                    float foodScore = chunk.totalFood*chunk.totalFood / distSq;
+
+                    if (foodScore > bestFoodScore) {
+                        bestFoodScore = foodScore;
+                        bestChunkIndex = chunk_index;
+                    }
+                }
+            }
+        }
+    }
+    // If no food found, return (0, 0)
+    if (bestChunkIndex == -1) return {0.0f, 0.0f};
+
+    // Now loop inside the best chunk to find the best cell, to improve precision when close to food
+    float bestCellFoodScore = -1.0f;
+    float bestCellX = 0.0f;
+    float bestCellY = 0.0f;
+
+    for (const sf::Vector2i& pos : food_lattice[bestChunkIndex].activeCells){
+        float food = grid[pos.x][pos.y].foodAmount;
+
+        // Skips if food eaten this frame
+        if (food <= 0.001f) continue;
+
+        float dx = pos.x + 0.5f - prey->x;
+        float dy = pos.y + 0.5f - prey->y;
+
+        // Handle wrapping for distance calculation
+        if (dx > NUM_CELLE_X * 0.5f) dx -= NUM_CELLE_X;
+        if (dx < -NUM_CELLE_X * 0.5f) dx += NUM_CELLE_X;
+
+        if (dy > NUM_CELLE_Y * 0.5f) dy -= NUM_CELLE_Y;
+        if (dy < -NUM_CELLE_Y * 0.5f) dy += NUM_CELLE_Y;
+
+        float distSq = dx*dx + dy*dy;
+        if (distSq < 0.1f) distSq = 0.1f; // Avoid division by zero
+
+        float foodScore = food*food / distSq;
+
+        if (foodScore > bestCellFoodScore){
+            bestCellFoodScore = foodScore;
+            bestCellX = dx;
+            bestCellY = dy;
+        }
+    }
+    if (bestCellFoodScore < 0) return {0.0f, 0.0f};
+
+    // Rotate to Local Space (Agent's Perspective)
+    float heading = prey->facingAngle;
+    float c = cos(-heading);
+    float s = sin(-heading);
+
+    float localX = bestCellX * c - bestCellY * s;
+    float localY = bestCellX * s + bestCellY * c;
+
+    return {localX, localY};
 }
 
 // Helper to check if prey eats grass
@@ -45,7 +142,7 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
             
-            // ACalculate Neighbor Coordinates (with wrapping)
+            // Calculate Neighbor Coordinates (with wrapping)
             int tx = centerIndexX + dx;
             int ty = centerIndexY + dy;
             
@@ -79,7 +176,21 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
                 agent->energy += grid[tx][ty].foodAmount * 5.0f; 
                 grid[tx][ty].foodAmount = 0;
                 
-                
+                // Update the food lattice
+                int cx = tx / FOOD_CELL_WIDTH;
+                int cy = ty / FOOD_CELL_HEIGHT;
+                int chunk_index = cy * food_lattice_x_cells + cx;
+
+                food_lattice[chunk_index].totalFood -= grid[tx][ty].foodAmount; 
+                food_lattice[chunk_index].sumFoodX -= tx * grid[tx][ty].foodAmount;
+                food_lattice[chunk_index].sumFoodY -= ty * grid[tx][ty].foodAmount;
+
+                if (food_lattice[chunk_index].totalFood <= 0.001f) {
+                    food_lattice[chunk_index].totalFood = 0.0f;
+                    food_lattice[chunk_index].sumFoodX = 0.0f;
+                    food_lattice[chunk_index].sumFoodY = 0.0f;
+                }
+
                 return;
             }
         }
@@ -99,12 +210,26 @@ void World::growGrass(float dt){
             int cx = disX(gen);
             int cy = disY(gen);
     
-            if (grid[cx][cy].foodAmount <= 0){
-                activeGrass.push_back(sf::Vector2i(cx, cy));
+            float current_food = grid[cx][cy].foodAmount;
+            float space_left = MAX_FOOD - current_food;
+
+            if (space_left <= 0) continue;
+
+            float actual_growth = min(growthAmount, space_left);
+
+            int chunk_x = cx / FOOD_CELL_WIDTH;
+            int chunk_y = cy / FOOD_CELL_HEIGHT;
+            int chunk_index = chunk_y * food_lattice_x_cells + chunk_x;
+
+            if (current_food <= 0){
+                food_lattice[chunk_index].activeCells.push_back(sf::Vector2i(cx, cy));
             }
 
-            grid[cx][cy].foodAmount = grid[cx][cy].foodAmount + growthAmount > MAX_FOOD ?
-                                        MAX_FOOD : grid[cx][cy].foodAmount + growthAmount;
+            grid[cx][cy].foodAmount += actual_growth;
+            food_lattice[chunk_index].totalFood += actual_growth;
+
+            food_lattice[chunk_index].sumFoodX += cx * actual_growth;
+            food_lattice[chunk_index].sumFoodY += cy * actual_growth;
         }
     }
 }
@@ -142,9 +267,10 @@ void World::update(float dt){
 
         // Update scents if the agent is a prey
         vector<float> scents = {0.0f, 0.0f, 0.0f};
+
         if (agent->speciesID == -1){
             Prey* p = static_cast<Prey*>(agent.get());
-            scents = p->senseFood(this->grid);
+            scents = getBestFoodScent(p);
         }
 
         agent->updateSensoryData(agentsInFOV, scents);
@@ -202,12 +328,14 @@ void World::update(float dt){
     growGrass(dt);
 
     // Remove element from activeGrass if its food got eaten
-    activeGrass.erase(
-        remove_if(activeGrass.begin(), activeGrass.end(), 
-            [&](const sf::Vector2i& pos) {
-            return grid[pos.x][pos.y].foodAmount <= 0;}),
-            activeGrass.end()
-    );
+    for (auto& chunk : food_lattice){ 
+        chunk.activeCells.erase(
+            remove_if(chunk.activeCells.begin(), chunk.activeCells.end(), 
+                [&](const sf::Vector2i& pos) {
+                return grid[pos.x][pos.y].foodAmount <= 0;}),
+                chunk.activeCells.end()
+        );
+    }
 }
 
 // Given an observer, returns a vector of pointers to all the agents it can see
@@ -305,26 +433,31 @@ void World::remapBackground(sf::Vector2u windowSize, float scaleX, float scaleY)
 }
 
 // Draws the layer of grass
-sf::VertexArray drawGrass(const vector<vector<Cell>>& grid, const vector<sf::Vector2i>& activeGrass, float scaleX, float scaleY){
+sf::VertexArray drawGrass(const vector<vector<Cell>>& grid, const vector<FoodChunk>& food_lattice, float scaleX, float scaleY){
     sf::VertexArray grassLayer(sf::Quads);
 
-    for (const auto& pos : activeGrass){
-        int i = pos.x;
-        int j = pos.y;
+    for (int chunkIndex = 0; chunkIndex < food_lattice.size(); chunkIndex++){
+        const FoodChunk& chunk = food_lattice[chunkIndex];
+        if (chunk.totalFood <= 0) continue;
 
-        if (grid[i][j].foodAmount > 0){
-            float x = scaleX * i;
-            float y = scaleY * j;
+        for (const auto& pos : chunk.activeCells){
+            int i = pos.x;
+            int j = pos.y;
 
-            // Create a color based on how grown the grass is
-            sf::Uint8 alpha = static_cast<sf::Uint8>((grid[i][j].foodAmount / MAX_FOOD) * 255);
-            sf::Color grassColor(0, 200, 0, alpha); 
+            if (grid[i][j].foodAmount > 0){
+                float x = scaleX * i;
+                float y = scaleY * j;
 
-            // Define the 4 corners of the grass cell
-            grassLayer.append(sf::Vertex(sf::Vector2f(x, y), grassColor));
-            grassLayer.append(sf::Vertex(sf::Vector2f(x + scaleX, y), grassColor));
-            grassLayer.append(sf::Vertex(sf::Vector2f(x + scaleX, y + scaleY), grassColor));
-            grassLayer.append(sf::Vertex(sf::Vector2f(x, y + scaleY), grassColor));
+                // Create a color based on how grown the grass is
+                sf::Uint8 alpha = static_cast<sf::Uint8>((grid[i][j].foodAmount / MAX_FOOD) * 255);
+                sf::Color grassColor(0, 200, 0, alpha); 
+
+                // Define the 4 corners of the grass cell
+                grassLayer.append(sf::Vertex(sf::Vector2f(x, y), grassColor));
+                grassLayer.append(sf::Vertex(sf::Vector2f(x + scaleX, y), grassColor));
+                grassLayer.append(sf::Vertex(sf::Vector2f(x + scaleX, y + scaleY), grassColor));
+                grassLayer.append(sf::Vertex(sf::Vector2f(x, y + scaleY), grassColor));
+            }
         }
     }
     return grassLayer;
@@ -477,7 +610,7 @@ void World::draw(sf::RenderWindow& window){
     window.draw(backgroundSprite);
 
     // Draws the food for prey
-    sf::VertexArray grassLayer = drawGrass(grid, activeGrass, scaleX, scaleY);
+    sf::VertexArray grassLayer = drawGrass(grid, food_lattice, scaleX, scaleY);
     window.draw(grassLayer);
 
     // Draw the agents
@@ -486,7 +619,7 @@ void World::draw(sf::RenderWindow& window){
     for (const auto& agent : agents) {
         setAgentShapeParameters(boidShape, agent, scaleX, scaleY);
 
-        //drawFOV(window, windowSize, agent, scaleX, scaleY);
+        // drawFOV(window, windowSize, agent, scaleX, scaleY);
         window.draw(boidShape);
     }
 }

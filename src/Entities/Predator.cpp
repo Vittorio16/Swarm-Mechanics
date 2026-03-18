@@ -7,7 +7,7 @@ Predator::Predator(float x, float y): Agent(x, y) {
     this->speciesID = 1;
     this->maxSpeed = 35.0f;
     this->force = 400.0f;
-    this->viewRadius = 40.0f;
+    this->viewRadius = 30.0f;
     this-> fovAngle = 120.0f;
 }
 
