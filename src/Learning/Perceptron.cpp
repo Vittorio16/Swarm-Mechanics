@@ -25,7 +25,7 @@ SimplePerceptron::SimplePerceptron() :
 
 // Calculates the ouputs of the network based on the given sensory inputs
 vector<float> SimplePerceptron::feedForward(const vector<float>& inputs){
-    vector<float> hiddenValues(hiddenNodes);
+    array<float, HIDDEN_LAYER_SIZE> hiddenValues;
 
     // Updates the neurons in the hidden node
     for (int i = 0; i < hiddenNodes; i++){

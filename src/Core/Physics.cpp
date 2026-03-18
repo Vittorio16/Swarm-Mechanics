@@ -29,8 +29,6 @@ ThoroidalData getThoroidalCoordinates(float obsX, float obsY, float targetX, flo
 
     float distSq = dx*dx + dy*dy;
     float angleToTarget = atan2(dy, dx);
-
-    vector<float> info = {distSq, angleToTarget, dx, dy};
     
     return {distSq, angleToTarget, dx, dy};
 }

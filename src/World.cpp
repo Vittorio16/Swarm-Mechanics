@@ -200,37 +200,44 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
 // Grows the grass
 void World::growGrass(float dt){
     float spawnChance = 0.005f;
-    int growthAttempts = 40;
+    int growthAttempts = (NUM_CELLE_X * NUM_CELLE_Y) * 0.0005f;
     float growthAmount = 1000.0f * dt;
 
+    // Avoids needless looping, running the RNG only once
+    float exactSpawnsFloat = growthAttempts * spawnChance;
+
+    int exactSpawns = (int)exactSpawnsFloat;
+
     static std::uniform_real_distribution<float> chance(0.0f, 1.0f);
+    float remainder = exactSpawnsFloat - exactSpawns;
+    if (chance(gen) < remainder) {
+        exactSpawns++; 
+    }
 
-    for (int i = 0; i < growthAttempts; i++){
-        if (chance(gen) < spawnChance){
-            int cx = disX(gen);
-            int cy = disY(gen);
-    
-            float current_food = grid[cx][cy].foodAmount;
-            float space_left = MAX_FOOD - current_food;
+    for (int i = 0; i < exactSpawns; i++){
+        int cx = disX(gen);
+        int cy = disY(gen);
 
-            if (space_left <= 0) continue;
+        float current_food = grid[cx][cy].foodAmount;
+        float space_left = MAX_FOOD - current_food;
 
-            float actual_growth = min(growthAmount, space_left);
+        if (space_left <= 0) continue;
 
-            int chunk_x = cx / FOOD_CELL_WIDTH;
-            int chunk_y = cy / FOOD_CELL_HEIGHT;
-            int chunk_index = chunk_y * food_lattice_x_cells + chunk_x;
+        float actual_growth = min(growthAmount, space_left);
 
-            if (current_food <= 0){
-                food_lattice[chunk_index].activeCells.push_back(sf::Vector2i(cx, cy));
-            }
+        int chunk_x = cx / FOOD_CELL_WIDTH;
+        int chunk_y = cy / FOOD_CELL_HEIGHT;
+        int chunk_index = chunk_y * food_lattice_x_cells + chunk_x;
 
-            grid[cx][cy].foodAmount += actual_growth;
-            food_lattice[chunk_index].totalFood += actual_growth;
-
-            food_lattice[chunk_index].sumFoodX += cx * actual_growth;
-            food_lattice[chunk_index].sumFoodY += cy * actual_growth;
+        if (current_food <= 0){
+            food_lattice[chunk_index].activeCells.push_back(sf::Vector2i(cx, cy));
         }
+
+        grid[cx][cy].foodAmount += actual_growth;
+        food_lattice[chunk_index].totalFood += actual_growth;
+
+        food_lattice[chunk_index].sumFoodX += cx * actual_growth;
+        food_lattice[chunk_index].sumFoodY += cy * actual_growth;
     }
 }
 
