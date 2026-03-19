@@ -6,8 +6,8 @@ using namespace std;
 
 constexpr float MAX_FOOD = 10.0f;
 
-constexpr int NUM_CELLE_X = 1920;
-constexpr int NUM_CELLE_Y = 1080;
+constexpr int NUM_CELLE_X = 480;
+constexpr int NUM_CELLE_Y = 270;
 
 // Enemy observation lattice parameters
 constexpr int LATTICE_CELL_WIDTH = 30;
@@ -17,8 +17,8 @@ constexpr int LATTICE_CELL_HEIGHT = 30;
 constexpr int FOOD_CELL_WIDTH = 10;
 constexpr int FOOD_CELL_HEIGHT = 10;
 
-constexpr int NUM_PREDATOR = 15;
-constexpr int NUM_PREY = 100;
+constexpr int NUM_PREDATOR = 0;
+constexpr int NUM_PREY = 1;
 
 enum Terrain {Standard};
 

@@ -61,7 +61,8 @@ int main() {
             if (dt > 0.05f) dt = 0.05f;
         } else {
             // MODE B: Training
-            dt = FIXED_TIME_STEP;
+            dt = 0; // Debugging mode
+            // dt = FIXED_TIME_STEP;
             clock.restart(); 
         }
 

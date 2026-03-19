@@ -1,5 +1,7 @@
 #include <cmath>
 #include <random>
+#include <array>
+
 #include "Learning/Perceptron.h"
 #include "Core/GlobalHelpers.h"
 

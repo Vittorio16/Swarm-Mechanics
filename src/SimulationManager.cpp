@@ -15,7 +15,7 @@ SimulationManager::SimulationManager(int cores) : numCores(cores) {
 
 // Updates all worlds
 void SimulationManager::update(float dt, bool renderEnabled) {
-    if (renderEnabled) {
+    if (renderEnabled || !renderEnabled) {
         generationTimer += dt;
         worlds[0]->update(dt);
     } 

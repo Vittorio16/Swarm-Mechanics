@@ -403,6 +403,49 @@ vector<Observation> World::getObservation(const Agent* observer){
     return observations;
 }
 
+
+// Optionally draw chunk boundaries for debugging
+void World::drawFoodLattice(float scaleX, float scaleY){
+    sf::Font font;
+    // Attempt to load the font. If it fails, we just skip drawing text so the game doesn't crash.
+    bool hasFont = font.loadFromFile("Roboto-Regular.ttf"); 
+    
+    sf::Text coordText;
+    if (hasFont) {
+        coordText.setFont(font);
+        coordText.setCharacterSize(10); // Very small text so it fits
+        coordText.setFillColor(sf::Color(0, 150, 0, 150)); // Faint green text
+    }
+
+    sf::RectangleShape chunkBox;
+    chunkBox.setFillColor(sf::Color::Transparent);
+    chunkBox.setOutlineColor(sf::Color(0, 100, 0));
+    chunkBox.setOutlineThickness(1.0f); 
+
+    // Calculate how many pixels wide/tall a single chunk is
+    float chunkPixelWidth = FOOD_CELL_WIDTH * scaleX;
+    float chunkPixelHeight = FOOD_CELL_HEIGHT * scaleY;
+
+    for (int i = 0; i < food_lattice_x_cells; i++) {
+        for (int j = 0; j < food_lattice_y_cells; j++) {
+            float posX = i * chunkPixelWidth;
+            float posY = j * chunkPixelHeight;
+
+            chunkBox.setPosition(posX, posY);
+            chunkBox.setSize(sf::Vector2f(chunkPixelWidth, chunkPixelHeight));
+            
+            gridTexture.draw(chunkBox);
+
+            if (hasFont) {
+                coordText.setString(std::to_string(i) + "," + std::to_string(j));
+                // Offset by 2 pixels so it doesn't overlap the border
+                coordText.setPosition(posX + 2, posY + 2); 
+                gridTexture.draw(coordText);
+            }
+        }
+    }
+}
+
 // Call this when window starts or resizes
 void World::resizeGridTexture(int width, int height) {
     if (width == 0 || height == 0) return;
@@ -435,6 +478,8 @@ void World::remapBackground(sf::Vector2u windowSize, float scaleX, float scaleY)
             }
         }
         
+        drawFoodLattice(scaleX, scaleY);
+
         gridTexture.display();
         gridTextureValid = true;
 }

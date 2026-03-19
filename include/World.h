@@ -47,6 +47,7 @@ class World{
 
     // Methods used for visual representation
     void draw(sf::RenderWindow& window);
+    void drawFoodLattice(float scaleX, float scaleY);
     void resizeGridTexture(int width, int height);
     void remapBackground(sf::Vector2u windowSize, float scaleX, float scaleY);
 
