@@ -208,7 +208,7 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
 
 // Grows the grass
 // Grows the grass (Hybrid "Spore & Roots" Method)
-void World::growGrass(float dt){
+void World::growGrass(float dt, int generationCount){
     float growthAmount = 1000.0f * dt;
 
     // Helper Lambda: Handles all the math for safely adding food to a specific (cx, cy)
@@ -236,10 +236,11 @@ void World::growGrass(float dt){
         food_lattice[chunk_index].sumFoodY += cy * actual_growth;
     };
 
-    static std::uniform_real_distribution<float> chance(0.0f, 1.0f);
+    static uniform_real_distribution<float> chance(0.0f, 1.0f);
 
-    // Generates around 2 new islands per second
-    float exactSpontaneousFloat = 2.0f * dt; 
+    // Generates around 2 new islands per second - decreasing with generation
+    float currentSpontaneousRate = max(0.5f, 2.0f - (generationCount * 0.01f));
+    float exactSpontaneousFloat = currentSpontaneousRate * dt;
     
     int spontaneousSpawns = (int)exactSpontaneousFloat;
     if (chance(gen) < (exactSpontaneousFloat - spontaneousSpawns)) {
@@ -252,7 +253,9 @@ void World::growGrass(float dt){
 
     // The rate at which existing grass spreads. 
     // Scaled by map area and dt so it grows smoothly regardless of framerate.
-    float exactExpansionFloat = (NUM_CELLE_X * NUM_CELLE_Y) * 0.05f * dt; 
+    // Decreases with generations
+    float currentExpansionRate = max(0.01f, 0.05f - (generationCount * 0.0002f));
+    float exactExpansionFloat = (NUM_CELLE_X * NUM_CELLE_Y) * currentExpansionRate * dt;
     
     int expansionSpawns = (int)exactExpansionFloat;
     if (chance(gen) < (exactExpansionFloat - expansionSpawns)) {
@@ -308,7 +311,7 @@ void World::update_buckets(){
 
 
 // Updates the world each tick of the simulation
-void World::update(float dt){
+void World::update(float dt, int generationCount){
     // Place each agent in the correct bucket in the spatial lattice
     update_buckets();
 
@@ -377,7 +380,7 @@ void World::update(float dt){
     agents.erase(firstDead, agents.end());
 
     // Grass growth
-    growGrass(dt);
+    growGrass(dt, generationCount);
 
     // Remove element from activeGrass if its food got eaten
     for (auto& chunk : food_lattice){ 

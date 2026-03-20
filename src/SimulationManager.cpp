@@ -18,7 +18,7 @@ SimulationManager::SimulationManager(int cores) : numCores(cores) {
 void SimulationManager::update(float dt, bool renderEnabled) {
     if (renderEnabled) {
         // Only update the first world if rendering is enabled to maintain performance
-        worlds[0]->update(dt);
+        worlds[0]->update(dt, this->generationCount);
         generationTimer += dt;
     } 
     else {
@@ -29,9 +29,9 @@ void SimulationManager::update(float dt, bool renderEnabled) {
             World* w = world.get(); 
             
             futures.push_back(async(launch::async, 
-                [w, dt, batchSize]() { 
+                [w, dt, batchSize, this]() { 
                     for (int i = 0; i < batchSize; i++){
-                        w->update(dt); 
+                        w->update(dt, this->generationCount); 
                     } 
                 }
             ));
@@ -46,7 +46,8 @@ void SimulationManager::update(float dt, bool renderEnabled) {
     }
 
     // Check for evolution
-    if (generationTimer >= GENERATION_DURATION) {
+    float currentDuration = std::min(180.0f, GENERATION_DURATION + generationCount * 3.0f);
+    if (generationTimer >= currentDuration) {
         generationTimer = 0.0f;
         generationCount++;
         evolve();
@@ -174,12 +175,34 @@ void SimulationManager::evolve() {
     float bestPreyFit = allPrey.empty() ? 0 : allPrey[0]->getFitness();
     float bestPredFit = allPredators.empty() ? 0 : allPredators[0]->getFitness();
 
-    // 1. Log the stats to a CSV (appends a new line every generation)
-    std::ofstream logFile("generation_stats.csv", ios_base::app);
+    // Log the stats to a CSV (appends a new line every generation)
+    std::ofstream logFile("../logs/generation_stats.csv", ios_base::app);
     if (logFile.is_open()) {
+        // Move cursor to the end and check the file size
+        logFile.seekp(0, std::ios_base::end); 
+        if (logFile.tellp() == 0) {
+            // If the file size is 0 bytes, write the header!
+            logFile << "Generation,PreyFitness,PredatorFitness\n";
+        }
+
         // Format: Generation, PreyFitness, PredatorFitness
         logFile << generationCount << "," << bestPreyFit << "," << bestPredFit << "\n";
         logFile.close();
+    }
+
+    // Checkpoint the weights every 3 generations
+    if (generationCount % 3 == 0) {
+        string preyFilename = "../logs/weights_prey_gen_" + to_string(generationCount) + ".txt";
+        string predFilename = "../logs/weights_pred_gen_" + to_string(generationCount) + ".txt";
+        
+        if (!bestWeightsPrey.empty()) saveWeightsToFile(preyFilename, bestWeightsPrey);
+        if (!bestWeightsPredator.empty()) saveWeightsToFile(predFilename, bestWeightsPredator);
+
+        string preyHoFFilename = "../logs/hof_prey_gen_" + to_string(generationCount) + ".txt";
+        string predHoFFilename = "../logs/hof_pred_gen_" + to_string(generationCount) + ".txt";
+        
+        if (!preyHallOfFame.empty()) saveHallOfFameToFile(preyHoFFilename, preyHallOfFame);
+        if (!predatorHallOfFame.empty()) saveHallOfFameToFile(predHoFFilename, predatorHallOfFame);
     }
 
     // Reset simulation to apply these new weights
@@ -192,6 +215,10 @@ void SimulationManager::resetSimulation() {
     for (int i = 0; i < numCores; i++) {
         worlds.push_back(make_unique<World>());
     }
+
+    // Adjust mutation parameters based on current generation count
+    float dynamicRate = std::max(0.02f, 0.20f - (generationCount * 0.005f));
+    float dynamicStrength = std::max(0.05f, 0.40f - (generationCount * 0.01f));
 
     // Give every new prey and predator the "Master Brain" + Mutation
     for (auto& world : worlds) {
@@ -207,7 +234,7 @@ void SimulationManager::resetSimulation() {
                     SimplePerceptron brain = p->getBrain();
                     
                     brain.setWeights(preyHallOfFame[index]);
-                    brain.mutate(); 
+                    brain.mutate(dynamicRate, dynamicStrength); 
                     
                     p->setBrain(brain);
                 } else if (roll < 0.20f){
@@ -216,7 +243,7 @@ void SimulationManager::resetSimulation() {
                     SimplePerceptron brain = p->getBrain();
                     
                     brain.setWeights(bestWeightsPrey);
-                    brain.mutate(); 
+                    brain.mutate(dynamicRate, dynamicStrength); 
                     
                     p->setBrain(brain);
                 }
@@ -231,7 +258,7 @@ void SimulationManager::resetSimulation() {
                     SimplePerceptron brain = p->getBrain();
                     
                     brain.setWeights(predatorHallOfFame[index]);
-                    brain.mutate(); 
+                    brain.mutate(dynamicRate, dynamicStrength); 
                     
                     p->setBrain(brain);
                 } else if (roll < 0.20f){
@@ -240,7 +267,7 @@ void SimulationManager::resetSimulation() {
                     SimplePerceptron brain = p->getBrain();
                     
                     brain.setWeights(bestWeightsPredator);
-                    brain.mutate(); 
+                    brain.mutate(dynamicRate, dynamicStrength); 
                     
                     p->setBrain(brain);
                 }
@@ -257,4 +284,35 @@ void SimulationManager::draw(sf::RenderWindow& window) {
 
 void SimulationManager::resizeTexture(int w, int h) {
     if (!worlds.empty()) worlds[0]->resizeGridTexture(w, h);
+}
+
+void SimulationManager::loadPreTrainedBrains(const string& preyBrains, const string& predatorBrains
+    , const string& hallOfFamePrey, const string& hallOfFamePredator) {
+    
+    // Load weights of chsen brains
+    vector<float> preyWeights = loadWeightsFromFile(preyBrains);
+    vector<float> predatorWeights = loadWeightsFromFile(predatorBrains);
+
+    if (!preyWeights.empty()) {
+        this->bestWeightsPrey = preyWeights;
+        cout << "Loaded Pre-trained Prey Brain!" << endl;
+    }
+    if (!predatorWeights.empty()) {
+        this->bestWeightsPredator = predatorWeights;
+        cout << "Loaded Pre-trained Predator Brain!" << endl;
+    }
+
+    // Load Hall of Fame if specified
+    if (!hallOfFamePrey.empty()) {
+        this->preyHallOfFame = loadHallOfFameFromFile(hallOfFamePrey);
+        cout << "Loaded Prey Hall of Fame! (" << this->preyHallOfFame.size() << " masters preserved)" << endl;
+    }
+    
+    if (!hallOfFamePredator.empty()) {
+        this->predatorHallOfFame = loadHallOfFameFromFile(hallOfFamePredator);
+        cout << "Loaded Predator Hall of Fame! (" << this->predatorHallOfFame.size() << " masters preserved)" << endl;
+    }
+
+    // Now restart the worlds with these new master brains
+    resetSimulation();
 }

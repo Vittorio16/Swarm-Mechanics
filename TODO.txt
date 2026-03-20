@@ -52,6 +52,8 @@ In reality, entities learn how to act by copying parent or by reward from enviro
 
 
 --- Experimentation ---
+// - train on differently sized maps
+
 Find a way to "balance learning" - once predators get good, prey are hardly gonna be able to evolve
 Use velocities as outputs
 Modify agents' frame of reference 
@@ -81,4 +83,4 @@ This requires:
 - Optimized enemy lookup and prey feeding mechanics using lattices, to allow for bigger simulation (which in turn diminished variability)
 - Implemented clustered food spawning to favour roaming
 - Added digestion time for more realistic behaviour
-- Implemented all of fame to prevent stagnating in evolution
+- Implemented hall of fame to prevent stagnating in evolution

@@ -15,6 +15,7 @@ private:
     vector<vector<float>> predatorHallOfFame;
     vector<vector<float>> preyHallOfFame;
     const int HALL_OF_FAME_SIZE = 50;
+    
     // Genetic Algorithm Settings
     float generationTimer = 0.0f;
     const float GENERATION_DURATION = 60.0f; // Seconds per generation
@@ -31,6 +32,9 @@ public:
     void evolve();
 
     void resetSimulation();
+
+    void loadPreTrainedBrains(const string& preyBrains, const string& predatorBrains, 
+        const string& hallOfFamePrey = "", const string& hallOfFamePredator = "");
 
     // Helper to draw the main world
     void draw(sf::RenderWindow& window);

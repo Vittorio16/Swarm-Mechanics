@@ -8,11 +8,11 @@
 // Constructor
 Prey::Prey(float x, float y): Agent(x, y) {
     this->speciesID = -1;
-    this->maxSpeed = 25.0f;
-    this->force = 500.0f;
+    this->maxSpeed = 35.0f;
+    this->force = 600.0f;
     this->viewRadius = 20.0f;
     this->eatRadius = 20;
-    this->fovAngle = 120.0f;
+    this->fovAngle = 360.0f;
     this->digestionTime = 1.0f;
     this->remainingDigestion = this->digestionTime;
 }

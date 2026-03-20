@@ -35,7 +35,7 @@ class World{
     // Helpers to check for prey eating grass and growing grass
     vector<float> getBestFoodScent(const Prey* prey); 
     void checkPreyFeeding(unique_ptr<Agent>& agent);
-    void growGrass(float dt);
+    void growGrass(float dt, int generationCount);
 
     public:
     vector<unique_ptr<Agent>> agents;
@@ -43,7 +43,7 @@ class World{
 
     World();
 
-    void update(float dt);
+    void update(float dt, int generationCount);
 
     // Methods used for visual representation
     void draw(sf::RenderWindow& window);

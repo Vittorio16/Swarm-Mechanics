@@ -56,12 +56,12 @@ vector<float> SimplePerceptron::feedForward(const vector<float>& inputs){
 }
 
 // Mutates randomly some weights of the network
-void SimplePerceptron::mutate(){
+void SimplePerceptron::mutate(float currentMutationRate, float currentMutationStrength){
     // Helper lambda to mutate the weights
    auto mutateVector = [&](vector<float>& weights){
         for (float& w : weights){
-            if (randomFloat(0.0f, 1.0f) < MUTATION_RATE){
-                float change = randomFloat() * MUTATION_STRENGTH * 2 - MUTATION_STRENGTH;
+            if (randomFloat(0.0f, 1.0f) < currentMutationRate){
+                float change = randomFloat() * currentMutationStrength * 2 - currentMutationStrength;
 
                 w += change;
                 if (w > 1.0f) w = 1.0f;

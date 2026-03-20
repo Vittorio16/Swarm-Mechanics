@@ -25,6 +25,13 @@ int main() {
 
     window.setFramerateLimit(MAX_FPS);
 
+    // Optional: Start in replay mode with a pre-trained brain
+    bool replayMode = false;
+    if (replayMode) {
+        // Load the sickest generation you saved
+        simManager.loadPreTrainedBrains("../logs/weights_prey_gen_24.txt", "../logs/weights_pred_gen_24.txt");
+    }
+
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
