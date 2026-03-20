@@ -128,14 +128,18 @@ vector<float> World::getBestFoodScent(const Prey* prey) {
 
 // Helper to check if prey eats grass
 void World::checkPreyFeeding(unique_ptr<Agent>& agent){
+    if (agent->remainingDigestion != 0) return;
+
     // Define Eat Range 
-    float eatRadiusSq = 1.0f * 1.0f; 
+    float eatRadiusSq = 2.0f * 2.0f; 
 
-    int centerIndexX = (int)agent->x;
-    int centerIndexY = (int)agent->y;
-
-    if (isnan(centerIndexX) || isinf(centerIndexX)) centerIndexX = 0.0f;
-    if (isnan(centerIndexY) || isinf(centerIndexY)) centerIndexY = 0.0f;
+    float posX = agent->x;
+    float posY = agent->y;
+    if (isnan(posX) || isinf(posX)) posX = 0.0f;
+    if (isnan(posY) || isinf(posY)) posY = 0.0f;
+    
+    int centerIndexX = (int)posX;
+    int centerIndexY = (int)posY;
 
     // Check the 3x3 grid around the agent
     // This ensures we can eat from a cell even if we drifted into its neighbor
@@ -146,11 +150,8 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
             int tx = centerIndexX + dx;
             int ty = centerIndexY + dy;
             
-            tx = fmod(tx, NUM_CELLE_X);
-            if (tx < 0) tx += NUM_CELLE_X;
-
-            ty = fmod(ty, NUM_CELLE_Y);
-            if (ty < 0) ty += NUM_CELLE_Y;
+            tx = ((tx % NUM_CELLE_X) + NUM_CELLE_X) % NUM_CELLE_X;
+            ty = ((ty % NUM_CELLE_Y) + NUM_CELLE_Y) % NUM_CELLE_Y;
 
             // Skip empty cells
             if (grid[tx][ty].foodAmount <= 0) continue;
@@ -171,8 +172,10 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
             float distSq = vecX*vecX + vecY*vecY;
 
             if (distSq < eatRadiusSq) {
+                // Prey begins digesting and gains energy based on the food eaten
                 float foodEaten = grid[tx][ty].foodAmount;
-
+                
+                agent->remainingDigestion = agent->digestionTime;
                 agent->energyGained += foodEaten * 5.0f;
                 agent->energy += foodEaten * 5.0f; 
                 

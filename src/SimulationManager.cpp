@@ -3,6 +3,7 @@
 #include <numeric>
 #include <algorithm>
 #include <iostream>
+#include <fstream>
 #include "SimulationManager.h"
 #include "Core/GlobalHelpers.h"
 // Constructor
@@ -16,25 +17,27 @@ SimulationManager::SimulationManager(int cores) : numCores(cores) {
 // Updates all worlds
 void SimulationManager::update(float dt, bool renderEnabled) {
     if (renderEnabled) {
-        generationTimer += dt;
+        // Only update the first world if rendering is enabled to maintain performance
         worlds[0]->update(dt);
+        generationTimer += dt;
     } 
     else {
         vector<future<void>> futures;
         int batchSize = 50;
 
         for (auto& world : worlds) {
-            // Launch async task for each world
+            World* w = world.get(); 
+            
             futures.push_back(async(launch::async, 
-                [&world, dt, batchSize]() { 
+                [w, dt, batchSize]() { 
                     for (int i = 0; i < batchSize; i++){
-                        world->update(dt); 
+                        w->update(dt); 
                     } 
                 }
             ));
         }
-        // Wait for all to finish (Implicitly happens when futures go out of scope, 
-        // but getting them ensures synchronization)
+        
+        // Wait for all threads to finish their batch
         for (auto& f : futures) {
             f.get();
         }
@@ -42,6 +45,7 @@ void SimulationManager::update(float dt, bool renderEnabled) {
         generationTimer += dt * batchSize;
     }
 
+    // Check for evolution
     if (generationTimer >= GENERATION_DURATION) {
         generationTimer = 0.0f;
         generationCount++;
@@ -89,6 +93,14 @@ void SimulationManager::evolve() {
 
     // Average and save
     if (!allPrey.empty()){
+        // Save to hall of fame
+        if (generationCount % 3 == 0){
+            preyHallOfFame.push_back(allPrey[0]->getBrain().getWeights());
+            if (preyHallOfFame.size() > HALL_OF_FAME_SIZE){
+                preyHallOfFame.erase(preyHallOfFame.begin());
+            }
+        }
+
         cout << "Best Prey Fitness: " << allPrey[0]->getFitness() << endl;
 
         // Take top 10% -- capped to avoid dilution
@@ -120,10 +132,19 @@ void SimulationManager::evolve() {
     }
     
     if (!allPredators.empty()){
+        // Save to hall of fame
+        if (generationCount % 3 == 0){
+            predatorHallOfFame.push_back(allPredators[0]->getBrain().getWeights());
+            if (predatorHallOfFame.size() > HALL_OF_FAME_SIZE){
+                predatorHallOfFame.erase(predatorHallOfFame.begin());
+            }
+        }
+
         cout << "Best Predator Fitness: " << allPredators[0]->getFitness() << endl;
 
         // Take top 10%
         int eliteCount = max(1, (int)(allPredators.size() * 0.1f));
+        eliteCount = min(50, eliteCount);
 
         // To minimize influence of randomly bad simulations,
         // we take the weighted average of the weights based on fitness
@@ -132,9 +153,9 @@ void SimulationManager::evolve() {
             totalEliteFitness += max(0.001f, allPredators[i]->getFitness());
         }
 
-        vector<float> sumWeights = allPredators[0]->getBrain().getWeights(); 
+        vector<float> sumWeights(allPredators[0]->getBrain().getWeights().size(), 0.0f);
 
-        for (int i = 1; i < eliteCount; i++){
+        for (int i = 0; i < eliteCount; i++){
             vector<float> w = allPredators[i]->getBrain().getWeights(); 
 
             float agentFitness = max(0.001f, allPredators[i]->getFitness());
@@ -148,6 +169,19 @@ void SimulationManager::evolve() {
         // Average already computed using totalEliteFitness
         this->bestWeightsPredator= sumWeights; 
     }
+
+    // Logginng
+    float bestPreyFit = allPrey.empty() ? 0 : allPrey[0]->getFitness();
+    float bestPredFit = allPredators.empty() ? 0 : allPredators[0]->getFitness();
+
+    // 1. Log the stats to a CSV (appends a new line every generation)
+    std::ofstream logFile("generation_stats.csv", ios_base::app);
+    if (logFile.is_open()) {
+        // Format: Generation, PreyFitness, PredatorFitness
+        logFile << generationCount << "," << bestPreyFit << "," << bestPredFit << "\n";
+        logFile.close();
+    }
+
     // Reset simulation to apply these new weights
     resetSimulation();
 }
@@ -162,11 +196,21 @@ void SimulationManager::resetSimulation() {
     // Give every new prey and predator the "Master Brain" + Mutation
     for (auto& world : worlds) {
         for (auto& agent : world->agents) {
+            float roll = randomFloat(0.0f, 1.0f);
+
             if (agent->speciesID == -1 && !bestWeightsPrey.empty()) {
                 Prey* p = static_cast<Prey*>(agent.get());
 
-                // Randomly sets some agents' brain to avoid local minima
-                if (randomFloat(0.0f, 1.0f) < 0.10f){
+                // Sets the new brains either to hall of fame, random, or best of last gen with mutation
+                if (!preyHallOfFame.empty() && roll < 0.10f){
+                    int index = (int)(randomFloat(0, preyHallOfFame.size() - 1));
+                    SimplePerceptron brain = p->getBrain();
+                    
+                    brain.setWeights(preyHallOfFame[index]);
+                    brain.mutate(); 
+                    
+                    p->setBrain(brain);
+                } else if (roll < 0.20f){
                     p->setBrain(SimplePerceptron());
                 } else {
                     SimplePerceptron brain = p->getBrain();
@@ -182,14 +226,22 @@ void SimulationManager::resetSimulation() {
                 Predator* p = static_cast<Predator*>(agent.get());
                 
                 // Sets some agents' brains randomly to avoid local minima
-                if (randomFloat(0.0f, 1.0f) < 0.10f){
+                if (!predatorHallOfFame.empty() && roll < 0.10f){
+                    int index = (int)(randomFloat(0, predatorHallOfFame.size() - 1));
+                    SimplePerceptron brain = p->getBrain();
+                    
+                    brain.setWeights(predatorHallOfFame[index]);
+                    brain.mutate(); 
+                    
+                    p->setBrain(brain);
+                } else if (roll < 0.20f){
                     p->setBrain(SimplePerceptron());
                 } else {
                     SimplePerceptron brain = p->getBrain();
-    
+                    
                     brain.setWeights(bestWeightsPredator);
-                    brain.mutate();
-    
+                    brain.mutate(); 
+                    
                     p->setBrain(brain);
                 }
             }

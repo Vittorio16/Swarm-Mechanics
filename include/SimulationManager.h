@@ -12,6 +12,9 @@ private:
     vector<unique_ptr<World>> worlds;
     int numCores;
     
+    vector<vector<float>> predatorHallOfFame;
+    vector<vector<float>> preyHallOfFame;
+    const int HALL_OF_FAME_SIZE = 50;
     // Genetic Algorithm Settings
     float generationTimer = 0.0f;
     const float GENERATION_DURATION = 60.0f; // Seconds per generation

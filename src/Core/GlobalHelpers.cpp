@@ -1,5 +1,7 @@
 #include <random>
 #include <cmath>
+#include <fstream>
+#include <iostream>
 #include "Core/GlobalHelpers.h"
 
 float randomFloat(float min, float max) {
@@ -10,15 +12,32 @@ float randomFloat(float min, float max) {
     return dis(gen);
 }
 
-// Returns a new heading, based on the wanted heading and turning factor
-float lerpAngle(float current, float target, float factor) {
-    float diff = target - current;
-    
-    // Handle wrapping (shortest path)
-    if (isnan(diff) || isinf(diff)) diff = 0.0f;
-    diff = fmod(diff, 2*M_PI);
-    if (diff <= -M_PI) diff += 2 * M_PI;
-    if (diff > M_PI) diff -= 2 * M_PI;
-    
-    return current + diff * factor;
+void saveWeightsToFile(const string& filename, const vector<float>& weights) {
+    ofstream outFile(filename);
+    if (!outFile.is_open()) {
+        cerr << "Error opening file for writing: " << filename << endl;
+        return;
+    }
+    for (float w : weights) {
+        outFile << w << " ";
+    }
+    outFile.close();
+}
+
+vector<float> loadWeightsFromFile(const string& filename) {
+    ifstream inFile(filename);
+    vector<float> weights;
+ 
+    if (!inFile.is_open()) {
+        cerr << "Error opening file for reading: " << filename << endl;
+        return weights;
+    }
+ 
+    float w;
+    while (inFile >> w) {
+        weights.push_back(w);
+    }
+ 
+    inFile.close();
+    return weights;
 }

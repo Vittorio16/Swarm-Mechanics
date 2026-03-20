@@ -6,7 +6,6 @@ const float MAX_ENERGY = 100.0f;
 const float METABOLISM_COST = 0.05f;
 const float MAX_EFFORT_COST = 5.0f;
 const float RANGE_OF_VISION_SQ = 16.0f;
-const float DIGESTION_TIME = 4.0f;
 
 // Forward declaration of the world class
 class World;
@@ -27,6 +26,10 @@ class Agent{
     // The neural network which guides the agent's behaviour
     SimplePerceptron brain;
 
+    // RNN behavioral memory variables
+    float previousThrustIntent;
+    float previousStrafeIntent;
+
     protected:
     // Sensory inputs which guide decisions
     struct SensoryData {
@@ -35,12 +38,14 @@ class Agent{
         float enemyClosingSpeed, enemyTangentialSpeed;
         float foodSenseX, foodSenseY;
         float foodClosingVelocity, foodTangentialVelocity;
+        float fullness;
         Agent* closestEnemy;
         
         SensoryData() : agentSpeed(0),
                         closestEnemyX(0), closestEnemyY(0), 
                         enemyClosingSpeed(0), enemyTangentialSpeed(0), closestEnemy(nullptr),
-                        foodSenseX(0), foodSenseY(0), foodClosingVelocity(0), foodTangentialVelocity(0) {}
+                        foodSenseX(0), foodSenseY(0), foodClosingVelocity(0), foodTangentialVelocity(0),
+                        fullness(0) {}
     } sensors;
     // Physics variables
     float friction;
@@ -55,6 +60,7 @@ class Agent{
 
     // Energy determines the state of life of the agent
     float energy;
+    float digestionTime;
     float remainingDigestion;
 
     float rangeOfVision;
@@ -88,5 +94,5 @@ class Agent{
     void setBrain(const SimplePerceptron& babyBrain);
 
     // Function to get the agent's fitnes
-    float getFitness() const;
+    virtual float getFitness() const;
 };

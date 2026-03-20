@@ -3,7 +3,7 @@
 
 using namespace std;
 
-const int INPUT_LAYER_SIZE = 9;
+const int INPUT_LAYER_SIZE = 12;
 const int HIDDEN_LAYER_SIZE = 8;
 const int OUTPUT_LAYER_SIZE = 2;
 

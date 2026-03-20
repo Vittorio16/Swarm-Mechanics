@@ -3,6 +3,8 @@ In no specific order:
 --- Behavioural changes ---
 Try to stop spin to win behaviour 
 
+// - give predators knowledge of grass
+
 Try to stop orbiting behaviour and "indecision" which causes stalling:
 - add layers to the network?  
 - increasing view radius to 20 seem to fix this
@@ -25,8 +27,11 @@ Fix apparent mismatch in agent generation
 
 
 --- Optimizations ---
+// - profile a single simulation to accurately figure out where time is spent
 
 --- Additions ---
+
+// - implement logging
 
 Epoch training:
 // - find a way to pool "best agents" from each simulation
@@ -35,7 +40,10 @@ Epoch training:
 - compare multiple generations when scoring fitness 
 
 // - Hall of fame, dedicating a portion of the population to be a copy of the previous best
-// - diminish mutation rate thorugh generations
+
+// - Incremental training
+- diminish mutation rate thorugh generations
+- increase simulation duration
 
 Improve world resource generation
 
@@ -72,3 +80,5 @@ This requires:
 - Implemented multi-threading to parallelize training
 - Optimized enemy lookup and prey feeding mechanics using lattices, to allow for bigger simulation (which in turn diminished variability)
 - Implemented clustered food spawning to favour roaming
+- Added digestion time for more realistic behaviour
+- Implemented all of fame to prevent stagnating in evolution

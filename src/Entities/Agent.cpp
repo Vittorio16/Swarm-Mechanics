@@ -2,6 +2,7 @@
 #include <algorithm>
 #include "Entities/Agent.h"
 #include "Core/GlobalHelpers.h"
+#include "Core/Physics.h"
 
 #include <iostream>
 
@@ -24,8 +25,9 @@ Agent::Agent(float startX, float startY) :
         timeLived(0), energyGained(0),
         x(startX), y(startY), vx(0), vy(0), facingAngle(0),
         ax(0), ay(0), friction(10.0f), 
-        energy(2 * MAX_ENERGY / 3), remainingDigestion(DIGESTION_TIME),
-        rangeOfVision(RANGE_OF_VISION_SQ), isAlive(true) {}
+        energy(2 * MAX_ENERGY / 3),
+        rangeOfVision(RANGE_OF_VISION_SQ), isAlive(true),
+        previousThrustIntent(0), previousStrafeIntent(0) {}
 
 // Transforms an array of observations (1 per visible agent) 
 // into sensory data processable by the brain
@@ -37,7 +39,8 @@ void Agent::updateSensoryData(const vector<Observation>& observations, const vec
     sensors.enemyClosingSpeed = 0;
     sensors.enemyTangentialSpeed = 0;
     sensors.closestEnemy = nullptr;
-    
+    sensors.fullness = this->remainingDigestion / this->digestionTime;
+
     if(observations.empty()) return;
 
     const Observation* closestEnemyObservation = getClosestEnemyObservation(observations);
@@ -73,17 +76,20 @@ void Agent::updateSensoryData(const vector<Observation>& observations, const vec
 
 void Agent::think(){
     vector<float> neuralInputs = { 
+        previousThrustIntent, previousStrafeIntent,
         sensors.agentSpeed / maxSpeed, 
         sensors.closestEnemyX / viewRadius, sensors.closestEnemyY / viewRadius, 
         sensors.enemyClosingSpeed, sensors.enemyTangentialSpeed,
         sensors.foodSenseX, sensors.foodSenseY,
-        sensors.foodClosingVelocity, sensors.foodTangentialVelocity
+        sensors.foodClosingVelocity, sensors.foodTangentialVelocity,
+        sensors.fullness
     };
 
     vector<float> neuralOutput = brain.feedForward(neuralInputs);
 
     float thrust = force * neuralOutput[0];
-    float strafing = force * neuralOutput[1];
+    // Cap strafing to avoid orbiting
+    float strafing = force * neuralOutput[1] * 0.25f;
 
     float heading = facingAngle;
     float c = cos(heading);
@@ -91,6 +97,9 @@ void Agent::think(){
 
     ax = thrust * c + strafing * s;
     ay = thrust * s - strafing * c;
+
+    previousThrustIntent = neuralOutput[0];
+    previousStrafeIntent = neuralOutput[1];
 }
 
 // Aggiorna la posizione dell'agente usando accelerazioni e dt
@@ -136,6 +145,7 @@ void Agent::move(float dt){
         remainingDigestion -= dt;
         if (remainingDigestion < 0) remainingDigestion = 0; 
     }
+
     updateEnergy(ax, ay, dt);
     if (energy <= 0) isAlive = false;
     

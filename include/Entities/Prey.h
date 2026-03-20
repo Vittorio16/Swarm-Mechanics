@@ -2,6 +2,8 @@
 #include <memory>
 #include "Entities/Agent.h"
 #include "Core/Config.h"
+
+
 class Prey: public Agent{
     private:
     // Internal helpers
@@ -10,6 +12,7 @@ class Prey: public Agent{
 
     public:
     int eatRadius;
+
     Prey(float x, float y);
 
     void updateEnergy(float ax, float ay, float dt) override;

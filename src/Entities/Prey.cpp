@@ -12,7 +12,9 @@ Prey::Prey(float x, float y): Agent(x, y) {
     this->force = 500.0f;
     this->viewRadius = 20.0f;
     this->eatRadius = 20;
-    this-> fovAngle = 120.0f;
+    this->fovAngle = 120.0f;
+    this->digestionTime = 1.0f;
+    this->remainingDigestion = this->digestionTime;
 }
 
 // Updates the prey's sensory data with info about smell
@@ -20,7 +22,7 @@ void Prey::updateSensoryData(const vector<Observation>& observations, const vect
     Agent::updateSensoryData(observations, scentVals);
 
     // Normalize inputs for the Brain    
-    float normalization = 10.0f;
+    float normalization = this->eatRadius;
     sensors.foodSenseX = clamp(scentVals[0] / normalization, -1.0f, 1.0f);
     sensors.foodSenseY = clamp(scentVals[1] / normalization, -1.0f, 1.0f);
 
