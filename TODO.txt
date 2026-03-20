@@ -1,8 +1,6 @@
 In no specific order:
 
 --- Behavioural changes ---
-// The best cell to head to should be a mix of energy and distance
-
 Try to stop spin to win behaviour 
 
 Try to stop orbiting behaviour and "indecision" which causes stalling:
@@ -13,6 +11,8 @@ Try to stop orbiting behaviour and "indecision" which causes stalling:
 // - in display mode, time interval is around 72 / 10 000 of a second
 
 Experiment with different fitness functions -- make kills worth more for predators
+
+// - Redefine world resource generation to favour roaming
 
 --- Physics changes ---
 Actually work out physics of movement to make some sense of what values to assign
@@ -25,14 +25,6 @@ Fix apparent mismatch in agent generation
 
 
 --- Optimizations ---
-// - Spatial Hashing of prey sensing food
-- organize grid in a lattice
-- for each cell, calculate the total food within (can do it when growing food)
-- for each cell, calculate relative "center of mass" of food -- could be too intensive
-- for each cell, save vector of active food
-- in world for each prey, find the "reacheable" cell with the best score
-- in world loop through each activeFood in the best cell, 
-        and pass the best scent to the agent
 
 --- Additions ---
 
@@ -41,6 +33,9 @@ Epoch training:
 - add a "decreasing change" as generations progress variable -- could do this across different epochs
 - keep weights at the end
 - compare multiple generations when scoring fitness 
+
+// - Hall of fame, dedicating a portion of the population to be a copy of the previous best
+// - diminish mutation rate thorugh generations
 
 Improve world resource generation
 
@@ -76,3 +71,4 @@ This requires:
 - Worked out physics necessary to try and avoid orbiting
 - Implemented multi-threading to parallelize training
 - Optimized enemy lookup and prey feeding mechanics using lattices, to allow for bigger simulation (which in turn diminished variability)
+- Implemented clustered food spawning to favour roaming

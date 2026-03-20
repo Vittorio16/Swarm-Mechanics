@@ -9,9 +9,8 @@ class Prey: public Agent{
     // float getFoodAt(int x, int y, const vector<vector<Cell>>& grid);
 
     public:
+    int eatRadius;
     Prey(float x, float y);
-
-    // vector<float> senseFood(const vector<vector<Cell>>& grid);
 
     void updateEnergy(float ax, float ay, float dt) override;
     unique_ptr<Agent> reproduce() override;

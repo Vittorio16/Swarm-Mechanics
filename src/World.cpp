@@ -67,7 +67,7 @@ vector<float> World::getBestFoodScent(const Prey* prey) {
                 float distSq = dx*dx + dy*dy;
                 if (distSq < 0.1f) distSq = 0.1f; // Avoid division by zero
 
-                if (distSq < prey->viewRadius * prey->viewRadius){
+                if (distSq < prey->eatRadius * prey->eatRadius){
                     float foodScore = chunk.totalFood*chunk.totalFood / distSq;
 
                     if (foodScore > bestFoodScore) {
@@ -171,19 +171,25 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
             float distSq = vecX*vecX + vecY*vecY;
 
             if (distSq < eatRadiusSq) {
-                agent->energyGained += grid[tx][ty].foodAmount * 5.0f;
+                float foodEaten = grid[tx][ty].foodAmount;
+
+                agent->energyGained += foodEaten * 5.0f;
+                agent->energy += foodEaten * 5.0f; 
                 
-                agent->energy += grid[tx][ty].foodAmount * 5.0f; 
+                if (agent->energy > 3 * MAX_ENERGY / 2) {
+                    agent->energy = 3 * MAX_ENERGY / 2;
+                }
+
                 grid[tx][ty].foodAmount = 0;
-                
+
                 // Update the food lattice
                 int cx = tx / FOOD_CELL_WIDTH;
                 int cy = ty / FOOD_CELL_HEIGHT;
                 int chunk_index = cy * food_lattice_x_cells + cx;
 
-                food_lattice[chunk_index].totalFood -= grid[tx][ty].foodAmount; 
-                food_lattice[chunk_index].sumFoodX -= tx * grid[tx][ty].foodAmount;
-                food_lattice[chunk_index].sumFoodY -= ty * grid[tx][ty].foodAmount;
+                food_lattice[chunk_index].totalFood -= foodEaten; 
+                food_lattice[chunk_index].sumFoodX -= tx * foodEaten;
+                food_lattice[chunk_index].sumFoodY -= ty * foodEaten;
 
                 if (food_lattice[chunk_index].totalFood <= 0.001f) {
                     food_lattice[chunk_index].totalFood = 0.0f;
@@ -198,30 +204,16 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
 }
 
 // Grows the grass
+// Grows the grass (Hybrid "Spore & Roots" Method)
 void World::growGrass(float dt){
-    float spawnChance = 0.005f;
-    int growthAttempts = (NUM_CELLE_X * NUM_CELLE_Y) * 0.0005f;
     float growthAmount = 1000.0f * dt;
 
-    // Avoids needless looping, running the RNG only once
-    float exactSpawnsFloat = growthAttempts * spawnChance;
-
-    int exactSpawns = (int)exactSpawnsFloat;
-
-    static std::uniform_real_distribution<float> chance(0.0f, 1.0f);
-    float remainder = exactSpawnsFloat - exactSpawns;
-    if (chance(gen) < remainder) {
-        exactSpawns++; 
-    }
-
-    for (int i = 0; i < exactSpawns; i++){
-        int cx = disX(gen);
-        int cy = disY(gen);
-
+    // Helper Lambda: Handles all the math for safely adding food to a specific (cx, cy)
+    auto addFoodToCell = [&](int cx, int cy) {
         float current_food = grid[cx][cy].foodAmount;
         float space_left = MAX_FOOD - current_food;
-
-        if (space_left <= 0) continue;
+        
+        if (space_left <= 0) return;
 
         float actual_growth = min(growthAmount, space_left);
 
@@ -229,18 +221,68 @@ void World::growGrass(float dt){
         int chunk_y = cy / FOOD_CELL_HEIGHT;
         int chunk_index = chunk_y * food_lattice_x_cells + chunk_x;
 
-        if (current_food <= 0){
+        // If it was completely empty, register it in the chunk's active list
+        if (current_food <= 0.001f){
             food_lattice[chunk_index].activeCells.push_back(sf::Vector2i(cx, cy));
         }
 
+        // Update main grid and chunk scoreboard
         grid[cx][cy].foodAmount += actual_growth;
         food_lattice[chunk_index].totalFood += actual_growth;
-
         food_lattice[chunk_index].sumFoodX += cx * actual_growth;
         food_lattice[chunk_index].sumFoodY += cy * actual_growth;
+    };
+
+    static std::uniform_real_distribution<float> chance(0.0f, 1.0f);
+
+    // Generates around 2 new islands per second
+    float exactSpontaneousFloat = 2.0f * dt; 
+    
+    int spontaneousSpawns = (int)exactSpontaneousFloat;
+    if (chance(gen) < (exactSpontaneousFloat - spontaneousSpawns)) {
+        spontaneousSpawns++; 
+    }
+
+    for (int i = 0; i < spontaneousSpawns; i++){
+        addFoodToCell(disX(gen), disY(gen));
+    }
+
+    // The rate at which existing grass spreads. 
+    // Scaled by map area and dt so it grows smoothly regardless of framerate.
+    float exactExpansionFloat = (NUM_CELLE_X * NUM_CELLE_Y) * 0.05f * dt; 
+    
+    int expansionSpawns = (int)exactExpansionFloat;
+    if (chance(gen) < (exactExpansionFloat - expansionSpawns)) {
+        expansionSpawns++;
+    }
+
+    // Setup RNG for picking random chunks and directions
+    static uniform_int_distribution<int> disChunk(0, food_lattice.size() - 1);
+    static uniform_int_distribution<int> disDir(0, 3); // 0=Right, 1=Left, 2=Down, 3=Up
+
+    for (int i = 0; i < expansionSpawns; i++){
+        // Pick a random chunk
+        int chunkIdx = disChunk(gen);
+        if (food_lattice[chunkIdx].activeCells.empty()) continue; 
+
+        // Pick a random blade of grass inside this chunk
+        uniform_int_distribution<int> disCell(0, food_lattice[chunkIdx].activeCells.size() - 1);
+        sf::Vector2i sourceCell = food_lattice[chunkIdx].activeCells[disCell(gen)];
+
+        // Pick a random neighbor (with Toroidal wrap)
+        int dir = disDir(gen);
+        int nx = sourceCell.x;
+        int ny = sourceCell.y;
+
+        if (dir == 0) nx = (nx + 1) % NUM_CELLE_X;
+        else if (dir == 1) nx = (nx - 1 + NUM_CELLE_X) % NUM_CELLE_X;
+        else if (dir == 2) ny = (ny + 1) % NUM_CELLE_Y;
+        else if (dir == 3) ny = (ny - 1 + NUM_CELLE_Y) % NUM_CELLE_Y;
+
+        // Grow the neighbor
+        addFoodToCell(nx, ny);
     }
 }
-
 
 // Resets all the buckets of the spatial lattice and updates their contents
 void World::update_buckets(){
@@ -478,7 +520,8 @@ void World::remapBackground(sf::Vector2u windowSize, float scaleX, float scaleY)
             }
         }
         
-        drawFoodLattice(scaleX, scaleY);
+        // Draw food lattice for debugging purposes
+        // drawFoodLattice(scaleX, scaleY);
 
         gridTexture.display();
         gridTextureValid = true;
