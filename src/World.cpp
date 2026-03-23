@@ -176,8 +176,8 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
                 float foodEaten = grid[tx][ty].foodAmount;
                 
                 agent->remainingDigestion = agent->digestionTime;
-                agent->energyGained += foodEaten * 5.0f;
-                agent->energy += foodEaten * 5.0f; 
+                agent->energyGained += foodEaten * 4.0f;
+                agent->energy += foodEaten * 4.0f; 
                 
                 if (agent->energy > 3 * MAX_ENERGY / 2) {
                     agent->energy = 3 * MAX_ENERGY / 2;

@@ -63,6 +63,10 @@ class Agent{
     float digestionTime;
     float remainingDigestion;
 
+    // Used to cap population
+    int childCount;
+    float reproductionCooldown;
+
     float rangeOfVision;
     float viewRadius;
     float fovAngle;

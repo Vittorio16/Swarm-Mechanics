@@ -21,9 +21,14 @@ private:
     const float GENERATION_DURATION = 60.0f; // Seconds per generation
     int generationCount = 0;
     
-    // The "Master Brain" (Average of the best from previous gen)
+    // The "Master Brain" (pools from this for new agents), and average of the best from previous gen
+    vector<vector<float>> elitePreyBrains;
+    vector<vector<float>> elitePredatorBrains;
+    
     vector<float> bestWeightsPrey;
     vector<float> bestWeightsPredator;
+
+
 
 public:
     SimulationManager(int cores);

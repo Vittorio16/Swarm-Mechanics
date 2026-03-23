@@ -3,7 +3,20 @@ In no specific order:
 --- Behavioural changes ---
 Try to stop spin to win behaviour 
 
-// - give predators knowledge of grass
+// - prey behaves very poorly when faced with a tightly packed group of predators
+
+// - General behavioural improvements
+- training on different sized maps to avoid weird dependencies
+- randomize some parameters to avoid having to fine tune them - hard to score
+- investigate fitness function
+
+// - Make predators great again
+- substitute averaging with polling
+- introduce population cap to avoid critical mass phenomenon -- NEED SOMETHING TO ADDRESS CRITICAL MASS
+- harder to survive
+- reverse RNN
+- give predators knowledge of grass
+
 
 Try to stop orbiting behaviour and "indecision" which causes stalling:
 - add layers to the network?  
@@ -15,6 +28,11 @@ Try to stop orbiting behaviour and "indecision" which causes stalling:
 Experiment with different fitness functions -- make kills worth more for predators
 
 // - Redefine world resource generation to favour roaming
+
+// - experiment with solutions to avoid exponential growth
+- increase cost of living
+- decrease island growth
+- should stop eating when full?
 
 --- Physics changes ---
 Actually work out physics of movement to make some sense of what values to assign
@@ -31,7 +49,7 @@ Fix apparent mismatch in agent generation
 
 --- Additions ---
 
-// - implement logging
+- fix load and store info
 
 Epoch training:
 // - find a way to pool "best agents" from each simulation
@@ -39,22 +57,20 @@ Epoch training:
 - keep weights at the end
 - compare multiple generations when scoring fitness 
 
-// - Hall of fame, dedicating a portion of the population to be a copy of the previous best
 
 // - Incremental training
 - diminish mutation rate thorugh generations
 - increase simulation duration
 
-Improve world resource generation
-
-Make everything dynamic according to world dimensions - ie grass growth
 In reality, entities learn how to act by copying parent or by reward from environment - could work on this
+
+// - better logging
+- could keep track of sheer number of agents - the more agents, the more successful the strategy (not really, this is true for prey but biased for predators)
 
 
 --- Experimentation ---
 // - train on differently sized maps
 
-Find a way to "balance learning" - once predators get good, prey are hardly gonna be able to evolve
 Use velocities as outputs
 Modify agents' frame of reference 
 
@@ -84,3 +100,5 @@ This requires:
 - Implemented clustered food spawning to favour roaming
 - Added digestion time for more realistic behaviour
 - Implemented hall of fame to prevent stagnating in evolution
+- Went from averaging weights to polling from the best - massive improvement in predator behaviour?
+- Introduced per child penalty and reproduction cooldowns to combat exponential growth

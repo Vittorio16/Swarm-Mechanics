@@ -44,7 +44,8 @@ unique_ptr<Agent> Predator::reproduce(){
     remainingDigestion = digestionTime;
 
     float energyCost = MAX_ENERGY / 2.0f;
-    energy -= energyCost * 1.2f;
+    energy -= energyCost * (1 + 0.3f * childCount);
+    reproductionCooldown = 5.0f;
 
     float babyX = this->x + (randomFloat() * 2.0f - 1.0f);
     float babyY = this->y + (randomFloat() * 2.0f - 1.0f);

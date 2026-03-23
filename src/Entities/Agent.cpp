@@ -25,7 +25,7 @@ Agent::Agent(float startX, float startY) :
         timeLived(0), energyGained(0),
         x(startX), y(startY), vx(0), vy(0), facingAngle(0),
         ax(0), ay(0), friction(10.0f), 
-        energy(2 * MAX_ENERGY / 3),
+        energy(2 * MAX_ENERGY / 3), childCount(0), reproductionCooldown(0),
         rangeOfVision(RANGE_OF_VISION_SQ), isAlive(true),
         previousThrustIntent(0), previousStrafeIntent(0) {}
 
@@ -76,7 +76,7 @@ void Agent::updateSensoryData(const vector<Observation>& observations, const vec
 
 void Agent::think(){
     vector<float> neuralInputs = { 
-        previousThrustIntent, previousStrafeIntent,
+        /*previousThrustIntent, previousStrafeIntent,*/
         sensors.agentSpeed / maxSpeed, 
         sensors.closestEnemyX / viewRadius, sensors.closestEnemyY / viewRadius, 
         sensors.enemyClosingSpeed, sensors.enemyTangentialSpeed,
@@ -144,6 +144,10 @@ void Agent::move(float dt){
     if (remainingDigestion != 0){
         remainingDigestion -= dt;
         if (remainingDigestion < 0) remainingDigestion = 0; 
+    }
+    if (reproductionCooldown > 0){
+        reproductionCooldown -= dt;
+        if (reproductionCooldown < 0) reproductionCooldown = 0;
     }
 
     updateEnergy(ax, ay, dt);

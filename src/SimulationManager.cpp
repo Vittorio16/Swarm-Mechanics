@@ -16,14 +16,23 @@ SimulationManager::SimulationManager(int cores) : numCores(cores) {
 
 // Updates all worlds
 void SimulationManager::update(float dt, bool renderEnabled) {
+    float currentDuration = min(180.0f, GENERATION_DURATION + generationCount * 3.0f);
+
     if (renderEnabled) {
         // Only update the first world if rendering is enabled to maintain performance
         worlds[0]->update(dt, this->generationCount);
-        generationTimer += dt;
+        this->generationTimer += dt;
     } 
     else {
         vector<future<void>> futures;
-        int batchSize = 50;
+
+        // Dynamically determine batch size
+        float timeRemaining = currentDuration - this->generationTimer;
+        int ticksRemaining = (int)ceil(timeRemaining / dt);
+
+        int batchSize = std::min(200, ticksRemaining);
+        
+        if (batchSize <= 0) batchSize = 1;
 
         for (auto& world : worlds) {
             World* w = world.get(); 
@@ -46,7 +55,6 @@ void SimulationManager::update(float dt, bool renderEnabled) {
     }
 
     // Check for evolution
-    float currentDuration = std::min(180.0f, GENERATION_DURATION + generationCount * 3.0f);
     if (generationTimer >= currentDuration) {
         generationTimer = 0.0f;
         generationCount++;
@@ -82,6 +90,8 @@ void SimulationManager::evolve() {
     }
 
     // Sort for getting the average
+    cout << allPrey.size() << " Prey and " << allPredators.size() << " Predators to select from." << endl;
+
     sort(allPrey.begin(), allPrey.end(),
         [](Prey* a, Prey* b){
             return a->getFitness() > b->getFitness();
@@ -108,28 +118,36 @@ void SimulationManager::evolve() {
         int eliteCount = max(1, (int)(allPrey.size() * 0.1f));
         eliteCount = min(50, eliteCount);
 
-        // To minimize influence of randomly bad simulations,
-        // we take the weighted average of the weights based on fitness
-        float totalEliteFitness = 0;
+        this->elitePreyBrains.clear();
         for (int i = 0; i < eliteCount; i++){
-            totalEliteFitness += max(0.001f, allPrey[i]->getFitness());
+            elitePreyBrains.push_back(allPrey[i]->getBrain().getWeights());
         }
 
-        vector<float> sumWeights(allPrey[0]->getBrain().getWeights().size(), 0.0f); 
+        // Logging only since we don't average the weights anymore
+        this->bestWeightsPrey = allPrey[0]->getBrain().getWeights();
 
-        for (int i = 0; i < eliteCount; i++){
-            vector<float> w = allPrey[i]->getBrain().getWeights(); 
+    //     // To minimize influence of randomly bad simulations,
+    //     // we take the weighted average of the weights based on fitness
+    //     float totalEliteFitness = 0;
+    //     for (int i = 0; i < eliteCount; i++){
+    //         totalEliteFitness += max(0.001f, allPrey[i]->getFitness());
+    //     }
 
-            float agentFitness = max(0.001f, allPrey[i]->getFitness());
-            float influence = agentFitness / totalEliteFitness;
+    //     vector<float> sumWeights(allPrey[0]->getBrain().getWeights().size(), 0.0f); 
 
-            for (size_t j = 0; j < w.size(); j++){
-                sumWeights[j] += w[j] * influence;
-            }
-        }
+    //     for (int i = 0; i < eliteCount; i++){
+    //         vector<float> w = allPrey[i]->getBrain().getWeights(); 
 
-        // Average already computed using totalEliteFitness
-        this->bestWeightsPrey = sumWeights; 
+    //         float agentFitness = max(0.001f, allPrey[i]->getFitness());
+    //         float influence = agentFitness / totalEliteFitness;
+
+    //         for (size_t j = 0; j < w.size(); j++){
+    //             sumWeights[j] += w[j] * influence;
+    //         }
+    //     }
+
+    //     // Average already computed using totalEliteFitness
+    //     this->bestWeightsPrey = sumWeights;
     }
     
     if (!allPredators.empty()){
@@ -147,28 +165,36 @@ void SimulationManager::evolve() {
         int eliteCount = max(1, (int)(allPredators.size() * 0.1f));
         eliteCount = min(50, eliteCount);
 
-        // To minimize influence of randomly bad simulations,
-        // we take the weighted average of the weights based on fitness
-        float totalEliteFitness = 0;
+        this->elitePredatorBrains.clear();
         for (int i = 0; i < eliteCount; i++){
-            totalEliteFitness += max(0.001f, allPredators[i]->getFitness());
+            elitePredatorBrains.push_back(allPredators[i]->getBrain().getWeights());
         }
 
-        vector<float> sumWeights(allPredators[0]->getBrain().getWeights().size(), 0.0f);
+        // Logging only since we don't average the weights anymore
+        this->bestWeightsPredator = allPredators[0]->getBrain().getWeights();
 
-        for (int i = 0; i < eliteCount; i++){
-            vector<float> w = allPredators[i]->getBrain().getWeights(); 
+        // // To minimize influence of randomly bad simulations,
+        // // we take the weighted average of the weights based on fitness
+        // float totalEliteFitness = 0;
+        // for (int i = 0; i < eliteCount; i++){
+        //     totalEliteFitness += max(0.001f, allPredators[i]->getFitness());
+        // }
 
-            float agentFitness = max(0.001f, allPredators[i]->getFitness());
-            float influence = agentFitness / totalEliteFitness;
+        // vector<float> sumWeights(allPredators[0]->getBrain().getWeights().size(), 0.0f);
 
-            for (size_t j = 0; j < w.size(); j++){
-                sumWeights[j] += w[j] * influence;
-            }
-        }
+        // for (int i = 0; i < eliteCount; i++){
+        //     vector<float> w = allPredators[i]->getBrain().getWeights(); 
 
-        // Average already computed using totalEliteFitness
-        this->bestWeightsPredator= sumWeights; 
+        //     float agentFitness = max(0.001f, allPredators[i]->getFitness());
+        //     float influence = agentFitness / totalEliteFitness;
+
+        //     for (size_t j = 0; j < w.size(); j++){
+        //         sumWeights[j] += w[j] * influence;
+        //     }
+        // }
+
+        // // Average already computed using totalEliteFitness
+        // this->bestWeightsPredator= sumWeights; 
     }
 
     // Logginng
@@ -230,19 +256,21 @@ void SimulationManager::resetSimulation() {
 
                 // Sets the new brains either to hall of fame, random, or best of last gen with mutation
                 if (!preyHallOfFame.empty() && roll < 0.10f){
-                    int index = (int)(randomFloat(0, preyHallOfFame.size() - 1));
+                    int index = (int)(randomFloat(0, preyHallOfFame.size() - 0.001f));
                     SimplePerceptron brain = p->getBrain();
                     
                     brain.setWeights(preyHallOfFame[index]);
-                    brain.mutate(dynamicRate, dynamicStrength); 
                     
                     p->setBrain(brain);
                 } else if (roll < 0.20f){
                     p->setBrain(SimplePerceptron());
                 } else {
+                    // Pick a random elite parent from the pool
+                    int parentIndex = (int)(randomFloat(0.0f, elitePreyBrains.size() - 0.001f));
+
                     SimplePerceptron brain = p->getBrain();
                     
-                    brain.setWeights(bestWeightsPrey);
+                    brain.setWeights(elitePreyBrains[parentIndex]);
                     brain.mutate(dynamicRate, dynamicStrength); 
                     
                     p->setBrain(brain);
@@ -254,19 +282,21 @@ void SimulationManager::resetSimulation() {
                 
                 // Sets some agents' brains randomly to avoid local minima
                 if (!predatorHallOfFame.empty() && roll < 0.10f){
-                    int index = (int)(randomFloat(0, predatorHallOfFame.size() - 1));
+                    int index = (int)(randomFloat(0, predatorHallOfFame.size() - 0.001f));
                     SimplePerceptron brain = p->getBrain();
                     
                     brain.setWeights(predatorHallOfFame[index]);
-                    brain.mutate(dynamicRate, dynamicStrength); 
                     
                     p->setBrain(brain);
                 } else if (roll < 0.20f){
                     p->setBrain(SimplePerceptron());
                 } else {
+                     // Pick a random elite parent from the pool
+                    int parentIndex = (int)(randomFloat(0.0f, elitePredatorBrains.size() - 0.001f));
+
                     SimplePerceptron brain = p->getBrain();
                     
-                    brain.setWeights(bestWeightsPredator);
+                    brain.setWeights(elitePredatorBrains[parentIndex]);
                     brain.mutate(dynamicRate, dynamicStrength); 
                     
                     p->setBrain(brain);
@@ -295,10 +325,18 @@ void SimulationManager::loadPreTrainedBrains(const string& preyBrains, const str
 
     if (!preyWeights.empty()) {
         this->bestWeightsPrey = preyWeights;
+
+        this->elitePreyBrains.clear();
+        this->elitePreyBrains.push_back(preyWeights);
+
         cout << "Loaded Pre-trained Prey Brain!" << endl;
     }
     if (!predatorWeights.empty()) {
         this->bestWeightsPredator = predatorWeights;
+
+        this->elitePredatorBrains.clear();
+        this->elitePredatorBrains.push_back(predatorWeights);
+
         cout << "Loaded Pre-trained Predator Brain!" << endl;
     }
 
