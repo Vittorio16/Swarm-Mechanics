@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <memory>
+#include <string>
 #include "World.h"
 #include "Entities/Prey.h"
 #include "Entities/Predator.h"
@@ -18,7 +19,7 @@ private:
     
     // Genetic Algorithm Settings
     float generationTimer = 0.0f;
-    const float GENERATION_DURATION = 60.0f; // Seconds per generation
+    const float GENERATION_DURATION = 60.0f;
     int generationCount = 0;
     
     // The "Master Brain" (pools from this for new agents), and average of the best from previous gen
@@ -28,8 +29,6 @@ private:
     vector<float> bestWeightsPrey;
     vector<float> bestWeightsPredator;
 
-
-
 public:
     SimulationManager(int cores);
 
@@ -38,8 +37,10 @@ public:
 
     void resetSimulation();
 
-    void loadPreTrainedBrains(const string& preyBrains, const string& predatorBrains, 
-        const string& hallOfFamePrey = "", const string& hallOfFamePredator = "");
+    // UPDATED: Added startGeneration and the two Elite Pool parameters
+    void loadPreTrainedBrains(int startGeneration, const string& preyBrains, const string& predatorBrains, 
+        const string& hallOfFamePrey = "", const string& hallOfFamePredator = "",
+        const string& elitePrey = "", const string& elitePredator = "");
 
     // Helper to draw the main world
     void draw(sf::RenderWindow& window);

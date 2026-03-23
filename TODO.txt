@@ -17,12 +17,7 @@ Try to stop spin to win behaviour
 - reverse RNN
 - give predators knowledge of grass
 
-
-Try to stop orbiting behaviour and "indecision" which causes stalling:
-- add layers to the network?  
-- increasing view radius to 20 seem to fix this
-
-// Fix apparent discrepancy in behaviour when fast forward - maybe decrease time interval
+// - Fix apparent discrepancy in behaviour when fast forward - maybe decrease time interval
 // - in display mode, time interval is around 72 / 10 000 of a second
 
 Experiment with different fitness functions -- make kills worth more for predators
@@ -41,8 +36,7 @@ Actually work out physics of movement to make some sense of what values to assig
 // - could add maximum angular velocity, but this may worsen skating
 // - fixed by making turning gradual
 
-Fix apparent mismatch in agent generation
-
+// - general look at all the parameters involved in the energy cycle
 
 --- Optimizations ---
 // - profile a single simulation to accurately figure out where time is spent
@@ -53,7 +47,6 @@ Fix apparent mismatch in agent generation
 
 Epoch training:
 // - find a way to pool "best agents" from each simulation
-- add a "decreasing change" as generations progress variable -- could do this across different epochs
 - keep weights at the end
 - compare multiple generations when scoring fitness 
 
@@ -61,6 +54,7 @@ Epoch training:
 // - Incremental training
 - diminish mutation rate thorugh generations
 - increase simulation duration
+- decrease energy gain from feeding
 
 In reality, entities learn how to act by copying parent or by reward from environment - could work on this
 
@@ -101,4 +95,4 @@ This requires:
 - Added digestion time for more realistic behaviour
 - Implemented hall of fame to prevent stagnating in evolution
 - Went from averaging weights to polling from the best - massive improvement in predator behaviour?
-- Introduced per child penalty and reproduction cooldowns to combat exponential growth
+- Introduced per child penalty and reproduction cooldowns to combat exponential growth - also increased eat rate while diminishing energy gained from feeding

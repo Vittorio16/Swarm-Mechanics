@@ -26,10 +26,18 @@ int main() {
     window.setFramerateLimit(MAX_FPS);
 
     // Optional: Start in replay mode with a pre-trained brain
-    bool replayMode = false;
+    bool replayMode = false; 
     if (replayMode) {
-        // Load the sickest generation you saved
-        simManager.loadPreTrainedBrains("../logs/weights_prey_gen_24.txt", "../logs/weights_pred_gen_24.txt");
+        // Load the sickest generation with FULL genetic diversity
+        simManager.loadPreTrainedBrains(
+            24, 
+            "../logs/weights_prey_gen_24.txt", 
+            "../logs/weights_pred_gen_24.txt",
+            "../logs/hof_prey_gen_24.txt",      // Prey HoF
+            "../logs/hof_pred_gen_24.txt",      // Predator HoF
+            "../logs/elite_prey_gen_24.txt",    // Prey Elite Pool
+            "../logs/elite_pred_gen_24.txt"     // Predator Elite Pool
+        );
     }
 
     while (window.isOpen()) {
