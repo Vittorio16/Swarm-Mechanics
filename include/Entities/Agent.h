@@ -70,6 +70,8 @@ class Agent{
     float rangeOfVision;
     float viewRadius;
     float fovAngle;
+    int grassViewRadius;
+
     // State variables
     int speciesID;
     bool isAlive;

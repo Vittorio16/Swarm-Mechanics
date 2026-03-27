@@ -11,55 +11,50 @@ Try to stop spin to win behaviour
 - investigate fitness function
 
 // - Make predators great again
-- substitute averaging with polling
+- predators sprint forward and stop seeing prey
 - introduce population cap to avoid critical mass phenomenon -- NEED SOMETHING TO ADDRESS CRITICAL MASS
 - harder to survive
 - reverse RNN
 - give predators knowledge of grass
 
 // - Fix apparent discrepancy in behaviour when fast forward - maybe decrease time interval
-// - in display mode, time interval is around 72 / 10 000 of a second
+- in display mode, time interval is around 72 / 10 000 of a second
+- in general, check needed time step
 
 Experiment with different fitness functions -- make kills worth more for predators
-
-// - Redefine world resource generation to favour roaming
 
 // - experiment with solutions to avoid exponential growth
 - increase cost of living
 - decrease island growth
 - should stop eating when full?
 
+
+
 --- Physics changes ---
 Actually work out physics of movement to make some sense of what values to assign
 
-// Prevent infinite rotation when standing still:
-// - could add maximum angular velocity, but this may worsen skating
-// - fixed by making turning gradual
-
 // - general look at all the parameters involved in the energy cycle
+
+
 
 --- Optimizations ---
 // - profile a single simulation to accurately figure out where time is spent
 
+// - refactor code to keep all changeable globals in the same place
+
+
+
 --- Additions ---
 
-- fix load and store info
-
-Epoch training:
-// - find a way to pool "best agents" from each simulation
-- keep weights at the end
-- compare multiple generations when scoring fitness 
-
+- better load and store info
 
 // - Incremental training
 - diminish mutation rate thorugh generations
-- increase simulation duration
 - decrease energy gain from feeding
 
 In reality, entities learn how to act by copying parent or by reward from environment - could work on this
 
-// - better logging
-- could keep track of sheer number of agents - the more agents, the more successful the strategy (not really, this is true for prey but biased for predators)
+
 
 
 --- Experimentation ---
@@ -73,9 +68,8 @@ Speciating the population
 
 Curriculum Learning
 
-Memory implementation - pass outputs as inputs
-
 Randomize some inputs - number of agents, world generation...
+
 
 
 --- GOAL ---
@@ -83,6 +77,8 @@ Ultimately, want to avoid using any sort of fitness function and base evolution 
 This requires:
 - a system resistant to extinction
 - a sufficiently well engineered resource generation, reproduction and energy gain logic
+
+
 
 
 --- PROJECT TIMELINE ---
@@ -96,3 +92,4 @@ This requires:
 - Implemented hall of fame to prevent stagnating in evolution
 - Went from averaging weights to polling from the best - massive improvement in predator behaviour?
 - Introduced per child penalty and reproduction cooldowns to combat exponential growth - also increased eat rate while diminishing energy gained from feeding
+- Better logging implemented

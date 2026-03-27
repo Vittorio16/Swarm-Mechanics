@@ -31,11 +31,11 @@ World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)),
 }
 
 // Helper to return to a prey the food scent (x, y) of the best food cell in its vision range
-vector<float> World::getBestFoodScent(const Prey* prey) {
-    int cx = (int)(prey->x / FOOD_CELL_WIDTH);
-    int cy = (int)(prey->y / FOOD_CELL_HEIGHT);
+vector<float> World::getBestFoodScent(const Agent* agent) {
+    int cx = (int)(agent->x / FOOD_CELL_WIDTH);
+    int cy = (int)(agent->y / FOOD_CELL_HEIGHT);
     
-    int max_distance = ceil(prey->viewRadius / FOOD_CELL_WIDTH);
+    int max_distance = ceil(agent->viewRadius / FOOD_CELL_WIDTH);
     
     float bestFoodScore = -1.0f;
     int bestChunkIndex = -1;
@@ -53,9 +53,9 @@ vector<float> World::getBestFoodScent(const Prey* prey) {
                 float centerX = chunk.sumFoodX / chunk.totalFood;
                 float centerY = chunk.sumFoodY / chunk.totalFood;
 
-                // Calculate distance from prey to this chunk's center of mass
-                float dx = centerX - prey->x;
-                float dy = centerY - prey->y;
+                // Calculate distance from agent to this chunk's center of mass
+                float dx = centerX - agent->x;
+                float dy = centerY - agent->y;
 
                 // Handle wrapping for distance calculation
                 if (dx > NUM_CELLE_X * 0.5f) dx -= NUM_CELLE_X;
@@ -67,7 +67,7 @@ vector<float> World::getBestFoodScent(const Prey* prey) {
                 float distSq = dx*dx + dy*dy;
                 if (distSq < 0.1f) distSq = 0.1f; // Avoid division by zero
 
-                if (distSq < prey->eatRadius * prey->eatRadius){
+                if (distSq < agent->grassViewRadius * agent->grassViewRadius){
                     float foodScore = chunk.totalFood*chunk.totalFood / distSq;
 
                     if (foodScore > bestFoodScore) {
@@ -92,8 +92,8 @@ vector<float> World::getBestFoodScent(const Prey* prey) {
         // Skips if food eaten this frame
         if (food <= 0.001f) continue;
 
-        float dx = pos.x + 0.5f - prey->x;
-        float dy = pos.y + 0.5f - prey->y;
+        float dx = pos.x + 0.5f - agent->x;
+        float dy = pos.y + 0.5f - agent->y;
 
         // Handle wrapping for distance calculation
         if (dx > NUM_CELLE_X * 0.5f) dx -= NUM_CELLE_X;
@@ -116,7 +116,7 @@ vector<float> World::getBestFoodScent(const Prey* prey) {
     if (bestCellFoodScore < 0) return {0.0f, 0.0f};
 
     // Rotate to Local Space (Agent's Perspective)
-    float heading = prey->facingAngle;
+    float heading = agent->facingAngle;
     float c = cos(-heading);
     float s = sin(-heading);
 
@@ -128,7 +128,7 @@ vector<float> World::getBestFoodScent(const Prey* prey) {
 
 // Helper to check if prey eats grass
 void World::checkPreyFeeding(unique_ptr<Agent>& agent){
-    if (agent->remainingDigestion != 0) return;
+    if (agent->remainingDigestion > 0.001f) return;
 
     // Define Eat Range 
     float eatRadiusSq = 2.0f * 2.0f; 
@@ -323,10 +323,8 @@ void World::update(float dt, int generationCount){
         // Update scents if the agent is a prey
         vector<float> scents = {0.0f, 0.0f, 0.0f};
 
-        if (agent->speciesID == -1){
-            Prey* p = static_cast<Prey*>(agent.get());
-            scents = getBestFoodScent(p);
-        }
+        Agent* a = static_cast<Agent*>(agent.get());
+        scents = getBestFoodScent(a);
 
         agent->updateSensoryData(agentsInFOV, scents);
         agent->think();

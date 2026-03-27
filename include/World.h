@@ -33,7 +33,7 @@ class World{
     vector<Observation> getObservation(const Agent* observer); 
     
     // Helpers to check for prey eating grass and growing grass
-    vector<float> getBestFoodScent(const Prey* prey); 
+    vector<float> getBestFoodScent(const Agent* agent); 
     void checkPreyFeeding(unique_ptr<Agent>& agent);
     void growGrass(float dt, int generationCount);
 

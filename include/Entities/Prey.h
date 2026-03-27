@@ -11,12 +11,8 @@ class Prey: public Agent{
     // float getFoodAt(int x, int y, const vector<vector<Cell>>& grid);
 
     public:
-    int eatRadius;
-
     Prey(float x, float y);
 
     void updateEnergy(float ax, float ay, float dt) override;
     unique_ptr<Agent> reproduce() override;
-
-    void updateSensoryData(const vector<Observation>& observations, const vector<float>& scents) override;
 };

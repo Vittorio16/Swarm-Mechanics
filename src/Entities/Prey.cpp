@@ -11,43 +11,9 @@ Prey::Prey(float x, float y): Agent(x, y) {
     this->maxSpeed = 35.0f;
     this->force = 600.0f;
     this->viewRadius = 20.0f;
-    this->eatRadius = 20;
     this->fovAngle = 360.0f;
     this->digestionTime = 0.5f;
     this->remainingDigestion = this->digestionTime;
-}
-
-// Updates the prey's sensory data with info about smell
-void Prey::updateSensoryData(const vector<Observation>& observations, const vector<float>& scentVals){
-    Agent::updateSensoryData(observations, scentVals);
-
-    // Normalize inputs for the Brain    
-    float normalization = this->eatRadius;
-    sensors.foodSenseX = clamp(scentVals[0] / normalization, -1.0f, 1.0f);
-    sensors.foodSenseY = clamp(scentVals[1] / normalization, -1.0f, 1.0f);
-
-    if (abs(sensors.foodSenseX) < 0.001f && abs(sensors.foodSenseY) < 0.001f) {
-        sensors.foodClosingVelocity = 0.0f;
-        sensors.foodTangentialVelocity = 0.0f;
-        return;
-    }
-
-    float angleToFood = atan2(scentVals[1], scentVals[0]);
-    float c = cos(-facingAngle);
-    float s = sin(-facingAngle);
-
-    float vLongitudinal = vx * c - vy * s;
-    float vTangential = vx * s + vy * c;
-    
-    float ca = cos(angleToFood);
-    float sa = sin(angleToFood);
-
-    float closingVelocity = vLongitudinal * ca + vTangential * sa;
-    float tangentialVelocity = -vLongitudinal * sa + vTangential * ca;
-
-    sensors.foodClosingVelocity = closingVelocity / maxSpeed;
-    sensors.foodTangentialVelocity = tangentialVelocity / maxSpeed;
-
 }
 
 // Updates the energy of the prey
@@ -77,5 +43,6 @@ unique_ptr<Agent> Prey::reproduce(){
     baby->setBrain(babyBrain);
     baby->energy = energyCost;
 
+    this->childCount++;
     return baby;
 }

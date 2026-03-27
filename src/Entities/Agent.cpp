@@ -26,7 +26,7 @@ Agent::Agent(float startX, float startY) :
         x(startX), y(startY), vx(0), vy(0), facingAngle(0),
         ax(0), ay(0), friction(10.0f), 
         energy(2 * MAX_ENERGY / 3), childCount(0), reproductionCooldown(0),
-        rangeOfVision(RANGE_OF_VISION_SQ), isAlive(true),
+        rangeOfVision(RANGE_OF_VISION_SQ),  grassViewRadius(20), isAlive(true),
         previousThrustIntent(0), previousStrafeIntent(0) {}
 
 // Transforms an array of observations (1 per visible agent) 
@@ -71,6 +71,33 @@ void Agent::updateSensoryData(const vector<Observation>& observations, const vec
         sensors.closestEnemy = closestEnemyObservation->otherAgent;
     } 
     
+    // Grass inputs  
+    float normalization = this->grassViewRadius;
+    sensors.foodSenseX = clamp(scents[0] / normalization, -1.0f, 1.0f);
+    sensors.foodSenseY = clamp(scents[1] / normalization, -1.0f, 1.0f);
+
+    if (abs(sensors.foodSenseX) < 0.001f && abs(sensors.foodSenseY) < 0.001f) {
+        sensors.foodClosingVelocity = 0.0f;
+        sensors.foodTangentialVelocity = 0.0f;
+        return;
+    }
+
+    float angleToFood = atan2(scents[1], scents[0]);
+    float c = cos(-facingAngle);
+    float s = sin(-facingAngle);
+
+    float vLongitudinal = vx * c - vy * s;
+    float vTangential = vx * s + vy * c;
+    
+    float ca = cos(angleToFood);
+    float sa = sin(angleToFood);
+
+    float closingVelocity = vLongitudinal * ca + vTangential * sa;
+    float tangentialVelocity = -vLongitudinal * sa + vTangential * ca;
+
+    sensors.foodClosingVelocity = closingVelocity / maxSpeed;
+    sensors.foodTangentialVelocity = tangentialVelocity / maxSpeed;
+
     return;
 }
 

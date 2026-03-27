@@ -25,7 +25,7 @@ void Predator::updateEnergy(float ax, float ay, float dt) {
     energy -= energyLoss;
 
     // Predators gain energy by eating prey
-    if (this->remainingDigestion != 0) return;
+    if (this->remainingDigestion > 0.001f) return;
     if (sensors.closestEnemy != nullptr && sensors.closestEnemy->isAlive){
         float distSq = sensors.closestEnemyX*sensors.closestEnemyX + sensors.closestEnemyY*sensors.closestEnemyY;
         if (distSq < KILL_RANGE_SQ && sensors.closestEnemy->isAlive){
@@ -33,16 +33,16 @@ void Predator::updateEnergy(float ax, float ay, float dt) {
             energyGained += MAX_ENERGY / 2;
 
             sensors.closestEnemy->isAlive = false;
+
+            this->remainingDigestion = this->digestionTime;
         }
     }
     if (energy > 3 * MAX_ENERGY / 2) energy = 3 * MAX_ENERGY / 2;
 };
 
-// Makes an agent reproduce, diminishing its energy 
-// and creating a new agent with similar weights 
+// Makes an agent reproduce, diminishing its energy
+// and creating a new agent with similar weights
 unique_ptr<Agent> Predator::reproduce(){
-    remainingDigestion = digestionTime;
-
     float energyCost = MAX_ENERGY / 2.0f;
     energy -= energyCost * (1 + 0.3f * childCount);
     reproductionCooldown = 5.0f;
@@ -57,6 +57,8 @@ unique_ptr<Agent> Predator::reproduce(){
 
     baby->setBrain(babyBrain);
     baby->energy = energyCost;
+
+    this->childCount++;
     return baby;
 }
 
