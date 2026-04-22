@@ -91,5 +91,6 @@ This requires:
 - Added digestion time for more realistic behaviour
 - Implemented hall of fame to prevent stagnating in evolution
 - Went from averaging weights to polling from the best - massive improvement in predator behaviour?
-- Introduced per child penalty and reproduction cooldowns to combat exponential growth - also increased eat rate while diminishing energy gained from feeding
+- Introduced per child penalty and reproduction ew11cooldowns to combat exponential growth - also increased eat rate while diminishing energy gained from feeding
 - Better logging implemented
+- Added knowledge of grass for predators
