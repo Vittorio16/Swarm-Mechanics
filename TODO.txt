@@ -71,6 +71,9 @@ Curriculum Learning
 Randomize some inputs - number of agents, world generation...
 
 
+--- Cleanup ---
+- put all global variables in config.h
+- check for code clarity in all the files
 
 --- GOAL ---
 Ultimately, want to avoid using any sort of fitness function and base evolution purely on survival

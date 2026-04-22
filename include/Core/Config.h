@@ -4,8 +4,12 @@
 
 using namespace std;
 
-constexpr float MAX_FOOD = 10.0f;
+/* ------------------- Simulation Settings ------------------ */
 
+
+/* ------------------- World Settings ------------------ */
+
+// World dimensions
 constexpr int NUM_CELLE_X = 960;
 constexpr int NUM_CELLE_Y = 540;
 
@@ -17,9 +21,36 @@ constexpr int LATTICE_CELL_HEIGHT = 30;
 constexpr int FOOD_CELL_WIDTH = 10;
 constexpr int FOOD_CELL_HEIGHT = 10;
 
+// Food settings per cell
+constexpr float MAX_FOOD = 10.0f;
+constexpr float GROWTH_MULTIPLIER = 1000.0f;
+
+// Incremental food spawning settings across generations
+constexpr float STARTING_FOOD_EXPANSION_RATE = 2.0f;
+constexpr float MINIMUM_FOOD_EXPANSION_RATE = 0.5f;
+constexpr float FOOD_EXPANSION_RATE_DECAY = 0.01f;
+
+// Incremental food island spawning settings across generations
+constexpr float MINIMUM_ISLAND_SPAWN_RATE = 0.5f;
+constexpr float ISLAND_SPAWN_RATE_DECAY = 0.01f;
+
+/* ------------------- Agent Settings ------------------ */
+
+// Starting agents
 constexpr int NUM_PREDATOR = 100;
 constexpr int NUM_PREY = 100;
 
+
+/* ------------------- Prey Settings ------------------ */
+
+// The radius within which a prey can eat grass
+constexpr float PREY_EAT_RADIUS_SQ = 4.0f;
+
+/* ------------------- Learning Settings ------------------ */
+
+
+
+/* ------------------- Utilities ------------------ */
 enum Terrain {Standard};
 
 struct Cell{
@@ -29,6 +60,7 @@ struct Cell{
     Cell() : type(Terrain::Standard), foodAmount(0.0f) {};
 };
 
+// A chunk of the world grid, used to optimize food sensing
 struct FoodChunk {
     float totalFood;
     float sumFoodX;

@@ -130,9 +130,6 @@ vector<float> World::getBestFoodScent(const Agent* agent) {
 void World::checkPreyFeeding(unique_ptr<Agent>& agent){
     if (agent->remainingDigestion > 0.001f) return;
 
-    // Define Eat Range 
-    float eatRadiusSq = 2.0f * 2.0f; 
-
     float posX = agent->x;
     float posY = agent->y;
     if (isnan(posX) || isinf(posX)) posX = 0.0f;
@@ -171,7 +168,7 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
 
             float distSq = vecX*vecX + vecY*vecY;
 
-            if (distSq < eatRadiusSq) {
+            if (distSq < PREY_EAT_RADIUS_SQ) {
                 // Prey begins digesting and gains energy based on the food eaten
                 float foodEaten = grid[tx][ty].foodAmount;
                 
@@ -179,6 +176,7 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
                 agent->energyGained += foodEaten * 1.0f;
                 agent->energy += foodEaten * 1.0f; 
                 
+                // Caps the energy to prevent extreme values - could be removed in the future
                 if (agent->energy > 3 * MAX_ENERGY / 2) {
                     agent->energy = 3 * MAX_ENERGY / 2;
                 }
@@ -207,9 +205,8 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
 }
 
 // Grows the grass
-// Grows the grass (Hybrid "Spore & Roots" Method)
 void World::growGrass(float dt, int generationCount){
-    float growthAmount = 1000.0f * dt;
+    float growthAmount = GROWTH_MULTIPLIER * dt;
 
     // Helper Lambda: Handles all the math for safely adding food to a specific (cx, cy)
     auto addFoodToCell = [&](int cx, int cy) {
@@ -239,7 +236,7 @@ void World::growGrass(float dt, int generationCount){
     static uniform_real_distribution<float> chance(0.0f, 1.0f);
 
     // Generates around 2 new islands per second - decreasing with generation
-    float currentSpontaneousRate = max(0.5f, 2.0f - (generationCount * 0.01f));
+    float currentSpontaneousRate = max(MINIMUM_ISLAND_SPAWN_RATE, STARTING_ISLAND_SPAWN_RATE - (generationCount * ISLAND_SPAWN_RATE_DECAY));
     float exactSpontaneousFloat = currentSpontaneousRate * dt;
     
     int spontaneousSpawns = (int)exactSpontaneousFloat;
@@ -254,7 +251,7 @@ void World::growGrass(float dt, int generationCount){
     // The rate at which existing grass spreads. 
     // Scaled by map area and dt so it grows smoothly regardless of framerate.
     // Decreases with generations
-    float currentExpansionRate = max(0.01f, 0.05f - (generationCount * 0.0002f));
+    float currentExpansionRate = max(MINIMUM_FOOD_EXPANSION_RATE, STARTING_FOOD_EXPANSION_RATE - (generationCount * FOOD_EXPANSION_RATE_DECAY));
     float exactExpansionFloat = (NUM_CELLE_X * NUM_CELLE_Y) * currentExpansionRate * dt;
     
     int expansionSpawns = (int)exactExpansionFloat;
