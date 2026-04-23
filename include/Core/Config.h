@@ -80,7 +80,14 @@ constexpr int FOOD_CELL_HEIGHT = 10;
 
 // Food settings per cell
 constexpr float MAX_FOOD = 10.0f;
-constexpr float GROWTH_MULTIPLIER = 1000.0f;
+
+// Grows food for cells nearby grass
+constexpr float SPREAD_GROWTH_MULTIPLIER = 15.0f;
+
+// Help create islands on world gen
+constexpr int STARTING_ISLANDS = 20;
+constexpr int MINIMUM_ISLAND_SIZE = 3;
+constexpr int MAXIMUM_ISLAND_SIZE = 9;
 
 // Incremental food spawning settings across generations
 constexpr float STARTING_FOOD_EXPANSION_RATE = 0.05f;
@@ -92,6 +99,9 @@ constexpr float STARTING_ISLAND_SPAWN_RATE = 2.0f;
 constexpr float MINIMUM_ISLAND_SPAWN_RATE = 0.5f;
 constexpr float ISLAND_SPAWN_RATE_DECAY = 0.01f;
 
+// How often all of the grass grows
+constexpr float GRASS_GROWTH_INTERVAL = 0.5f; 
+constexpr float GROWTH_MULTIPLIER = 2.0f;
 
 // Only saves dead agents with fitness greater than this to be later analyzed
 constexpr float MINIIMUM_FITNESS_TO_BE_SAVED = 5.0f;
@@ -106,7 +116,7 @@ const bool SHOW_FOV = false;
 /* ------------------- Agent Settings ------------------ */
 
 // Influences much the agent slows down when not accelerating - pivotal for turning
-constexpr float FRICTION_COEFFICIENT = 10.0f;
+constexpr float FRICTION_COEFFICIENT = 3.0f;
 
 // Enery settings per agents
 constexpr float MAX_ENERGY = 100.0f;
@@ -120,17 +130,17 @@ constexpr float REPRODUCTION_COST_SCALING = 0.3f;
 constexpr float REPRODUCTION_COOLDOWN = 5.0f;
 
 // Range around the agent in which it perceives enemies all-around
-constexpr float SENSING_RANGE = 16.0f;
+constexpr float SENSING_RANGE = 36.0f;
 
 // Range around the agent in which it perceives grass - one of the main bottlenecks for simulation efficiency
-constexpr float GRASS_SENSING_RADIUS = 20.0f;
+constexpr float GRASS_SENSING_RADIUS = 50.0f;
 
 // Caps the strafing output of the brain to avoid orbiting behavior around prey - needs work, not very realistic
 constexpr float STRAFING_CAP = 0.25f;
 
 // Minimum speed required to update heading, to avoid jitter when almost still - also needs work
 constexpr float MINIMUM_HEADING_UPDATE_SPEED = 0.2f;
-constexpr float MAXIMUM_TURNING_SPEED = 10.0f;
+constexpr float MAXIMUM_TURNING_SPEED = 3.14f;
 
 
 
@@ -149,7 +159,7 @@ constexpr float PREDATOR_DIGESTION_TIME = 2.0f;
 
 // Prredators consume more energy passively, less to sprint
 constexpr float PREDATOR_METABOLISM_MULTIPLIER = 5.0f;
-constexpr float PREDATOR_EFFORT_MULTIPLIER = 0.2f;
+constexpr float PREDATOR_EFFORT_MULTIPLIER = 2.0f;
 
 // Energy gained by predators when eating prey
 const float PREDATOR_ENERGY_GAIN = MAX_ENERGY / 2;
@@ -160,13 +170,18 @@ constexpr float PREDATOR_ENERGY_FITNESS_MULTIPLIER = 10.0f;
 // The radius within which a prey can eat grass
 constexpr float PREY_EAT_RADIUS_SQ = 4.0f;
 
+// Minimum food amount in a cell to be considered worth eating
+constexpr float MINIMUM_BITE_SIZE = 1.5f;
+
 // Prey-specific parameters
 constexpr int PREY_ID = -1;
 constexpr float PREY_MAX_SPEED = 25.0f;
-constexpr float PREY_FORCE = 300.0f;
+constexpr float PREY_FORCE = 600.0f;
 constexpr float PREY_VIEW_RADIUS = 20.0f;
 constexpr float PREY_FOV_ANGLE = 180.0f;
-constexpr float PREY_DIGESTION_TIME = 2.0f;
+constexpr float PREY_DIGESTION_TIME = 0.25f;
+
+const float PREY_EFFORT_MULTIPLIER = 0.5f;
 
 // Rewards gaining energy, to discourage standstill
 const float PREY_ENERGY_GAIN = MAX_ENERGY / 2;
@@ -176,7 +191,7 @@ constexpr float PREY_ENERGY_FITNESS_MULTIPLIER = 10.0f;
 /* ------------------- Learning Settings ------------------ */
 
 // Brain size parameters - take care to keep these consistent with the ones inputted from the agents
-const int INPUT_LAYER_SIZE = 10;
+const int INPUT_LAYER_SIZE = 14;
 const int HIDDEN_LAYER_SIZE = 8;
 const int OUTPUT_LAYER_SIZE = 2;
 

@@ -4,6 +4,7 @@
 using namespace std;
 
 struct ThoroidalData {
+    float dist;
     float distSq;
     float angleToTarget;
     float dx;

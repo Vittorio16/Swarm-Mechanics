@@ -28,10 +28,11 @@ ThoroidalData getThoroidalCoordinates(float obsX, float obsY, float targetX, flo
         dy += worldHeight;
     }
 
+    float dist = hypot(dx, dy);
     float distSq = dx*dx + dy*dy;
     float angleToTarget = atan2(dy, dx);
     
-    return {distSq, angleToTarget, dx, dy};
+    return {dist, distSq, angleToTarget, dx, dy};
 }
 
 // Returns a new heading, based on the wanted heading and turning factor

@@ -25,7 +25,9 @@ class World{
     
     sf::RenderTexture gridTexture; 
     bool gridTextureValid = false; 
-    
+  
+    // timer to control grass growth
+    float timeSinceLastGrowth = 0.0f;
     // RNG for spawning entities and grass
     mt19937 gen;
     uniform_int_distribution<int> disX;
@@ -33,6 +35,10 @@ class World{
     
     vector<Observation> getObservation(const Agent* observer); 
     
+    // Helpers to grow the grass
+    void addFood(int cx, int cy, float amount);
+    void spawnInitialIslands(int numIslands, int minRadius, int maxRadius);
+
     // Helpers to check for prey eating grass and growing grass
     vector<float> getBestFoodScent(const Agent* agent); 
     void checkPreyFeeding(unique_ptr<Agent>& agent);

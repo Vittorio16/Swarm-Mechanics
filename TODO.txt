@@ -72,10 +72,10 @@ Randomize some inputs - number of agents, world generation...
 
 
 --- Cleanup ---
-- put all global variables in config.h
 - check for code clarity in all the files
 - check if the "has_text" is being used at all in world.cpp
-
+- prey should learn to stand still...
+- something wrong with them orbiting their left side, instead of center
 
 --- GOAL ---
 Ultimately, want to avoid using any sort of fitness function and base evolution purely on survival
@@ -99,3 +99,4 @@ This requires:
 - Introduced per child penalty and reproduction ew11cooldowns to combat exponential growth - also increased eat rate while diminishing energy gained from feeding
 - Better logging implemented
 - Added knowledge of grass for predators
+- Separated direction from distance vectors in sensory_data, and implemented global grass growth 

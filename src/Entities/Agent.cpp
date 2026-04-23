@@ -36,11 +36,49 @@ void Agent::updateSensoryData(const vector<Observation>& observations, const vec
     sensors.agentSpeed = speed;
     sensors.closestEnemyX = 0;
     sensors.closestEnemyY = 0;
+    sensors.closestEnemyDist = 1.0f;
     sensors.enemyClosingSpeed = 0;
     sensors.enemyTangentialSpeed = 0;
     sensors.closestEnemy = nullptr;
     sensors.fullness = this->remainingDigestion / this->digestionTime;
 
+    // Grass inputs  
+    float normalization = this->grassViewRadius;
+    float distToFood = hypot(scents[0], scents[1]);
+
+    if (abs(scents[0]) < 0.001f && abs(scents[1]) < 0.001f) {
+        sensors.foodClosingVelocity = 0.0f;
+        sensors.foodTangentialVelocity = 0.0f;
+
+        sensors.foodSenseX = 0.0f;
+        sensors.foodSenseY = 0.0f;
+        sensors.foodDistance = 1.0f; 
+    } else {
+        // Normalize the food sense vector, dividing the direction vector from the distance
+        float normFoodX = scents[0] / distToFood;
+        float normFoodY = scents[1] / distToFood;
+        
+        sensors.foodSenseX = normFoodX;
+        sensors.foodSenseY = normFoodY;
+    
+        float foodDistance = distToFood / normalization;
+        sensors.foodDistance = foodDistance;
+    
+        // Calculate the agent's heading for closing and tangential velocity calculations
+        float c = cos(-facingAngle);
+        float s = sin(-facingAngle);
+    
+        float vLongitudinal = vx * c - vy * s;
+        float vTangential = vx * s + vy * c;
+    
+        float closingVelocity = vLongitudinal * normFoodX + vTangential * normFoodY;
+        float tangentialVelocity = vLongitudinal * normFoodY - vTangential * normFoodX;
+    
+        sensors.foodClosingVelocity = closingVelocity / maxSpeed;
+        sensors.foodTangentialVelocity = tangentialVelocity / maxSpeed;
+    }
+
+    // Terminate early if no enemies are visible
     if(observations.empty()) return;
 
     const Observation* closestEnemyObservation = getClosestEnemyObservation(observations);
@@ -49,15 +87,27 @@ void Agent::updateSensoryData(const vector<Observation>& observations, const vec
         float heading = facingAngle;
         float c = cos(-heading);
         float s = sin(-heading);
-
+        
         float relx = closestEnemyObservation->dx;
         float rely = closestEnemyObservation->dy;
-
+        
         float localX = relx * c - rely * s;
         float localY = relx * s + rely * c;
+        
+        float obsDist = closestEnemyObservation->dist;
+        float closestEnemyX, closestEnemyY;
 
-        sensors.closestEnemyX = localX;
-        sensors.closestEnemyY = localY;
+        if (obsDist <= 0.001f){
+            closestEnemyX = 0;
+            closestEnemyY = 0;
+        } else {
+            closestEnemyX = localX / obsDist;
+            closestEnemyY = localY / obsDist;
+        }
+        
+        sensors.closestEnemyX = closestEnemyX;
+        sensors.closestEnemyY = closestEnemyY;
+        sensors.closestEnemyDist = obsDist / viewRadius;
 
         float relvx = closestEnemyObservation->otherAgent->vx - this->vx;
         float relvy = closestEnemyObservation->otherAgent->vy - this->vy;
@@ -70,44 +120,17 @@ void Agent::updateSensoryData(const vector<Observation>& observations, const vec
         sensors.enemyTangentialSpeed = vTangential / closestEnemyObservation->otherAgent->maxSpeed;
         sensors.closestEnemy = closestEnemyObservation->otherAgent;
     } 
-    
-    // Grass inputs  
-    float normalization = this->grassViewRadius;
-    sensors.foodSenseX = clamp(scents[0] / normalization, -1.0f, 1.0f);
-    sensors.foodSenseY = clamp(scents[1] / normalization, -1.0f, 1.0f);
-
-    if (abs(sensors.foodSenseX) < 0.001f && abs(sensors.foodSenseY) < 0.001f) {
-        sensors.foodClosingVelocity = 0.0f;
-        sensors.foodTangentialVelocity = 0.0f;
-        return;
-    }
-
-    float angleToFood = atan2(scents[1], scents[0]);
-    float c = cos(-facingAngle);
-    float s = sin(-facingAngle);
-
-    float vLongitudinal = vx * c - vy * s;
-    float vTangential = vx * s + vy * c;
-    
-    float ca = cos(angleToFood);
-    float sa = sin(angleToFood);
-
-    float closingVelocity = vLongitudinal * ca + vTangential * sa;
-    float tangentialVelocity = -vLongitudinal * sa + vTangential * ca;
-
-    sensors.foodClosingVelocity = closingVelocity / maxSpeed;
-    sensors.foodTangentialVelocity = tangentialVelocity / maxSpeed;
-
     return;
 }
 
 void Agent::think(){
     vector<float> neuralInputs = { 
-        /*previousThrustIntent, previousStrafeIntent,*/
+        previousThrustIntent, previousStrafeIntent,
         sensors.agentSpeed / maxSpeed, 
-        sensors.closestEnemyX / viewRadius, sensors.closestEnemyY / viewRadius, 
+        sensors.closestEnemyX, sensors.closestEnemyY, 
+        sensors.closestEnemyDist,
         sensors.enemyClosingSpeed, sensors.enemyTangentialSpeed,
-        sensors.foodSenseX, sensors.foodSenseY,
+        sensors.foodSenseX, sensors.foodSenseY, sensors.foodDistance,
         sensors.foodClosingVelocity, sensors.foodTangentialVelocity,
         sensors.fullness
     };
@@ -163,6 +186,11 @@ void Agent::move(float dt){
 
         facingAngle = lerpAngle(facingAngle, targetAngle, factor);
     }
+    // Ensure heading stays between -PI and PI
+    facingAngle = fmod(facingAngle, 2 * M_PI);
+    if (facingAngle <= -M_PI) facingAngle += 2 * M_PI;
+    if (facingAngle > M_PI) facingAngle -= 2 * M_PI;
+
     // Update position
     x += vx * dt;
     y += vy * dt;

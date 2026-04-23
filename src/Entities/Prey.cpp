@@ -19,7 +19,11 @@ Prey::Prey(float x, float y): Agent(x, y) {
 // Updates the energy of the prey
 void Prey::updateEnergy(float ax, float ay, float dt) {
     float actionEnergyCost = hypot(ax, ay) / this->force;
-    float energyLoss = METABOLISM_COST * dt + actionEnergyCost * MAX_EFFORT_COST * dt;
+
+    float metabolismCost = METABOLISM_COST;
+    float effortCost = actionEnergyCost * MAX_EFFORT_COST * PREY_EFFORT_MULTIPLIER;
+
+    float energyLoss = metabolismCost * dt + effortCost * dt;
     energy -= energyLoss;
 
     // Prey gain energy by eating grass -- handled in world.update

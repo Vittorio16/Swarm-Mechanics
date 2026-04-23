@@ -14,6 +14,9 @@ World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)),
                 food_lattice(food_lattice_x_cells * food_lattice_y_cells),
                 gen(random_device{}()), disX(0, NUM_CELLE_X - 1), disY(0, NUM_CELLE_Y - 1) {
 
+    // Spawn initial islands of grass
+    spawnInitialIslands(STARTING_ISLANDS, MINIMUM_ISLAND_SIZE, MAXIMUM_ISLAND_SIZE);
+
     // Puts set number of predators and preys in random positions
     for (int i = 0; i < NUM_PREDATOR; i++){
         float randX = disX(gen);
@@ -34,8 +37,7 @@ vector<float> World::getBestFoodScent(const Agent* agent) {
     int cx = (int)(agent->x / FOOD_CELL_WIDTH);
     int cy = (int)(agent->y / FOOD_CELL_HEIGHT);
     
-    int max_distance = ceil(agent->viewRadius / FOOD_CELL_WIDTH);
-    
+    int max_distance = ceil(agent->grassViewRadius / FOOD_CELL_WIDTH);
     float bestFoodScore = -1.0f;
     int bestChunkIndex = -1;
 
@@ -88,8 +90,8 @@ vector<float> World::getBestFoodScent(const Agent* agent) {
     for (const sf::Vector2i& pos : food_lattice[bestChunkIndex].activeCells){
         float food = grid[pos.x][pos.y].foodAmount;
 
-        // Skips if food eaten this frame
-        if (food <= 0.001f) continue;
+        // Skips if food eaten this frame, or if too small for bite size
+        if (food <= MINIMUM_BITE_SIZE) continue;
 
         float dx = pos.x + 0.5f - agent->x;
         float dy = pos.y + 0.5f - agent->y;
@@ -149,8 +151,8 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
             tx = ((tx % NUM_CELLE_X) + NUM_CELLE_X) % NUM_CELLE_X;
             ty = ((ty % NUM_CELLE_Y) + NUM_CELLE_Y) % NUM_CELLE_Y;
 
-            // Skip empty cells
-            if (grid[tx][ty].foodAmount <= 0) continue;
+            // Skip empty - or almost empty - cells
+            if (grid[tx][ty].foodAmount <= MINIMUM_BITE_SIZE) continue;
 
             // Calculate Distance to the CENTER of that target cell
             // Note: We use the relative (dx, dy) to calculate distance 
@@ -203,34 +205,35 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
     }
 }
 
+// Adds food to a cell
+void World::addFood(int cx, int cy, float growthAmount){
+    float current_food = grid[cx][cy].foodAmount;
+    float space_left = MAX_FOOD - current_food;
+    
+    if (space_left <= 0) return;
+
+    float actual_growth = min(growthAmount, space_left);
+
+    int chunk_x = cx / FOOD_CELL_WIDTH;
+    int chunk_y = cy / FOOD_CELL_HEIGHT;
+    int chunk_index = chunk_y * food_lattice_x_cells + chunk_x;
+
+    // If it was completely empty, register it in the chunk's active list
+    if (current_food <= 0.001f){
+        food_lattice[chunk_index].activeCells.push_back(sf::Vector2i(cx, cy));
+    }
+
+    // Update main grid and chunk scoreboard
+    grid[cx][cy].foodAmount += actual_growth;
+    food_lattice[chunk_index].totalFood += actual_growth;
+    food_lattice[chunk_index].sumFoodX += cx * actual_growth;
+    food_lattice[chunk_index].sumFoodY += cy * actual_growth;
+}
+
+
 // Grows the grass
 void World::growGrass(float dt, int generationCount){
-    float growthAmount = GROWTH_MULTIPLIER * dt;
-
-    // Helper Lambda: Handles all the math for safely adding food to a specific (cx, cy)
-    auto addFoodToCell = [&](int cx, int cy) {
-        float current_food = grid[cx][cy].foodAmount;
-        float space_left = MAX_FOOD - current_food;
-        
-        if (space_left <= 0) return;
-
-        float actual_growth = min(growthAmount, space_left);
-
-        int chunk_x = cx / FOOD_CELL_WIDTH;
-        int chunk_y = cy / FOOD_CELL_HEIGHT;
-        int chunk_index = chunk_y * food_lattice_x_cells + chunk_x;
-
-        // If it was completely empty, register it in the chunk's active list
-        if (current_food <= 0.001f){
-            food_lattice[chunk_index].activeCells.push_back(sf::Vector2i(cx, cy));
-        }
-
-        // Update main grid and chunk scoreboard
-        grid[cx][cy].foodAmount += actual_growth;
-        food_lattice[chunk_index].totalFood += actual_growth;
-        food_lattice[chunk_index].sumFoodX += cx * actual_growth;
-        food_lattice[chunk_index].sumFoodY += cy * actual_growth;
-    };
+    float growthAmount = SPREAD_GROWTH_MULTIPLIER * dt;
 
     static uniform_real_distribution<float> chance(0.0f, 1.0f);
 
@@ -244,7 +247,7 @@ void World::growGrass(float dt, int generationCount){
     }
 
     for (int i = 0; i < spontaneousSpawns; i++){
-        addFoodToCell(disX(gen), disY(gen));
+        addFood(disX(gen), disY(gen), growthAmount);
     }
 
     // The rate at which existing grass spreads. 
@@ -282,7 +285,56 @@ void World::growGrass(float dt, int generationCount){
         else if (dir == 3) ny = (ny - 1 + NUM_CELLE_Y) % NUM_CELLE_Y;
 
         // Grow the neighbor
-        addFoodToCell(nx, ny);
+        addFood(nx, ny, growthAmount);
+    }
+    
+    // Makes all of the grass grow
+    timeSinceLastGrowth += dt;
+
+    if (timeSinceLastGrowth >= GRASS_GROWTH_INTERVAL) {
+        float batchGrowth = GROWTH_MULTIPLIER * timeSinceLastGrowth; 
+        
+        for (int chunkIndex = 0; chunkIndex < food_lattice.size(); chunkIndex++) {
+            if (food_lattice[chunkIndex].totalFood <= 0) continue;
+            
+            for (const sf::Vector2i& pos : food_lattice[chunkIndex].activeCells) {
+                if (grid[pos.x][pos.y].foodAmount < MAX_FOOD) {
+                    addFood(pos.x, pos.y, batchGrowth);
+                }
+            }
+        }
+        timeSinceLastGrowth = 0.0f;
+    }
+}
+
+// Populates the world with some initial grass islands
+void World::spawnInitialIslands(int numIslands, int minRadius, int maxRadius) {
+    uniform_int_distribution<int> radiusDist(minRadius, maxRadius);
+
+    for (int i = 0; i < numIslands; i++) {
+        // 1. Pick a random center for the island
+        int centerX = disX(gen);
+        int centerY = disY(gen);
+        
+        // 2. Pick a random size
+        int radius = radiusDist(gen);
+
+        // 3. Loop through a bounding box around the center
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dy = -radius; dy <= radius; dy++) {
+                
+                // 4. If the cell is inside the circle, fill it with grass
+                if (dx * dx + dy * dy <= radius * radius) {
+                    
+                    // Handle Toroidal Wrapping
+                    int nx = ((centerX + dx) % NUM_CELLE_X + NUM_CELLE_X) % NUM_CELLE_X;
+                    int ny = ((centerY + dy) % NUM_CELLE_Y + NUM_CELLE_Y) % NUM_CELLE_Y;
+                    
+                    // Instantly mature the grass to maximum capacity
+                    addFood(nx, ny, MAX_FOOD); 
+                }
+            }
+        }
     }
 }
 
@@ -373,18 +425,18 @@ void World::update(float dt, int generationCount){
     }
     agents.erase(firstDead, agents.end());
 
-    // Grass growth
-    growGrass(dt, generationCount);
-
+    
     // Remove element from activeGrass if its food got eaten
     for (auto& chunk : food_lattice){ 
         chunk.activeCells.erase(
             remove_if(chunk.activeCells.begin(), chunk.activeCells.end(), 
-                [&](const sf::Vector2i& pos) {
+            [&](const sf::Vector2i& pos) {
                 return grid[pos.x][pos.y].foodAmount <= 0;}),
                 chunk.activeCells.end()
-        );
+            );
     }
+    // Grass growth
+    growGrass(dt, generationCount);    
 }
 
 // Given an observer, returns a vector of pointers to all the agents it can see
@@ -415,6 +467,7 @@ vector<Observation> World::getObservation(const Agent* observer){
                     observer->x, observer->y, otherAgent->x, otherAgent->y, NUM_CELLE_X, NUM_CELLE_Y
                 );
         
+                float dist = coords.dist;
                 float distSq = coords.distSq;
                 float angleToTarget = coords.angleToTarget;
                 float dx = coords.dx;
@@ -422,7 +475,7 @@ vector<Observation> World::getObservation(const Agent* observer){
         
                 // Senses an area around the agent
                 if (distSq < observer->sensingRange){
-                    observations.emplace_back(dx, dy, distSq, otherAgent);
+                    observations.emplace_back(dx, dy, dist, distSq, otherAgent);
                     continue;
                 }
         
@@ -437,7 +490,7 @@ vector<Observation> World::getObservation(const Agent* observer){
                 if (angleDiff > M_PI) angleDiff -= 2 * M_PI;
         
                 if (abs(angleDiff) < observer->fovAngle * M_PI / 360.0f){
-                    observations.emplace_back(dx, dy, distSq, otherAgent);
+                    observations.emplace_back(dx, dy, dist, distSq, otherAgent);
                 }
             }
         }

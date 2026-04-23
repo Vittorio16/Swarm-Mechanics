@@ -10,11 +10,12 @@ class Agent;
 // Contains an observation of another agent from the POV of an observer
 struct Observation{
     float dx, dy;
+    float dist;
     float distSq;
     Agent* otherAgent;
 
-    Observation(float x, float y, float dist, Agent* other) : 
-                dx(x), dy(y), distSq(dist), otherAgent(other) {}
+    Observation(float x, float y, float dist, float distSq, Agent* other) : 
+                dx(x), dy(y), dist(dist), distSq(distSq), otherAgent(other) {}
 };
 
 class Agent{
@@ -30,17 +31,18 @@ class Agent{
     // Sensory inputs which guide decisions
     struct SensoryData {
         float agentSpeed;
-        float closestEnemyX, closestEnemyY;
+        float closestEnemyX, closestEnemyY, closestEnemyDist;
         float enemyClosingSpeed, enemyTangentialSpeed;
-        float foodSenseX, foodSenseY;
+        float foodSenseX, foodSenseY, foodDistance;
         float foodClosingVelocity, foodTangentialVelocity;
         float fullness;
         Agent* closestEnemy;
         
         SensoryData() : agentSpeed(0),
-                        closestEnemyX(0), closestEnemyY(0), 
+                        closestEnemyX(0), closestEnemyY(0), closestEnemyDist(0),
                         enemyClosingSpeed(0), enemyTangentialSpeed(0), closestEnemy(nullptr),
-                        foodSenseX(0), foodSenseY(0), foodClosingVelocity(0), foodTangentialVelocity(0),
+                        foodSenseX(0), foodSenseY(0), foodDistance(0),
+                        foodClosingVelocity(0), foodTangentialVelocity(0),
                         fullness(0) {}
     } sensors;
     // Physics variables
