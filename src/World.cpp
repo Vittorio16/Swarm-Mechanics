@@ -422,7 +422,7 @@ vector<Observation> World::getObservation(const Agent* observer){
                 float dy = coords.dy;
         
                 // Senses an area around the agent
-                if (distSq < observer->rangeOfVision){
+                if (distSq < observer->sensingRange){
                     observations.emplace_back(dx, dy, distSq, otherAgent);
                     continue;
                 }
@@ -642,7 +642,7 @@ void drawFOV(sf::RenderWindow& window, const sf::Vector2u& windowSize, const uni
     }
 
     // We use sqrt because rangeOfVision is considered as squared distance
-    float proximityRadius = std::sqrt(agent->rangeOfVision) * scaleX;
+    float proximityRadius = std::sqrt(agent->sensingRange) * scaleX;
     sf::CircleShape proximityShape(proximityRadius);
     
     // Important: Set Origin to center so it draws around the agent, not from top-left

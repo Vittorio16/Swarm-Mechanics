@@ -1,11 +1,7 @@
 #pragma once
 #include <memory>
 #include "Learning/Perceptron.h"
-
-const float MAX_ENERGY = 100.0f;
-const float METABOLISM_COST = 0.05f;
-const float MAX_EFFORT_COST = 5.0f;
-const float RANGE_OF_VISION_SQ = 16.0f;
+#include "Core/Config.h"
 
 // Forward declaration of the world class
 class World;
@@ -67,7 +63,7 @@ class Agent{
     int childCount;
     float reproductionCooldown;
 
-    float rangeOfVision;
+    float sensingRange;
     float viewRadius;
     float fovAngle;
     int grassViewRadius;

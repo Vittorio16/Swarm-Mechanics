@@ -60,6 +60,10 @@ const float RANDOM_INJECTION_RATE = 0.20f; // minus the hof injection rate
 
 /* ------------------- World Settings ------------------ */
 
+// Starting agents
+constexpr int NUM_PREDATOR = 100;
+constexpr int NUM_PREY = 100;
+
 // World dimensions
 constexpr int NUM_CELLE_X = 960;
 constexpr int NUM_CELLE_Y = 540;
@@ -96,12 +100,35 @@ const bool SHOW_FOOD_LATTICE = false;
 const bool SHOW_FOV = false;
 
 
+
 /* ------------------- Agent Settings ------------------ */
 
-// Starting agents
-constexpr int NUM_PREDATOR = 100;
-constexpr int NUM_PREY = 100;
+// Influences much the agent slows down when not accelerating - pivotal for turning
+constexpr float FRICTION_COEFFICIENT = 10.0f;
 
+// Enery settings per agents
+const float MAX_ENERGY = 100.0f;
+constexpr float METABOLISM_COST = 0.05f;
+constexpr float MAX_EFFORT_COST = 5.0f;
+constexpr float STARTING_ENERGY =  2 * MAX_ENERGY / 3;
+
+// Rewards gaining energy, to discourage standstill
+constexpr float ENERGY_FITNESS_MULTIPLIER = 10.0f;
+
+// Range around the agent in which it perceives enemies all-around
+constexpr float SENSING_RANGE = 16.0f;
+
+// Range around the agent in which it perceives grass - one of the main bottlenecks for simulation efficiency
+constexpr float GRASS_SENSING_RADIUS = 20.0f;
+
+// Caps the strafing output of the brain to avoid orbiting behavior around prey - needs work, not very realistic
+constexpr float STRAFING_CAP = 0.25f;
+
+// Minimum speed required to update heading, to avoid jitter when almost still - also needs work
+constexpr float MINIMUM_HEADING_UPDATE_SPEED = 0.2f;
+constexpr float MAXIMUM_TURNING_SPEED = 10.0f;
+
+/* ------------------- Predator Settings ------------------ */
 
 /* ------------------- Prey Settings ------------------ */
 
@@ -109,6 +136,13 @@ constexpr int NUM_PREY = 100;
 constexpr float PREY_EAT_RADIUS_SQ = 4.0f;
 
 /* ------------------- Learning Settings ------------------ */
+
+// Brain size parameters - take care to keep these consistent with the ones inputted from the agents
+const int INPUT_LAYER_SIZE = 10;
+const int HIDDEN_LAYER_SIZE = 8;
+const int OUTPUT_LAYER_SIZE = 2;
+
+// Mutation parameters are kept in the simulation section, since they change across generations
 
 
 

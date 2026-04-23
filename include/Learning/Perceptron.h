@@ -1,14 +1,8 @@
 #pragma once
 #include <vector>
+#include "Core/Config.h"
 
 using namespace std;
-
-const int INPUT_LAYER_SIZE = 10;
-const int HIDDEN_LAYER_SIZE = 8;
-const int OUTPUT_LAYER_SIZE = 2;
-
-const float MUTATION_RATE = 0.1;
-const float MUTATION_STRENGTH = 0.2;
 
 class SimplePerceptron{
     private:
@@ -33,7 +27,7 @@ class SimplePerceptron{
     vector<float> feedForward(const vector<float>& inputs);
     
     // Helper function to mutate brain of newborns
-    void mutate(float currentMutationRate = MUTATION_RATE, float currentMutationStrength = MUTATION_STRENGTH);
+    void mutate(float currentMutationRate = STARTING_MUTATION_RATE, float currentMutationStrength = STARTING_MUTATION_STRENGTH);
     // Helpers to set weights at the start of the simulation
     vector<float> getWeights() const;
     void setWeights(const vector<float>& newWeights);

@@ -24,9 +24,9 @@ const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& 
 Agent::Agent(float startX, float startY) : 
         timeLived(0), energyGained(0),
         x(startX), y(startY), vx(0), vy(0), facingAngle(0),
-        ax(0), ay(0), friction(10.0f), 
-        energy(2 * MAX_ENERGY / 3), childCount(0), reproductionCooldown(0),
-        rangeOfVision(RANGE_OF_VISION_SQ),  grassViewRadius(20), isAlive(true),
+        ax(0), ay(0), friction(FRICTION_COEFFICIENT), 
+        energy(STARTING_ENERGY), childCount(0), reproductionCooldown(0),
+        sensingRange(SENSING_RANGE),  grassViewRadius(GRASS_SENSING_RADIUS), isAlive(true),
         previousThrustIntent(0), previousStrafeIntent(0) {}
 
 // Transforms an array of observations (1 per visible agent) 
@@ -116,7 +116,7 @@ void Agent::think(){
 
     float thrust = force * neuralOutput[0];
     // Cap strafing to avoid orbiting
-    float strafing = force * neuralOutput[1] * 0.25f;
+    float strafing = force * neuralOutput[1] * STRAFING_CAP;
 
     float heading = facingAngle;
     float c = cos(heading);
@@ -153,10 +153,10 @@ void Agent::move(float dt){
     }
 
     // This makes for smooth turning, instead of instantaneous, and avoids crazy standstill rotation
-    if (speed > 0.2f){
+    if (speed > MINIMUM_HEADING_UPDATE_SPEED){
         float targetAngle = atan2(vy, vx);
     
-        float turnSpeed = 10.0f;
+        float turnSpeed = MAXIMUM_TURNING_SPEED;
         // Ensures we never overshoot the wanted angle, no matted dt
         float factor = turnSpeed * dt;
         if (factor > 1) factor = 1;
@@ -192,7 +192,7 @@ void Agent::setBrain(const SimplePerceptron& newBrain){
 
 // Gets the agent's fitness
 float Agent::getFitness() const {
-    float fitness = timeLived + (energyGained * 10.0f);
+    float fitness = timeLived + (energyGained * ENERGY_FITNESS_MULTIPLIER);
 
     if (isnan(fitness) || isinf(fitness)) {
             return -1.0f; 
