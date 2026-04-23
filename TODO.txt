@@ -3,7 +3,10 @@ In no specific order:
 --- Behavioural changes ---
 Try to stop spin to win behaviour 
 
-// - prey behaves very poorly when faced with a tightly packed group of predators
+/* 
+    prey behaves very poorly when faced with a tightly packed group of predators,
+    this can only be solved by implementing knowledge of multiple agents 
+*/
 
 // - General behavioural improvements
 - training on different sized maps to avoid weird dependencies
@@ -14,51 +17,28 @@ Try to stop spin to win behaviour
 - predators sprint forward and stop seeing prey
 - introduce population cap to avoid critical mass phenomenon -- NEED SOMETHING TO ADDRESS CRITICAL MASS
 - harder to survive
-- reverse RNN
-- give predators knowledge of grass
-
-// - Fix apparent discrepancy in behaviour when fast forward - maybe decrease time interval
-- in display mode, time interval is around 72 / 10 000 of a second
-- in general, check needed time step
-
-Experiment with different fitness functions -- make kills worth more for predators
-
-// - experiment with solutions to avoid exponential growth
-- increase cost of living
-- decrease island growth
-- should stop eating when full?
 
 
 
 --- Physics changes ---
-Actually work out physics of movement to make some sense of what values to assign
 
-// - general look at all the parameters involved in the energy cycle
-
+*/
+    change outputs to [thrust, turn delta], specifying where the agent wants to head
+*/
 
 
 --- Optimizations ---
 // - profile a single simulation to accurately figure out where time is spent
 
 
+
 --- Additions ---
 
 - better load and store info
 
-// - Incremental training
-- diminish mutation rate thorugh generations
-- decrease energy gain from feeding
-
-In reality, entities learn how to act by copying parent or by reward from environment - could work on this
-
-
 
 
 --- Experimentation ---
-// - train on differently sized maps
-
-Use velocities as outputs
-Modify agents' frame of reference 
 
 Different network topologies - complexification
 Speciating the population
@@ -76,6 +56,8 @@ Randomize some inputs - number of agents, world generation...
 - check if the "has_text" is being used at all in world.cpp
 - prey should learn to stand still...
 - something wrong with them orbiting their left side, instead of center
+
+
 
 --- GOAL ---
 Ultimately, want to avoid using any sort of fitness function and base evolution purely on survival
