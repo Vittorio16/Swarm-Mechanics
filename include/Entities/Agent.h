@@ -95,6 +95,6 @@ class Agent{
     const SimplePerceptron& getBrain() const {return brain;}
     void setBrain(const SimplePerceptron& babyBrain);
 
-    // Function to get the agent's fitnes
-    virtual float getFitness() const;
-};
+    // Function to get the agent's fitnes   
+    virtual float getFitness() const = 0;
+};  

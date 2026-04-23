@@ -75,7 +75,7 @@ void SimulationManager::evolve() {
     for (auto& world : worlds){
         // Collect living
         for (auto& agent : world->agents){
-            if (agent->speciesID == -1){
+            if (agent->speciesID == PREY_ID){
                 allPrey.push_back(static_cast<Prey*>(agent.get()));
             } else {
                 allPredators.push_back(static_cast<Predator*>(agent.get()));
@@ -83,7 +83,7 @@ void SimulationManager::evolve() {
         }
         // Collect dead
         for (auto& agent : world->graveyard){
-            if (agent->speciesID == -1){
+            if (agent->speciesID == PREY_ID){
                 allPrey.push_back(static_cast<Prey*>(agent.get()));
             } else {
                 allPredators.push_back(static_cast<Predator*>(agent.get()));
@@ -209,7 +209,7 @@ void SimulationManager::resetSimulation() {
             float roll = randomFloat(0.0f, 1.0f);
 
             // PREY
-            if (agent->speciesID == -1 && !elitePreyBrains.empty()) {
+            if (agent->speciesID == PREY_ID && !elitePreyBrains.empty()) {
                 Prey* p = static_cast<Prey*>(agent.get());
 
                 if (!preyHallOfFame.empty() && roll < HOF_POOL_INJECTION_RATE){
@@ -234,7 +234,7 @@ void SimulationManager::resetSimulation() {
             }
             
             // PREDATORS
-            if (agent->speciesID == 1 && !elitePredatorBrains.empty()) {
+            if (agent->speciesID == PREDATOR_ID && !elitePredatorBrains.empty()) {
                 Predator* p = static_cast<Predator*>(agent.get());
                 
                 if (!predatorHallOfFame.empty() && roll < HOF_POOL_INJECTION_RATE){

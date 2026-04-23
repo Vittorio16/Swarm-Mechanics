@@ -1,8 +1,7 @@
 #pragma once
 #include <memory>
 #include "Entities/Agent.h"
-
-const float KILL_RANGE_SQ = 5.0f;
+#include "Core/Config.h"
 
 class Predator : public Agent{
     private:

@@ -4,12 +4,12 @@
 
 // Constructor
 Predator::Predator(float x, float y): Agent(x, y) {
-    this->speciesID = 1;
-    this->maxSpeed = 35.0f;
-    this->force = 400.0f;
-    this->viewRadius = 30.0f;
-    this->fovAngle = 120.0f;
-    this->digestionTime = 2.0f;
+    this->speciesID = PREDATOR_ID;
+    this->maxSpeed = PREDATOR_MAX_SPEED;
+    this->force = PREDATOR_FORCE;
+    this->viewRadius = PREDATOR_VIEW_RADIUS;
+    this->fovAngle = PREDATOR_FOV_ANGLE;
+    this->digestionTime = PREDATOR_DIGESTION_TIME;
     this->remainingDigestion = this->digestionTime;
 }
 
@@ -18,8 +18,8 @@ void Predator::updateEnergy(float ax, float ay, float dt) {
     float actionEnergyCost = hypot(ax, ay) / this->force;
 
     // Sharks -- spend more to stay alive, less to move
-    float baseMetabolism = METABOLISM_COST * 5.0f;
-    float effortCost = actionEnergyCost * MAX_EFFORT_COST * 0.2f;
+    float baseMetabolism = METABOLISM_COST * PREDATOR_METABOLISM_MULTIPLIER;
+    float effortCost = actionEnergyCost * MAX_EFFORT_COST * PREDATOR_EFFORT_MULTIPLIER;
 
     float energyLoss = baseMetabolism * dt + effortCost * dt;
     energy -= energyLoss;
@@ -29,8 +29,8 @@ void Predator::updateEnergy(float ax, float ay, float dt) {
     if (sensors.closestEnemy != nullptr && sensors.closestEnemy->isAlive){
         float distSq = sensors.closestEnemyX*sensors.closestEnemyX + sensors.closestEnemyY*sensors.closestEnemyY;
         if (distSq < KILL_RANGE_SQ && sensors.closestEnemy->isAlive){
-            energy += MAX_ENERGY / 2;
-            energyGained += MAX_ENERGY / 2;
+            energy += PREDATOR_ENERGY_GAIN;
+            energyGained += PREDATOR_ENERGY_GAIN;
 
             sensors.closestEnemy->isAlive = false;
 
@@ -43,9 +43,9 @@ void Predator::updateEnergy(float ax, float ay, float dt) {
 // Makes an agent reproduce, diminishing its energy
 // and creating a new agent with similar weights
 unique_ptr<Agent> Predator::reproduce(){
-    float energyCost = MAX_ENERGY / 2.0f;
-    energy -= energyCost * (1 + 0.3f * childCount);
-    reproductionCooldown = 5.0f;
+    float energyCost = BASE_REPRODUCTION_COST;
+    energy -= energyCost * (1 + REPRODUCTION_COST_SCALING * childCount);
+    reproductionCooldown = REPRODUCTION_COOLDOWN;
 
     float babyX = this->x + (randomFloat() * 2.0f - 1.0f);
     float babyY = this->y + (randomFloat() * 2.0f - 1.0f);
@@ -63,7 +63,7 @@ unique_ptr<Agent> Predator::reproduce(){
 }
 
 float Predator::getFitness() const {
-    float fitness = energyGained * 10.0f;
+    float fitness = energyGained * PREDATOR_ENERGY_FITNESS_MULTIPLIER;
 
     if (isnan(fitness) || isinf(fitness)) return -1.0f;
     return fitness;

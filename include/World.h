@@ -5,6 +5,7 @@
 #include <random>
 #include "Core/Config.h"
 #include "Entities/Agent.h"
+#include "Entities/Predator.h"
 #include "Entities/Prey.h"
 
 using namespace std;

@@ -17,6 +17,8 @@ const float FIXED_TIME_STEP = 1.0f / 200.0f;
 const float MINIMUM_REAL_TIME_STEP = 0.05f;
 constexpr int MAX_FPS = 170;
 
+// Set to start with pre-trained brains, selected in main.cpp
+constexpr bool REPLAY_MODE_ENABLED = false;
 // Enable to stop time when pressing R
 constexpr bool DEBUGGING_ENABLED = false;
 
@@ -81,9 +83,9 @@ constexpr float MAX_FOOD = 10.0f;
 constexpr float GROWTH_MULTIPLIER = 1000.0f;
 
 // Incremental food spawning settings across generations
-constexpr float STARTING_FOOD_EXPANSION_RATE = 2.0f;
-constexpr float MINIMUM_FOOD_EXPANSION_RATE = 0.5f;
-constexpr float FOOD_EXPANSION_RATE_DECAY = 0.01f;
+constexpr float STARTING_FOOD_EXPANSION_RATE = 0.05f;
+constexpr float MINIMUM_FOOD_EXPANSION_RATE = 0.01f;
+constexpr float FOOD_EXPANSION_RATE_DECAY = 0.0002f;
 
 // Incremental food island spawning settings across generations
 constexpr float STARTING_ISLAND_SPAWN_RATE = 2.0f;
@@ -107,13 +109,15 @@ const bool SHOW_FOV = false;
 constexpr float FRICTION_COEFFICIENT = 10.0f;
 
 // Enery settings per agents
-const float MAX_ENERGY = 100.0f;
+constexpr float MAX_ENERGY = 100.0f;
 constexpr float METABOLISM_COST = 0.05f;
 constexpr float MAX_EFFORT_COST = 5.0f;
-constexpr float STARTING_ENERGY =  2 * MAX_ENERGY / 3;
+const float STARTING_ENERGY =  2 * MAX_ENERGY / 3;
 
-// Rewards gaining energy, to discourage standstill
-constexpr float ENERGY_FITNESS_MULTIPLIER = 10.0f;
+// Reproduction settings - energy cost, cooldown, and child count scaling
+const float BASE_REPRODUCTION_COST = MAX_ENERGY / 2.0f;
+constexpr float REPRODUCTION_COST_SCALING = 0.3f;
+constexpr float REPRODUCTION_COOLDOWN = 5.0f;
 
 // Range around the agent in which it perceives enemies all-around
 constexpr float SENSING_RANGE = 16.0f;
@@ -128,12 +132,46 @@ constexpr float STRAFING_CAP = 0.25f;
 constexpr float MINIMUM_HEADING_UPDATE_SPEED = 0.2f;
 constexpr float MAXIMUM_TURNING_SPEED = 10.0f;
 
+
+
 /* ------------------- Predator Settings ------------------ */
+
+// Range in which a predator can eat a prey
+const float KILL_RANGE_SQ = 5.0f;
+
+// Predator-specific parameters
+constexpr int PREDATOR_ID = 1;
+constexpr float PREDATOR_MAX_SPEED = 35.0f;
+constexpr float PREDATOR_FORCE = 400.0f;
+constexpr float PREDATOR_VIEW_RADIUS = 30.0f;
+constexpr float PREDATOR_FOV_ANGLE = 120.0f;
+constexpr float PREDATOR_DIGESTION_TIME = 2.0f;
+
+// Prredators consume more energy passively, less to sprint
+constexpr float PREDATOR_METABOLISM_MULTIPLIER = 5.0f;
+constexpr float PREDATOR_EFFORT_MULTIPLIER = 0.2f;
+
+// Energy gained by predators when eating prey
+const float PREDATOR_ENERGY_GAIN = MAX_ENERGY / 2;
+constexpr float PREDATOR_ENERGY_FITNESS_MULTIPLIER = 10.0f;
 
 /* ------------------- Prey Settings ------------------ */
 
 // The radius within which a prey can eat grass
 constexpr float PREY_EAT_RADIUS_SQ = 4.0f;
+
+// Prey-specific parameters
+constexpr int PREY_ID = -1;
+constexpr float PREY_MAX_SPEED = 25.0f;
+constexpr float PREY_FORCE = 300.0f;
+constexpr float PREY_VIEW_RADIUS = 20.0f;
+constexpr float PREY_FOV_ANGLE = 180.0f;
+constexpr float PREY_DIGESTION_TIME = 2.0f;
+
+// Rewards gaining energy, to discourage standstill
+const float PREY_ENERGY_GAIN = MAX_ENERGY / 2;
+constexpr float PREY_ENERGY_FITNESS_MULTIPLIER = 10.0f;
+
 
 /* ------------------- Learning Settings ------------------ */
 

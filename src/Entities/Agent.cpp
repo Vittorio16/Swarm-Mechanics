@@ -189,13 +189,3 @@ void Agent::move(float dt){
 void Agent::setBrain(const SimplePerceptron& newBrain){
     this->brain = newBrain;
 }
-
-// Gets the agent's fitness
-float Agent::getFitness() const {
-    float fitness = timeLived + (energyGained * ENERGY_FITNESS_MULTIPLIER);
-
-    if (isnan(fitness) || isinf(fitness)) {
-            return -1.0f; 
-    }
-    return fitness;
-}

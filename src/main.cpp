@@ -23,8 +23,7 @@ int main() {
     window.setFramerateLimit(MAX_FPS);
 
     // Optional: Start in replay mode with a pre-trained brain
-    bool replayMode = false;; 
-    if (replayMode) {
+    if (REPLAY_MODE_ENABLED) {
         // Load the sickest generation with FULL genetic diversity
         simManager.loadPreTrainedBrains(
             51, 
