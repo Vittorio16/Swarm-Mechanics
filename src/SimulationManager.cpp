@@ -17,7 +17,7 @@ SimulationManager::SimulationManager(int cores) : numCores(cores) {
 
 // Updates all worlds
 void SimulationManager::update(float dt, bool renderEnabled) {
-    float currentDuration = min(180.0f, GENERATION_DURATION + generationCount * 3.0f);
+    float currentDuration = min(MAXIMUM_GENERATION_DURATION, STARTING_GENERATION_DURATION + generationCount * GENERATION_SCALING_FACTOR);
 
     if (renderEnabled) {
         // Only update the first world if rendering is enabled to maintain performance
@@ -31,8 +31,9 @@ void SimulationManager::update(float dt, bool renderEnabled) {
         float timeRemaining = currentDuration - this->generationTimer;
         int ticksRemaining = (int)ceil(timeRemaining / dt);
 
-        int batchSize = std::min(200, ticksRemaining);
+        int batchSize = std::min(MAXIMUM_BATCH_SIZE, ticksRemaining);
         
+        // Enssure correct batch size when generation is ending
         if (batchSize <= 0) batchSize = 1;
 
         for (auto& world : worlds) {
@@ -105,7 +106,7 @@ void SimulationManager::evolve() {
 
     // --- PREY EVOLUTION ---
     if (!allPrey.empty()){
-        if (generationCount % 3 == 0){
+        if (generationCount % HOF_GENERATION_UPDATE_RATE == 0){
             preyHallOfFame.push_back(allPrey[0]->getBrain().getWeights());
             if (preyHallOfFame.size() > HALL_OF_FAME_SIZE){
                 preyHallOfFame.erase(preyHallOfFame.begin());
@@ -115,8 +116,8 @@ void SimulationManager::evolve() {
         cout << "Best Prey Fitness: " << allPrey[0]->getFitness() << endl;
 
         // Take top 10% -- capped to avoid dilution
-        int eliteCount = max(1, (int)(allPrey.size() * 0.1f));
-        eliteCount = min(50, eliteCount);
+        int eliteCount = max(1, (int)(allPrey.size() * TOP_PERCENTAGE));
+        eliteCount = min(MAXIMUM_ELITE_COUNT, eliteCount);
 
         this->elitePreyBrains.clear();
         for (int i = 0; i < eliteCount; i++){
@@ -129,7 +130,7 @@ void SimulationManager::evolve() {
     
     // --- PREDATOR EVOLUTION ---
     if (!allPredators.empty()){
-        if (generationCount % 3 == 0){
+        if (generationCount % HOF_GENERATION_UPDATE_RATE == 0){
             predatorHallOfFame.push_back(allPredators[0]->getBrain().getWeights());
             if (predatorHallOfFame.size() > HALL_OF_FAME_SIZE){
                 predatorHallOfFame.erase(predatorHallOfFame.begin());
@@ -139,8 +140,8 @@ void SimulationManager::evolve() {
         cout << "Best Predator Fitness: " << allPredators[0]->getFitness() << endl;
 
         // Take top 10%
-        int eliteCount = max(1, (int)(allPredators.size() * 0.1f));
-        eliteCount = min(50, eliteCount);
+        int eliteCount = max(1, (int)(allPredators.size() * TOP_PERCENTAGE));
+        eliteCount = min(MAXIMUM_ELITE_COUNT, eliteCount);
 
         this->elitePredatorBrains.clear();
         for (int i = 0; i < eliteCount; i++){
@@ -165,8 +166,8 @@ void SimulationManager::evolve() {
         logFile.close();
     }
 
-    // Checkpoint the weights every 3 generations
-    if (generationCount % 3 == 0) {
+    // Checkpoint the weights every HOF_GENERATION_UPDATE_RATE generations
+    if (generationCount % HOF_GENERATION_UPDATE_RATE == 0) {
         string preyFilename = "../logs/weights_prey_gen_" + to_string(generationCount) + ".txt";
         string predFilename = "../logs/weights_pred_gen_" + to_string(generationCount) + ".txt";
         
@@ -199,8 +200,8 @@ void SimulationManager::resetSimulation() {
     }
 
     // Adjust mutation parameters based on current generation count
-    float dynamicRate = std::max(0.02f, 0.20f - (generationCount * 0.005f));
-    float dynamicStrength = std::max(0.05f, 0.40f - (generationCount * 0.01f));
+    float dynamicRate = std::max(MINIMUM_MUTATION_RATE, STARTING_MUTATION_RATE - (generationCount * MUTATION_RATE_DECAY));
+    float dynamicStrength = std::max(MINIMUM_MUTATION_STRENGTH, STARTING_MUTATION_STRENGTH - (generationCount * MUTATION_STRENGTH_DECAY));
 
     // Give every new prey and predator the "Master Brain" + Mutation
     for (auto& world : worlds) {
@@ -211,14 +212,14 @@ void SimulationManager::resetSimulation() {
             if (agent->speciesID == -1 && !elitePreyBrains.empty()) {
                 Prey* p = static_cast<Prey*>(agent.get());
 
-                if (!preyHallOfFame.empty() && roll < 0.10f){
+                if (!preyHallOfFame.empty() && roll < HOF_POOL_INJECTION_RATE){
                     int index = (int)(randomFloat(0.0f, preyHallOfFame.size() - 0.001f));
 
                     SimplePerceptron brain = p->getBrain();
                     brain.setWeights(preyHallOfFame[index]);
                     p->setBrain(brain);
                 
-                } else if (roll < 0.20f){
+                } else if (roll < RANDOM_INJECTION_RATE){
                     p->setBrain(SimplePerceptron());
                 
                 } else {
@@ -236,14 +237,14 @@ void SimulationManager::resetSimulation() {
             if (agent->speciesID == 1 && !elitePredatorBrains.empty()) {
                 Predator* p = static_cast<Predator*>(agent.get());
                 
-                if (!predatorHallOfFame.empty() && roll < 0.10f){
+                if (!predatorHallOfFame.empty() && roll < HOF_POOL_INJECTION_RATE){
                     int index = (int)(randomFloat(0.0f, predatorHallOfFame.size() - 0.001f));
                     
                     SimplePerceptron brain = p->getBrain();
                     brain.setWeights(predatorHallOfFame[index]);
                     p->setBrain(brain);
                 
-                } else if (roll < 0.20f){
+                } else if (roll < RANDOM_INJECTION_RATE){
                     p->setBrain(SimplePerceptron());
                 
                 } else {

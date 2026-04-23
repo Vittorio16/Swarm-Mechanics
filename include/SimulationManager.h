@@ -5,6 +5,7 @@
 #include "World.h"
 #include "Entities/Prey.h"
 #include "Entities/Predator.h"
+#include "Core/Config.h"
 
 using namespace std;
 
@@ -15,11 +16,9 @@ private:
     
     vector<vector<float>> predatorHallOfFame;
     vector<vector<float>> preyHallOfFame;
-    const int HALL_OF_FAME_SIZE = 50;
     
     // Genetic Algorithm Settings
     float generationTimer = 0.0f;
-    const float GENERATION_DURATION = 60.0f;
     int generationCount = 0;
     
     // The "Master Brain" (pools from this for new agents), and average of the best from previous gen
@@ -37,7 +36,7 @@ public:
 
     void resetSimulation();
 
-    // UPDATED: Added startGeneration and the two Elite Pool parameters
+    // Loads pre-trained brains and hall of fame from files, and fast-forwards the simulation to a specified generation
     void loadPreTrainedBrains(int startGeneration, const string& preyBrains, const string& predatorBrains, 
         const string& hallOfFamePrey = "", const string& hallOfFamePredator = "",
         const string& elitePrey = "", const string& elitePredator = "");

@@ -1,6 +1,7 @@
 #include <SFML/Graphics.hpp>
 #include <thread>
 #include <iostream>
+#include "Core/Config.h"
 #include "SimulationManager.h"
 
 using namespace std;
@@ -8,13 +9,9 @@ using namespace std;
 
 int main() {
     int numCores = std::thread::hardware_concurrency();
-    if (numCores == 0) numCores = 4; // Fallback
+    if (numCores == 0) numCores = FALLBACK_CORE_NUMBER; // Fallback
 
     cout << "Running on " << numCores - 1 << " logical cores." << endl;
-
-    // Standard fixed step (1/200th of a second)
-    const float FIXED_TIME_STEP = 1.0f / 200.0f;
-    constexpr int MAX_FPS = 170;
     
     sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Swarm Evolution");
     bool renderingEnabled = true; // Toggle this to run faster evolution
@@ -73,11 +70,14 @@ int main() {
         if (renderingEnabled) {
             // MODE A: Real-Time
             dt = clock.restart().asSeconds();
-            if (dt > 0.05f) dt = 0.05f;
+            if (dt > MINIMUM_REAL_TIME_STEP) dt = MINIMUM_REAL_TIME_STEP; // Cap to prevent huge jumps
         } else {
             // MODE B: Training
-            // dt = 0; // Debugging mode
-            dt = FIXED_TIME_STEP;
+            if (DEBUGGING_ENABLED) {
+                dt = 0;
+            } else {
+                dt = FIXED_TIME_STEP;
+            }
             clock.restart(); 
         }
 
@@ -88,9 +88,6 @@ int main() {
             window.clear();
             simManager.draw(window);
             window.display();
-        } else {
-            // Optional: Sleep a tiny bit to prevent CPU burning if you don't want max speed
-            // sf::sleep(sf::milliseconds(10));
         }
     }
 }

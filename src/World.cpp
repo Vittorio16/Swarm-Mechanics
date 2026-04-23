@@ -368,7 +368,7 @@ void World::update(float dt, int generationCount){
     // Move the dead agents into the graveyard
     for (auto it = firstDead; it != agents.end(); ++it) {
         // Only save them if they actually did something useful
-        if ((*it)->getFitness() > 5.0f) { 
+        if ((*it)->getFitness() > MINIIMUM_FITNESS_TO_BE_SAVED) { 
             graveyard.push_back(std::move(*it));
         }
     }
@@ -456,7 +456,7 @@ void World::drawFoodLattice(float scaleX, float scaleY){
     sf::Text coordText;
     if (hasFont) {
         coordText.setFont(font);
-        coordText.setCharacterSize(10); // Very small text so it fits
+        coordText.setCharacterSize(10);
         coordText.setFillColor(sf::Color(0, 150, 0, 150)); // Faint green text
     }
 
@@ -507,7 +507,8 @@ void World::remapBackground(sf::Vector2u windowSize, float scaleX, float scaleY)
         
         sf::RectangleShape cell;
         cell.setOutlineColor(sf::Color(128,128,128));
-        // cell.setOutlineThickness(1.0f);
+        
+        if (SHOW_GRID) cell.setOutlineThickness(1.0f);
 
         for (int i = 0; i < NUM_CELLE_X; i++) {
             for (int j = 0; j < NUM_CELLE_Y; j++) {
@@ -522,7 +523,7 @@ void World::remapBackground(sf::Vector2u windowSize, float scaleX, float scaleY)
         }
         
         // Draw food lattice for debugging purposes
-        // drawFoodLattice(scaleX, scaleY);
+        if (SHOW_FOOD_LATTICE) drawFoodLattice(scaleX, scaleY);
 
         gridTexture.display();
         gridTextureValid = true;
@@ -715,7 +716,8 @@ void World::draw(sf::RenderWindow& window){
     for (const auto& agent : agents) {
         setAgentShapeParameters(boidShape, agent, scaleX, scaleY);
 
-        // drawFOV(window, windowSize, agent, scaleX, scaleY);
+        if (SHOW_FOV) drawFOV(window, windowSize, agent, scaleX, scaleY);
+        
         window.draw(boidShape);
     }
 }

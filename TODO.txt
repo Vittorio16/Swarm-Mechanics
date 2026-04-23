@@ -40,9 +40,6 @@ Actually work out physics of movement to make some sense of what values to assig
 --- Optimizations ---
 // - profile a single simulation to accurately figure out where time is spent
 
-// - refactor code to keep all changeable globals in the same place
-
-
 
 --- Additions ---
 
@@ -70,10 +67,15 @@ Curriculum Learning
 
 Randomize some inputs - number of agents, world generation...
 
+// - make the hof not only the best agent, but a pool of them
+// - check how much the MAX_ELITE_COUNT is being used - we are likely polling less than 0.1% of the population 
+
 
 --- Cleanup ---
 - put all global variables in config.h
 - check for code clarity in all the files
+- check if the "has_text" is being used at all in world.cpp
+
 
 --- GOAL ---
 Ultimately, want to avoid using any sort of fitness function and base evolution purely on survival
