@@ -38,7 +38,7 @@ class Agent{
         float enemyClosingSpeed, enemyTangentialSpeed;
         float foodSenseX, foodSenseY, foodDistance;
         float foodClosingVelocity, foodTangentialVelocity;
-        float fullness;
+        float energyReserve;
         Agent* closestEnemy;
         
         SensoryData() : agentSpeed(0),
@@ -46,7 +46,7 @@ class Agent{
                         enemyClosingSpeed(0), enemyTangentialSpeed(0), closestEnemy(nullptr),
                         foodSenseX(0), foodSenseY(0), foodDistance(0),
                         foodClosingVelocity(0), foodTangentialVelocity(0),
-                        fullness(0) {}
+                        energyReserve(0) {}
     } sensors;
     // Physics variables
     float friction;

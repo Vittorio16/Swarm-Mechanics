@@ -42,7 +42,7 @@ constexpr int HOF_GENERATION_UPDATE_RATE = 3;
 
 // Percentage of best agents to pool from for next generation, and maximum number of them
 const float TOP_PERCENTAGE = 0.1f;
-constexpr int MAXIMUM_ELITE_COUNT = 50;
+constexpr int MAXIMUM_ELITE_COUNT = 500;
 
 // Mutation rates per generation
 constexpr float STARTING_MUTATION_RATE = 0.20f;

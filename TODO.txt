@@ -22,10 +22,6 @@ Try to stop spin to win behaviour
 
 --- Physics changes ---
 
-*/
-    change outputs to [thrust, turn delta], specifying where the agent wants to head
-*/
-
 
 --- Optimizations ---
 // - profile a single simulation to accurately figure out where time is spent
@@ -54,11 +50,7 @@ Randomize some inputs - number of agents, world generation...
 --- Cleanup ---
 - check for code clarity in all the files
 - check if the "has_text" is being used at all in world.cpp
-- prey should learn to stand still...
-- something wrong with them orbiting their left side, instead of center
-- check for bugs in enemy detection logic - sometimes predators react to prey, sometime they keep orbiting
 - work out good energy parameters
-- predators should be able to roam longer?
 
 
 --- GOAL ---
@@ -85,3 +77,4 @@ This requires:
 - Added knowledge of grass for predators
 - Separated direction from distance vectors in sensory_data, and implemented global grass growth 
 - converted from strafing to turning intent
+- converted fullness to energy reserves

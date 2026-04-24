@@ -41,7 +41,7 @@ void Agent::updateSensoryData(const vector<Observation>& observations, const vec
     sensors.enemyClosingSpeed = 0;
     sensors.enemyTangentialSpeed = 0;
     sensors.closestEnemy = nullptr;
-    sensors.fullness = this->remainingDigestion / this->digestionTime;
+    sensors.energyReserve = 1 - this->energy / MAX_ENERGY;
 
     // Grass inputs  
     float normalization = this->grassViewRadius;
@@ -133,12 +133,12 @@ void Agent::think(){
         sensors.enemyClosingSpeed, sensors.enemyTangentialSpeed,
         sensors.foodSenseX, sensors.foodSenseY, sensors.foodDistance,
         sensors.foodClosingVelocity, sensors.foodTangentialVelocity,
-        sensors.fullness
+        sensors.energyReserve
     };
 
     vector<float> neuralOutput = brain.feedForward(neuralInputs);
 
-    thrustIntent = neuralOutput[0];
+    thrustIntent = max(0.0f, neuralOutput[0]);
     turnIntent = neuralOutput[1];
 
     previousThrustIntent = thrustIntent;
