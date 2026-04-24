@@ -17,8 +17,8 @@ Prey::Prey(float x, float y): Agent(x, y) {
 }
 
 // Updates the energy of the prey
-void Prey::updateEnergy(float ax, float ay, float dt) {
-    float actionEnergyCost = hypot(ax, ay) / this->force;
+void Prey::updateEnergy(float thrust, float turn, float dt) {
+    float actionEnergyCost = abs(thrust) + abs(turn) * TURNING_COST_PENALTY;
 
     float metabolismCost = METABOLISM_COST;
     float effortCost = actionEnergyCost * MAX_EFFORT_COST * PREY_EFFORT_MULTIPLIER;

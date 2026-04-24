@@ -23,11 +23,12 @@ const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& 
 // Constructor
 Agent::Agent(float startX, float startY) : 
         timeLived(0), energyGained(0),
-        x(startX), y(startY), vx(0), vy(0), facingAngle(0),
+        x(startX), y(startY), vx(0), vy(0), speed(0), facingAngle(0),
         ax(0), ay(0), friction(FRICTION_COEFFICIENT), 
         energy(STARTING_ENERGY), childCount(0), reproductionCooldown(0),
         sensingRange(SENSING_RANGE),  grassViewRadius(GRASS_SENSING_RADIUS), isAlive(true),
-        previousThrustIntent(0), previousStrafeIntent(0) {}
+        previousThrustIntent(0), previousTurnIntent(0),
+        thrustIntent(0), turnIntent(0) {}
 
 // Transforms an array of observations (1 per visible agent) 
 // into sensory data processable by the brain
@@ -125,7 +126,7 @@ void Agent::updateSensoryData(const vector<Observation>& observations, const vec
 
 void Agent::think(){
     vector<float> neuralInputs = { 
-        previousThrustIntent, previousStrafeIntent,
+        previousThrustIntent, previousTurnIntent,
         sensors.agentSpeed / maxSpeed, 
         sensors.closestEnemyX, sensors.closestEnemyY, 
         sensors.closestEnemyDist,
@@ -137,24 +138,26 @@ void Agent::think(){
 
     vector<float> neuralOutput = brain.feedForward(neuralInputs);
 
-    float thrust = force * neuralOutput[0];
-    // Cap strafing to avoid orbiting
-    float strafing = force * neuralOutput[1] * STRAFING_CAP;
+    thrustIntent = neuralOutput[0];
+    turnIntent = neuralOutput[1];
 
-    float heading = facingAngle;
-    float c = cos(heading);
-    float s = sin(heading);
-
-    ax = thrust * c + strafing * s;
-    ay = thrust * s - strafing * c;
-
-    previousThrustIntent = neuralOutput[0];
-    previousStrafeIntent = neuralOutput[1];
+    previousThrustIntent = thrustIntent;
+    previousTurnIntent = turnIntent;
 }
 
 // Aggiorna la posizione dell'agente usando accelerazioni e dt
 void Agent::move(float dt){
     timeLived += dt;
+
+    // Update heading and acceleration based on brain output
+    facingAngle += turnIntent * MAXIMUM_TURNING_SPEED * dt;
+    facingAngle = fmod(facingAngle, 2 * M_PI);
+    if (facingAngle <= -M_PI) facingAngle += 2 * M_PI;
+    if (facingAngle > M_PI) facingAngle -= 2 * M_PI;
+
+    // Apply thrust in the direction of facingAngle
+    ax = thrustIntent * cos(facingAngle) * force;
+    ay = thrustIntent * sin(facingAngle) * force;
 
     // Update velocity using acceleration and friction
     vx += ax * dt;
@@ -175,22 +178,6 @@ void Agent::move(float dt){
         speed = maxSpeed;
     }
 
-    // This makes for smooth turning, instead of instantaneous, and avoids crazy standstill rotation
-    if (speed > MINIMUM_HEADING_UPDATE_SPEED){
-        float targetAngle = atan2(vy, vx);
-    
-        float turnSpeed = MAXIMUM_TURNING_SPEED;
-        // Ensures we never overshoot the wanted angle, no matted dt
-        float factor = turnSpeed * dt;
-        if (factor > 1) factor = 1;
-
-        facingAngle = lerpAngle(facingAngle, targetAngle, factor);
-    }
-    // Ensure heading stays between -PI and PI
-    facingAngle = fmod(facingAngle, 2 * M_PI);
-    if (facingAngle <= -M_PI) facingAngle += 2 * M_PI;
-    if (facingAngle > M_PI) facingAngle -= 2 * M_PI;
-
     // Update position
     x += vx * dt;
     y += vy * dt;
@@ -205,7 +192,7 @@ void Agent::move(float dt){
         if (reproductionCooldown < 0) reproductionCooldown = 0;
     }
 
-    updateEnergy(ax, ay, dt);
+    updateEnergy(thrustIntent, turnIntent, dt);
     if (energy <= 0) isAlive = false;
     
     // Reset acceleration for next frame

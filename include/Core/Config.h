@@ -135,13 +135,9 @@ constexpr float SENSING_RANGE = 36.0f;
 // Range around the agent in which it perceives grass - one of the main bottlenecks for simulation efficiency
 constexpr float GRASS_SENSING_RADIUS = 50.0f;
 
-// Caps the strafing output of the brain to avoid orbiting behavior around prey - needs work, not very realistic
-constexpr float STRAFING_CAP = 0.25f;
-
 // Minimum speed required to update heading, to avoid jitter when almost still - also needs work
-constexpr float MINIMUM_HEADING_UPDATE_SPEED = 0.2f;
 constexpr float MAXIMUM_TURNING_SPEED = 3.14f;
-
+constexpr float TURNING_COST_PENALTY = 0.5f;
 
 
 /* ------------------- Predator Settings ------------------ */
@@ -155,7 +151,7 @@ constexpr float PREDATOR_MAX_SPEED = 35.0f;
 constexpr float PREDATOR_FORCE = 400.0f;
 constexpr float PREDATOR_VIEW_RADIUS = 30.0f;
 constexpr float PREDATOR_FOV_ANGLE = 120.0f;
-constexpr float PREDATOR_DIGESTION_TIME = 2.0f;
+constexpr float PREDATOR_DIGESTION_TIME = 0.5f;
 
 // Prredators consume more energy passively, less to sprint
 constexpr float PREDATOR_METABOLISM_MULTIPLIER = 5.0f;

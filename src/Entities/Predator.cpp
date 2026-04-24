@@ -14,8 +14,8 @@ Predator::Predator(float x, float y): Agent(x, y) {
 }
 
 // Updates the energy of the predator
-void Predator::updateEnergy(float ax, float ay, float dt) {
-    float actionEnergyCost = hypot(ax, ay) / this->force;
+void Predator::updateEnergy(float thrust, float turn, float dt) {
+    float actionEnergyCost = abs(thrust) + abs(turn) * TURNING_COST_PENALTY;
 
     // Sharks -- spend more to stay alive, less to move
     float baseMetabolism = METABOLISM_COST * PREDATOR_METABOLISM_MULTIPLIER;
@@ -27,8 +27,10 @@ void Predator::updateEnergy(float ax, float ay, float dt) {
     // Predators gain energy by eating prey
     if (this->remainingDigestion > 0.001f) return;
     if (sensors.closestEnemy != nullptr && sensors.closestEnemy->isAlive){
-        float distSq = sensors.closestEnemyX*sensors.closestEnemyX + sensors.closestEnemyY*sensors.closestEnemyY;
-        if (distSq < KILL_RANGE_SQ && sensors.closestEnemy->isAlive){
+        // Check if the closest enemy is within kill range
+        float actualDist = sensors.closestEnemyDist * viewRadius;
+
+        if (actualDist * actualDist < KILL_RANGE_SQ && sensors.closestEnemy->isAlive){
             energy += PREDATOR_ENERGY_GAIN;
             energyGained += PREDATOR_ENERGY_GAIN;
 

@@ -10,7 +10,7 @@ class Predator : public Agent{
     public:
     Predator(float startX, float startY);
 
-    void updateEnergy(float ax, float ay, float dt) override;
+    void updateEnergy(float thrust, float turn, float dt) override;
     unique_ptr<Agent> reproduce() override;
 
     float getFitness() const override;

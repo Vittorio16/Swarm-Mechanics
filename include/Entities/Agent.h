@@ -25,7 +25,10 @@ class Agent{
 
     // RNN behavioral memory variables
     float previousThrustIntent;
-    float previousStrafeIntent;
+    float previousTurnIntent;
+
+    float thrustIntent;
+    float turnIntent;
 
     protected:
     // Sensory inputs which guide decisions
@@ -86,7 +89,7 @@ class Agent{
 
     // Updates the agent's state
     void move(float dt);
-    virtual void updateEnergy(float ax, float ay, float dt) = 0;
+    virtual void updateEnergy(float thrust, float turn, float dt) = 0;
     // Creates a new agent of the same species as the parent
     virtual unique_ptr<Agent> reproduce() = 0;
 

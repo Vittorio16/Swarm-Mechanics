@@ -56,7 +56,9 @@ Randomize some inputs - number of agents, world generation...
 - check if the "has_text" is being used at all in world.cpp
 - prey should learn to stand still...
 - something wrong with them orbiting their left side, instead of center
-
+- check for bugs in enemy detection logic - sometimes predators react to prey, sometime they keep orbiting
+- work out good energy parameters
+- predators should be able to roam longer?
 
 
 --- GOAL ---
@@ -82,3 +84,4 @@ This requires:
 - Better logging implemented
 - Added knowledge of grass for predators
 - Separated direction from distance vectors in sensory_data, and implemented global grass growth 
+- converted from strafing to turning intent
