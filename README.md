@@ -61,7 +61,7 @@ cmake --build .
 # Run the simulation
 ./SwarmSim
 
----
+```
 
 ## 🛠️ Configuration & Tuning
 The entire simulation is highly parametric. You can alter the rules by editing `Core/Config.h`.
