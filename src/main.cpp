@@ -14,7 +14,7 @@ int main() {
     cout << "Running on " << numCores - 1 << " logical cores." << endl;
     
     sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Swarm Evolution");
-    bool renderingEnabled = true; // Toggle this to run faster evolution
+    bool renderingEnabled = true;
 
     sf::Clock clock;
 

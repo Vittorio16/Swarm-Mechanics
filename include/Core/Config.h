@@ -150,12 +150,12 @@ constexpr int PREDATOR_ID = 1;
 constexpr float PREDATOR_MAX_SPEED = 35.0f;
 constexpr float PREDATOR_FORCE = 400.0f;
 constexpr float PREDATOR_VIEW_RADIUS = 30.0f;
-constexpr float PREDATOR_FOV_ANGLE = 120.0f;
+constexpr float PREDATOR_FOV_ANGLE = 150.0f;
 constexpr float PREDATOR_DIGESTION_TIME = 0.5f;
 
 // Prredators consume more energy passively, less to sprint
-constexpr float PREDATOR_METABOLISM_MULTIPLIER = 5.0f;
-constexpr float PREDATOR_EFFORT_MULTIPLIER = 2.0f;
+constexpr float PREDATOR_METABOLISM_MULTIPLIER = 20.0f;
+constexpr float PREDATOR_EFFORT_MULTIPLIER = 0.4f;
 
 // Energy gained by predators when eating prey
 const float PREDATOR_ENERGY_GAIN = MAX_ENERGY / 2;
@@ -177,7 +177,7 @@ constexpr float PREY_VIEW_RADIUS = 20.0f;
 constexpr float PREY_FOV_ANGLE = 180.0f;
 constexpr float PREY_DIGESTION_TIME = 0.25f;
 
-const float PREY_EFFORT_MULTIPLIER = 0.5f;
+const float PREY_EFFORT_MULTIPLIER = 1.0f;
 
 // Rewards gaining energy, to discourage standstill
 const float PREY_ENERGY_GAIN = MAX_ENERGY / 2;

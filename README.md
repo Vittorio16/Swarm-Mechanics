@@ -63,9 +63,26 @@ cmake --build .
 
 ```
 
+---
+
+## 🎮 Usage & Controls
+
+### Training Mode vs. Real-Time (The 'R' Key)
+By default, the simulation starts in Real-Time rendering mode. You can press the **`R` key** at any time to toggle between rendering and training:
+* **Real-Time Mode:** Capped to a set framerate. Renders the world, agents, and debug overlays so you can observe the behaviors visually.
+* **Training Mode:** Headless mode. Rendering is disabled, the framerate is uncapped, and the simulation dynamically batches ticks across CPU cores to evolve generations faster.
+
+### Running a Pre-Trained Population
+The simulation automatically saves the best weights, Hall of Fame, and elite pools to the `logs/` directory every few generations. To watch a previously trained generation:
+1. Open `Core/Config.h` and ensure `REPLAY_MODE_ENABLED = true;`.
+2. Open `main.cpp` and locate the `simManager.loadPreTrainedBrains(...)` function block.
+3. Update the starting generation integer and the string file paths to point to your desired `.txt` log files (e.g., `../logs/weights_prey_gen_50.txt`).
+4. Recompile and run
+
+---
+
 ## 🛠️ Configuration & Tuning
 The entire simulation is highly parametric. You can alter the rules by editing `Core/Config.h`.
-
 
 **Key areas to tweak:**
 * **`World Settings`:** Adjust map size (`NUM_CELLE_X`, `NUM_CELLE_Y`), starting population, and grass growth rates.
