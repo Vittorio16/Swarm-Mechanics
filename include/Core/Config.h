@@ -63,8 +63,8 @@ const float RANDOM_INJECTION_RATE = 0.20f; // minus the hof injection rate
 /* ------------------- World Settings ------------------ */
 
 // Starting agents
-constexpr int NUM_PREDATOR = 100;
-constexpr int NUM_PREY = 100;
+constexpr int NUM_PREDATOR = 50;
+constexpr int NUM_PREY = 400;
 
 // World dimensions
 constexpr int NUM_CELLE_X = 960;
@@ -85,19 +85,19 @@ constexpr float MAX_FOOD = 10.0f;
 constexpr float SPREAD_GROWTH_MULTIPLIER = 15.0f;
 
 // Help create islands on world gen
-constexpr int STARTING_ISLANDS = 20;
-constexpr int MINIMUM_ISLAND_SIZE = 3;
-constexpr int MAXIMUM_ISLAND_SIZE = 9;
+constexpr int STARTING_ISLANDS = 8;
+constexpr int MINIMUM_ISLAND_SIZE = 5;
+constexpr int MAXIMUM_ISLAND_SIZE = 15;
 
 // Incremental food spawning settings across generations
-constexpr float STARTING_FOOD_EXPANSION_RATE = 0.05f;
-constexpr float MINIMUM_FOOD_EXPANSION_RATE = 0.01f;
-constexpr float FOOD_EXPANSION_RATE_DECAY = 0.0002f;
+constexpr float STARTING_FOOD_EXPANSION_RATE = 0.18f;
+constexpr float MINIMUM_FOOD_EXPANSION_RATE = 0.06f;
+constexpr float FOOD_EXPANSION_RATE_DECAY = 0.0015f;
 
 // Incremental food island spawning settings across generations
-constexpr float STARTING_ISLAND_SPAWN_RATE = 2.0f;
-constexpr float MINIMUM_ISLAND_SPAWN_RATE = 0.5f;
-constexpr float ISLAND_SPAWN_RATE_DECAY = 0.01f;
+constexpr float STARTING_ISLAND_SPAWN_RATE = 0.2f;
+constexpr float MINIMUM_ISLAND_SPAWN_RATE = 0.05f;
+constexpr float ISLAND_SPAWN_RATE_DECAY = 0.0015f;
 
 // How often all of the grass grows
 constexpr float GRASS_GROWTH_INTERVAL = 0.5f; 
@@ -149,16 +149,16 @@ const float KILL_RANGE_SQ = 5.0f;
 constexpr int PREDATOR_ID = 1;
 constexpr float PREDATOR_MAX_SPEED = 35.0f;
 constexpr float PREDATOR_FORCE = 400.0f;
-constexpr float PREDATOR_VIEW_RADIUS = 30.0f;
+constexpr float PREDATOR_VIEW_RADIUS = 150.0f;
 constexpr float PREDATOR_FOV_ANGLE = 150.0f;
-constexpr float PREDATOR_DIGESTION_TIME = 0.5f;
+constexpr float PREDATOR_DIGESTION_TIME = 1.0f;
 
 // Prredators consume more energy passively, less to sprint
 constexpr float PREDATOR_METABOLISM_MULTIPLIER = 20.0f;
 constexpr float PREDATOR_EFFORT_MULTIPLIER = 0.4f;
 
 // Energy gained by predators when eating prey
-const float PREDATOR_ENERGY_GAIN = MAX_ENERGY / 2;
+const float PREDATOR_ENERGY_GAIN = MAX_ENERGY / 3;
 constexpr float PREDATOR_ENERGY_FITNESS_MULTIPLIER = 10.0f;
 
 /* ------------------- Prey Settings ------------------ */
@@ -166,15 +166,16 @@ constexpr float PREDATOR_ENERGY_FITNESS_MULTIPLIER = 10.0f;
 // The radius within which a prey can eat grass
 constexpr float PREY_EAT_RADIUS_SQ = 4.0f;
 
-// Minimum food amount in a cell to be considered worth eating
-constexpr float MINIMUM_BITE_SIZE = 1.5f;
+// Minimum food amount in a cell to be considered worth eating, and if it should be deleted
+constexpr float MINIMUM_BITE_SIZE = 0.0f;
+const float DELETION_THRESHOLD = MINIMUM_BITE_SIZE; 
 
 // Prey-specific parameters
 constexpr int PREY_ID = -1;
 constexpr float PREY_MAX_SPEED = 25.0f;
 constexpr float PREY_FORCE = 600.0f;
 constexpr float PREY_VIEW_RADIUS = 20.0f;
-constexpr float PREY_FOV_ANGLE = 180.0f;
+constexpr float PREY_FOV_ANGLE = 360.0f;
 constexpr float PREY_DIGESTION_TIME = 0.25f;
 
 const float PREY_EFFORT_MULTIPLIER = 1.0f;

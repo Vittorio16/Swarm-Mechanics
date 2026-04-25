@@ -1,0 +1,55 @@
+Changed starting agent numbers, food spawning parameters, predator energy gain, digestion time
+Prey are still ignoring predators; too much food spawn on later generations
+/* ------------------- World Settings ------------------ */
+
+constexpr int NUM_PREDATOR = 50;
+constexpr int NUM_PREY = 400;
+
+constexpr int NUM_CELLE_X = 960;
+constexpr int NUM_CELLE_Y = 540;
+
+constexpr int STARTING_ISLANDS = 8;
+constexpr int MINIMUM_ISLAND_SIZE = 5;
+constexpr int MAXIMUM_ISLAND_SIZE = 15;
+
+
+constexpr float STARTING_ISLAND_SPAWN_RATE = 1.0f;
+constexpr float MINIMUM_ISLAND_SPAWN_RATE = 0.2f;
+constexpr float ISLAND_SPAWN_RATE_DECAY = 0.002f;
+
+constexpr float STARTING_FOOD_EXPANSION_RATE = 0.05f;
+constexpr float MINIMUM_FOOD_EXPANSION_RATE = 0.01f;
+constexpr float FOOD_EXPANSION_RATE_DECAY = 0.0002f;
+
+/* ------------------- Agent Settings ------------------ */
+
+constexpr float GRASS_SENSING_RADIUS = 50.0f;
+
+constexpr float MAXIMUM_TURNING_SPEED = 3.14f;
+constexpr float TURNING_COST_PENALTY = 0.5f;
+
+
+/* ------------------- Predator Settings ------------------ */
+
+constexpr float PREDATOR_MAX_SPEED = 35.0f;
+constexpr float PREDATOR_FORCE = 400.0f;
+constexpr float PREDATOR_VIEW_RADIUS = 30.0f;
+constexpr float PREDATOR_FOV_ANGLE = 150.0f;
+constexpr float PREDATOR_DIGESTION_TIME = 1.0f;
+
+constexpr float PREDATOR_METABOLISM_MULTIPLIER = 20.0f;
+constexpr float PREDATOR_EFFORT_MULTIPLIER = 0.4f;
+
+const float PREDATOR_ENERGY_GAIN = MAX_ENERGY / 3;
+constexpr float PREDATOR_ENERGY_FITNESS_MULTIPLIER = 10.0f;
+
+/* ------------------- Prey Settings ------------------ */
+
+constexpr float PREY_MAX_SPEED = 25.0f;
+constexpr float PREY_FORCE = 600.0f;
+constexpr float PREY_VIEW_RADIUS = 20.0f;
+constexpr float PREY_FOV_ANGLE = 180.0f;
+
+const float PREY_EFFORT_MULTIPLIER = 1.0f;
+
+constexpr float PREY_ENERGY_FITNESS_MULTIPLIER = 10.0f;

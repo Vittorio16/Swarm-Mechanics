@@ -237,7 +237,7 @@ void World::growGrass(float dt, int generationCount){
 
     static uniform_real_distribution<float> chance(0.0f, 1.0f);
 
-    // Generates around 2 new islands per second - decreasing with generation
+    // Generates around STARTING_ISLAND_SPAWN_RATE new islands per second - decreasing with generation
     float currentSpontaneousRate = max(MINIMUM_ISLAND_SPAWN_RATE, STARTING_ISLAND_SPAWN_RATE - (generationCount * ISLAND_SPAWN_RATE_DECAY));
     float exactSpontaneousFloat = currentSpontaneousRate * dt;
     
@@ -251,43 +251,54 @@ void World::growGrass(float dt, int generationCount){
     }
 
     // The rate at which existing grass spreads. 
-    // Scaled by map area and dt so it grows smoothly regardless of framerate.
-    // Decreases with generations
-    float currentExpansionRate = max(MINIMUM_FOOD_EXPANSION_RATE, STARTING_FOOD_EXPANSION_RATE - (generationCount * FOOD_EXPANSION_RATE_DECAY));
-    float exactExpansionFloat = (NUM_CELLE_X * NUM_CELLE_Y) * currentExpansionRate * dt;
+    // Find all chunks that actually have grass and count total active blades
+    vector<int> activeChunkIndices;
+    int totalActiveCells = 0;
     
-    int expansionSpawns = (int)exactExpansionFloat;
-    if (chance(gen) < (exactExpansionFloat - expansionSpawns)) {
-        expansionSpawns++;
+    for (int i = 0; i < food_lattice.size(); i++) {
+        if (!food_lattice[i].activeCells.empty()) {
+            activeChunkIndices.push_back(i);
+            totalActiveCells += food_lattice[i].activeCells.size();
+        }
     }
 
-    // Setup RNG for picking random chunks and directions
-    static uniform_int_distribution<int> disChunk(0, food_lattice.size() - 1);
-    static uniform_int_distribution<int> disDir(0, 3); // 0=Right, 1=Left, 2=Down, 3=Up
+    if (totalActiveCells > 0) {
+        // The rate scales with existing grass
+        float currentExpansionRate = max(MINIMUM_FOOD_EXPANSION_RATE, STARTING_FOOD_EXPANSION_RATE - (generationCount * FOOD_EXPANSION_RATE_DECAY));
+        
+        // Each individual blade of grass has a X% chance to spread per second
+        float exactExpansionFloat = totalActiveCells * currentExpansionRate * dt;
+        
+        int expansionSpawns = (int)exactExpansionFloat;
+        if (chance(gen) < (exactExpansionFloat - expansionSpawns)) {
+            expansionSpawns++;
+        }
 
-    for (int i = 0; i < expansionSpawns; i++){
-        // Pick a random chunk
-        int chunkIdx = disChunk(gen);
-        if (food_lattice[chunkIdx].activeCells.empty()) continue; 
+        static uniform_int_distribution<int> disDir(0, 3); // 0=Right, 1=Left, 2=Down, 3=Up
 
-        // Pick a random blade of grass inside this chunk
-        uniform_int_distribution<int> disCell(0, food_lattice[chunkIdx].activeCells.size() - 1);
-        sf::Vector2i sourceCell = food_lattice[chunkIdx].activeCells[disCell(gen)];
+        for (int i = 0; i < expansionSpawns; i++){
+            // Pick a random chunk from the active ones
+            uniform_int_distribution<int> disChunk(0, activeChunkIndices.size() - 1);
+            int chunkIdx = activeChunkIndices[disChunk(gen)];
+            
+            // Pick a random blade of grass inside this chunk
+            uniform_int_distribution<int> disCell(0, food_lattice[chunkIdx].activeCells.size() - 1);
+            sf::Vector2i sourceCell = food_lattice[chunkIdx].activeCells[disCell(gen)];
 
-        // Pick a random neighbor (with Toroidal wrap)
-        int dir = disDir(gen);
-        int nx = sourceCell.x;
-        int ny = sourceCell.y;
+            // Pick a random neighbor (with Toroidal wrap)
+            int dir = disDir(gen);
+            int nx = sourceCell.x;
+            int ny = sourceCell.y;
 
-        if (dir == 0) nx = (nx + 1) % NUM_CELLE_X;
-        else if (dir == 1) nx = (nx - 1 + NUM_CELLE_X) % NUM_CELLE_X;
-        else if (dir == 2) ny = (ny + 1) % NUM_CELLE_Y;
-        else if (dir == 3) ny = (ny - 1 + NUM_CELLE_Y) % NUM_CELLE_Y;
+            if (dir == 0) nx = (nx + 1) % NUM_CELLE_X;
+            else if (dir == 1) nx = (nx - 1 + NUM_CELLE_X) % NUM_CELLE_X;
+            else if (dir == 2) ny = (ny + 1) % NUM_CELLE_Y;
+            else if (dir == 3) ny = (ny - 1 + NUM_CELLE_Y) % NUM_CELLE_Y;
 
-        // Grow the neighbor
-        addFood(nx, ny, growthAmount);
+            // Grow the neighbor
+            addFood(nx, ny, growthAmount);
+        }
     }
-    
     // Makes all of the grass grow
     timeSinceLastGrowth += dt;
 
@@ -431,7 +442,7 @@ void World::update(float dt, int generationCount){
         chunk.activeCells.erase(
             remove_if(chunk.activeCells.begin(), chunk.activeCells.end(), 
             [&](const sf::Vector2i& pos) {
-                return grid[pos.x][pos.y].foodAmount <= 0;}),
+                return grid[pos.x][pos.y].foodAmount <= DELETION_THRESHOLD;}),
                 chunk.activeCells.end()
             );
     }
