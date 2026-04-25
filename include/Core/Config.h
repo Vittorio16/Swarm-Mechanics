@@ -45,14 +45,14 @@ const float TOP_PERCENTAGE = 0.1f;
 constexpr int MAXIMUM_ELITE_COUNT = 500;
 
 // Mutation rates per generation
-constexpr float STARTING_MUTATION_RATE = 0.20f;
-constexpr float STARTING_MUTATION_STRENGTH = 0.40f;
+constexpr float STARTING_MUTATION_RATE = 0.50f;
+constexpr float STARTING_MUTATION_STRENGTH = 0.10f;
 
-constexpr float MINIMUM_MUTATION_RATE = 0.02f;
-constexpr float MINIMUM_MUTATION_STRENGTH = 0.05f;
+constexpr float MINIMUM_MUTATION_RATE = 0.20f;
+constexpr float MINIMUM_MUTATION_STRENGTH = 0.005f;
 
-constexpr float MUTATION_RATE_DECAY = 0.005f;
-constexpr float MUTATION_STRENGTH_DECAY = 0.01f;
+constexpr float MUTATION_RATE_DECAY = 0.003f;
+constexpr float MUTATION_STRENGTH_DECAY = 0.00095f;
 
 // Parameters for loading pre-trained brains - which pool to chose from
 constexpr float HOF_POOL_INJECTION_RATE = 0.10f;
@@ -84,6 +84,9 @@ constexpr float MAX_FOOD = 10.0f;
 // Grows food for cells nearby grass
 constexpr float SPREAD_GROWTH_MULTIPLIER = 15.0f;
 
+// Helps prevent starvation
+constexpr int SCARCITY_THRESHOLD = 100;
+
 // Help create islands on world gen
 constexpr int STARTING_ISLANDS = 8;
 constexpr int MINIMUM_ISLAND_SIZE = 5;
@@ -95,9 +98,9 @@ constexpr float MINIMUM_FOOD_EXPANSION_RATE = 0.06f;
 constexpr float FOOD_EXPANSION_RATE_DECAY = 0.0015f;
 
 // Incremental food island spawning settings across generations
-constexpr float STARTING_ISLAND_SPAWN_RATE = 0.2f;
-constexpr float MINIMUM_ISLAND_SPAWN_RATE = 0.05f;
-constexpr float ISLAND_SPAWN_RATE_DECAY = 0.0015f;
+constexpr float STARTING_ISLAND_SPAWN_RATE = 0.4f;
+constexpr float MINIMUM_ISLAND_SPAWN_RATE = 0.1f;
+constexpr float ISLAND_SPAWN_RATE_DECAY = 0.003f;
 
 // How often all of the grass grows
 constexpr float GRASS_GROWTH_INTERVAL = 0.5f; 
@@ -109,7 +112,7 @@ constexpr float MINIIMUM_FITNESS_TO_BE_SAVED = 5.0f;
 // Set to true for debugging to visualize the map grid, food lattice, or agents' FOV
 const bool SHOW_GRID = false;
 const bool SHOW_FOOD_LATTICE = false;
-const bool SHOW_FOV = false;
+const bool SHOW_FOV = true;
 
 
 
@@ -149,13 +152,13 @@ const float KILL_RANGE_SQ = 5.0f;
 constexpr int PREDATOR_ID = 1;
 constexpr float PREDATOR_MAX_SPEED = 35.0f;
 constexpr float PREDATOR_FORCE = 400.0f;
-constexpr float PREDATOR_VIEW_RADIUS = 150.0f;
-constexpr float PREDATOR_FOV_ANGLE = 150.0f;
-constexpr float PREDATOR_DIGESTION_TIME = 1.0f;
+constexpr float PREDATOR_VIEW_RADIUS = 100.0f;
+constexpr float PREDATOR_FOV_ANGLE = 360.0f;
+constexpr float PREDATOR_DIGESTION_TIME = 2.0f;
 
 // Prredators consume more energy passively, less to sprint
 constexpr float PREDATOR_METABOLISM_MULTIPLIER = 20.0f;
-constexpr float PREDATOR_EFFORT_MULTIPLIER = 0.4f;
+constexpr float PREDATOR_EFFORT_MULTIPLIER = 1.0f;
 
 // Energy gained by predators when eating prey
 const float PREDATOR_ENERGY_GAIN = MAX_ENERGY / 3;
@@ -178,11 +181,11 @@ constexpr float PREY_VIEW_RADIUS = 20.0f;
 constexpr float PREY_FOV_ANGLE = 360.0f;
 constexpr float PREY_DIGESTION_TIME = 0.25f;
 
-const float PREY_EFFORT_MULTIPLIER = 1.0f;
+const float PREY_EFFORT_MULTIPLIER = 0.4f;
 
 // Rewards gaining energy, to discourage standstill
 const float PREY_ENERGY_GAIN = MAX_ENERGY / 2;
-constexpr float PREY_ENERGY_FITNESS_MULTIPLIER = 10.0f;
+constexpr float PREY_ENERGY_FITNESS_MULTIPLIER = 2.0f;
 
 
 /* ------------------- Learning Settings ------------------ */

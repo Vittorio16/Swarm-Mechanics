@@ -2,6 +2,12 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <thread>
+#include <queue>
+#include <mutex>
+#include <condition_variable>
+#include <functional>
+#include <atomic>
 #include "World.h"
 #include "Entities/Prey.h"
 #include "Entities/Predator.h"
@@ -11,6 +17,20 @@ using namespace std;
 
 class SimulationManager {
 private:
+    // Handle thread pool - threads stay alive for the whole simulation
+    vector<thread> workers;
+    queue<function<void()>> tasks;
+
+    mutex queueMutex;
+    condition_variable condition;
+    bool stopPool = false;
+    
+    // Keep track of batch of updates
+    atomic<int> tasksRemaining;
+    condition_variable syncCondition;
+    mutex syncMutex;
+
+    // Multiple worlds for parallel processing of updates
     vector<unique_ptr<World>> worlds;
     int numCores;
     
@@ -30,7 +50,8 @@ private:
 
 public:
     SimulationManager(int cores);
-
+    ~SimulationManager();
+    
     void update(float dt, bool renderEnabled);
     void evolve();
 

@@ -110,3 +110,4 @@ This requires:
 - converted from strafing to turning intent
 - converted fullness to energy reserves
 - modified food gen to depend on food, and not map size (growing grass)
+- modified threading to keep persistent threads across generations

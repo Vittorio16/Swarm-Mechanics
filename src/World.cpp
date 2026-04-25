@@ -237,8 +237,26 @@ void World::growGrass(float dt, int generationCount){
 
     static uniform_real_distribution<float> chance(0.0f, 1.0f);
 
+    // Find all chunks that actually have grass and count total active blades
+    vector<int> activeChunkIndices;
+    int totalActiveCells = 0;
+    
+    for (int i = 0; i < food_lattice.size(); i++) {
+        if (!food_lattice[i].activeCells.empty()) {
+            activeChunkIndices.push_back(i);
+            totalActiveCells += food_lattice[i].activeCells.size();
+        }
+    }
+
     // Generates around STARTING_ISLAND_SPAWN_RATE new islands per second - decreasing with generation
     float currentSpontaneousRate = max(MINIMUM_ISLAND_SPAWN_RATE, STARTING_ISLAND_SPAWN_RATE - (generationCount * ISLAND_SPAWN_RATE_DECAY));
+    
+    int scarcityThreshold = SCARCITY_THRESHOLD;
+    if (totalActiveCells < scarcityThreshold) {
+        float scarcityMultiplier = 1.0f + 9.0f * (1.0f - ((float)totalActiveCells / scarcityThreshold));
+        currentSpontaneousRate *= scarcityMultiplier;
+    }
+
     float exactSpontaneousFloat = currentSpontaneousRate * dt;
     
     int spontaneousSpawns = (int)exactSpontaneousFloat;
@@ -250,17 +268,6 @@ void World::growGrass(float dt, int generationCount){
         addFood(disX(gen), disY(gen), growthAmount);
     }
 
-    // The rate at which existing grass spreads. 
-    // Find all chunks that actually have grass and count total active blades
-    vector<int> activeChunkIndices;
-    int totalActiveCells = 0;
-    
-    for (int i = 0; i < food_lattice.size(); i++) {
-        if (!food_lattice[i].activeCells.empty()) {
-            activeChunkIndices.push_back(i);
-            totalActiveCells += food_lattice[i].activeCells.size();
-        }
-    }
 
     if (totalActiveCells > 0) {
         // The rate scales with existing grass

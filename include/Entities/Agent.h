@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <cstdint>
 #include "Learning/Perceptron.h"
 #include "Core/Config.h"
 
@@ -55,6 +56,10 @@ class Agent{
     float ax, ay;
     
     public:
+
+    uint64_t id;
+    uint64_t lockedTargetID;
+
     // Data to assess fitness
     float timeLived;
     float energyGained;

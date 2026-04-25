@@ -1,0 +1,78 @@
+Inverted predator and prey effort cost for sprinting
+
+Introduced famine prevention
+Updated mutation
+Implemented tunnel vision
+360 predator view
+
+constexpr float STARTING_MUTATION_RATE = 0.50f;
+constexpr float STARTING_MUTATION_STRENGTH = 0.10f;
+
+constexpr float MINIMUM_MUTATION_RATE = 0.20f;
+constexpr float MINIMUM_MUTATION_STRENGTH = 0.005f;
+
+constexpr float MUTATION_RATE_DECAY = 0.003f;
+constexpr float MUTATION_STRENGTH_DECAY = 0.00095f;
+
+/* ------------------- World Settings ------------------ */
+
+// Starting agents
+constexpr int NUM_PREDATOR = 50;
+constexpr int NUM_PREY = 400;
+
+// World dimensions
+constexpr int NUM_CELLE_X = 960;
+constexpr int NUM_CELLE_Y = 540;
+
+constexpr int SCARCITY_THRESHOLD = 100;
+
+// Help create islands on world gen
+constexpr int STARTING_ISLANDS = 8;
+constexpr int MINIMUM_ISLAND_SIZE = 8;
+constexpr int MAXIMUM_ISLAND_SIZE = 20;
+
+
+constexpr float STARTING_ISLAND_SPAWN_RATE = 0.4f;
+constexpr float MINIMUM_ISLAND_SPAWN_RATE = 0.1f;
+constexpr float ISLAND_SPAWN_RATE_DECAY = 0.003f;
+
+constexpr float STARTING_FOOD_EXPANSION_RATE = 0.18f;
+constexpr float MINIMUM_FOOD_EXPANSION_RATE = 0.06f;
+constexpr float FOOD_EXPANSION_RATE_DECAY = 0.0015f;
+
+
+/* ------------------- Agent Settings ------------------ */
+
+constexpr float GRASS_SENSING_RADIUS = 50.0f;
+
+constexpr float MAXIMUM_TURNING_SPEED = 3.14f;
+constexpr float TURNING_COST_PENALTY = 0.5f;
+
+
+/* ------------------- Predator Settings ------------------ */
+
+constexpr float PREDATOR_MAX_SPEED = 35.0f;
+constexpr float PREDATOR_FORCE = 400.0f;
+constexpr float PREDATOR_VIEW_RADIUS = 100.0f;
+constexpr float PREDATOR_FOV_ANGLE = 360.0f;
+constexpr float PREDATOR_DIGESTION_TIME = 2.0f;
+
+constexpr float PREDATOR_METABOLISM_MULTIPLIER = 20.0f;
+constexpr float PREDATOR_EFFORT_MULTIPLIER = 1.0f;
+
+const float PREDATOR_ENERGY_GAIN = MAX_ENERGY / 3;
+constexpr float PREDATOR_ENERGY_FITNESS_MULTIPLIER = 10.0f;
+
+/* ------------------- Prey Settings ------------------ */
+
+constexpr float PREY_MAX_SPEED = 25.0f;
+constexpr float PREY_FORCE = 600.0f;
+constexpr float PREY_VIEW_RADIUS = 20.0f;
+constexpr float PREY_FOV_ANGLE = 360.0f;
+
+const float PREY_EFFORT_MULTIPLIER = 0.4f;
+
+constexpr float PREY_ENERGY_FITNESS_MULTIPLIER = 2.0f;
+
+constexpr float MINIMUM_BITE_SIZE = 0.0f;
+const float DELETION_THRESHOLD = MINIMUM_BITE_SIZE; 

@@ -1,16 +1,30 @@
 #include <cmath>
 #include <algorithm>
+#include <cstdint>
 #include "Entities/Agent.h"
 #include "Core/GlobalHelpers.h"
 #include "Core/Physics.h"
 
 #include <iostream>
 
+// Global counter for unique agent IDs
+static uint64_t globalAgentIDCounter = 1;
+
 // Helper function to find the closest enemy in the observation list
 const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& observations){
     const Observation* closestEnemy = nullptr;
     float minDistSq = INFINITY;
     
+    if (this->lockedTargetID != 0) {
+        for (const auto& obs : observations) {
+            // Tunnel vision lock maintained
+            if (obs.otherAgent->id == this->lockedTargetID) {
+                return &obs; 
+            }
+        }
+    }
+ 
+    // Find the new closest enemy
     for (const auto& obs : observations){
         if (obs.otherAgent->speciesID != this->speciesID && obs.distSq < minDistSq){
             minDistSq = obs.distSq;
@@ -18,8 +32,16 @@ const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& 
         }
     }
 
+    // Update the target lock for the next simulation tick
+    if (closestEnemy != nullptr) {
+        this->lockedTargetID = closestEnemy->otherAgent->id;
+    } else {
+        this->lockedTargetID = 0;
+    }
+
     return closestEnemy;
 }
+
 // Constructor
 Agent::Agent(float startX, float startY) : 
         timeLived(0), energyGained(0),
@@ -28,13 +50,18 @@ Agent::Agent(float startX, float startY) :
         energy(STARTING_ENERGY), childCount(0), reproductionCooldown(0),
         sensingRange(SENSING_RANGE),  grassViewRadius(GRASS_SENSING_RADIUS), isAlive(true),
         previousThrustIntent(0), previousTurnIntent(0),
-        thrustIntent(0), turnIntent(0) {}
+        thrustIntent(0), turnIntent(0) {
+
+        this->id = globalAgentIDCounter++;
+        this->lockedTargetID = 0;
+    }
 
 // Transforms an array of observations (1 per visible agent) 
 // into sensory data processable by the brain
 // It returns the data about the closest agent of a different species
 void Agent::updateSensoryData(const vector<Observation>& observations, const vector<float>& scents){
     sensors.agentSpeed = speed;
+
     sensors.closestEnemyX = 0;
     sensors.closestEnemyY = 0;
     sensors.closestEnemyDist = 1.0f;

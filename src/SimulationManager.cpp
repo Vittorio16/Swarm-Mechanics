@@ -12,6 +12,44 @@ SimulationManager::SimulationManager(int cores) : numCores(cores) {
     // Initialize N worlds
     for (int i = 0; i < numCores; i++) {
         worlds.push_back(make_unique<World>());
+
+        // Launch persistent threads
+        workers.emplace_back([this] {
+            while(true){
+                function<void()> task;
+                {
+                    unique_lock<mutex> lock(this->queueMutex);
+                    this->condition.wait(lock, [this]{ 
+                        return this->stopPool || !this->tasks.empty();
+                    });
+
+                    if (this->stopPool && this->tasks.empty()) return;
+
+                    task = move(this->tasks.front());
+                    this->tasks.pop();
+                }
+                // Execute the task
+                task();
+                
+                if (--tasksRemaining == 0) {
+                    unique_lock<mutex> lock(this->syncMutex);
+                    this->syncCondition.notify_one();
+                }
+            }
+        });
+    }
+}
+
+// Destructor
+SimulationManager::~SimulationManager() {
+    {
+        unique_lock<mutex> lock(queueMutex);
+        stopPool = true;
+    }
+    // Wake up all threads to let them exit
+    condition.notify_all();
+    for (thread &worker : workers) {
+        worker.join();
     }
 }
 
@@ -25,6 +63,7 @@ void SimulationManager::update(float dt, bool renderEnabled) {
         this->generationTimer += dt;
     } 
     else {
+        tasksRemaining = worlds.size();
         vector<future<void>> futures;
 
         // Dynamically determine batch size
@@ -39,19 +78,22 @@ void SimulationManager::update(float dt, bool renderEnabled) {
         for (auto& world : worlds) {
             World* w = world.get(); 
             
-            futures.push_back(async(launch::async, 
-                [w, dt, batchSize, this]() { 
-                    for (int i = 0; i < batchSize; i++){
-                        w->update(dt, this->generationCount); 
-                    } 
-                }
-            ));
+            {
+                unique_lock<mutex> lock(queueMutex);
+                tasks.emplace([w, dt, batchSize, this] {
+                    for (int i = 0; i < batchSize; i++) {
+                        w->update(dt, this->generationCount);
+                    }
+                });
+            }
         }
+
+        // Wake up all threads
+        condition.notify_all();
         
         // Wait for all threads to finish their batch
-        for (auto& f : futures) {
-            f.get();
-        }
+        unique_lock<mutex> lock(syncMutex);
+        syncCondition.wait(lock, [this] { return tasksRemaining == 0; });
 
         generationTimer += dt * batchSize;
     }
