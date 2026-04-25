@@ -58,5 +58,11 @@ float Prey::getFitness() const {
     if (isnan(fitness) || isinf(fitness)) {
             return -1.0f; 
     }
+
+    // Massive penalty for being eaten by a predator
+    if (energy > 0 && !isAlive) {
+        fitness *= PREY_HUNTED_PENALTY;
+    }
+
     return fitness;
 }

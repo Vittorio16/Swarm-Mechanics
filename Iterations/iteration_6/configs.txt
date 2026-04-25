@@ -2,8 +2,10 @@ Inverted predator and prey effort cost for sprinting
 
 Introduced famine prevention
 Updated mutation
-Implemented tunnel vision
 360 predator view
+Implemented tunnel vision
+
+Implemented random constant food spawn
 
 constexpr float STARTING_MUTATION_RATE = 0.50f;
 constexpr float STARTING_MUTATION_STRENGTH = 0.10f;

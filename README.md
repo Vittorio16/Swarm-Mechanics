@@ -2,32 +2,26 @@
 
 **SwarmSim** is a multithreaded 2D artificial life simulation built in C++ using SFML. It explores neuroevolution and population dynamics by dropping two competing species—**Predators** and **Prey**—into a closed ecosystem. 
 
-Agents are driven by **Feed-Forward Neural Networks (Perceptrons)**. Over successive generations, a Genetic Algorithm is used to "breed" the most successful agents, allowing complex behaviors to emerge.
+Agents are driven by **Feed-Forward Neural Networks (Perceptrons)**. Over successive generations, a Genetic Algorithm is used to "breed" the most successful agents.
 
-## ✨ Key Features
 * **Neuroevolution:** Agents possess simple brains - 3 layer perceptrons. The best-performing agents (based on energy gathered and time lived) pass their mutated neural weights to the next generation.
-* **Realistic Physics & Locomotion:** Agents use **Differential Steering** (`Thrust` and `Turn Intent`). Moving and turning burn energy, punishing erratic behavior.
-* **Dynamic Ecosystem Dynamics:** * **Prey** must migrate between dynamically growing islands of grass to avoid starving, balancing foraging with predator evasion.
-  * **Predators** must hunt prey to survive. They possess high sprint speeds but suffer massive energy drains.
-  * **Digestion Cooldowns** prevent "spawn camping" of resources and population explotions.
+* **Digestion Cooldowns** prevent "spawn camping" of resources and population explotions.
 * **Performance Optimization:** Uses **Spatial Partitioning (Lattice Grids)** to optimize vision, collision checks, and grass detection; it implements **Multithreading** to simulate batch generations concurrently across multiple CPU cores.
 
 ---
 
-## 🧠 How It Works
-
-### The Brain
-Each agent perceives the world through a set of normalized sensory inputs:
+### Neural Network Parameters
+Each agent perceives the world through a set of sensory inputs:
 1. **Memory:** Previous Thrust, Previous Turn
 2. **Self-Knowledge:** Current Speed, Fullness (Digestion status)
 3. **Food Sense (Prey):** Distance to food, X/Y direction, Closing/Tangential Velocity - also given to predators to give them knowledge of grass
 4. **Enemy Sense:** Distance to closest enemy, X/Y direction, Closing/Tangential Velocity
 
-The network processes these inputs through a hidden layer and outputs two values via a `tanh` activation function:
+The network outputs two values:
 * `Thrust Intent` (Clamped `0.0` to `1.0`): Forward acceleration.
 * `Turn Intent` (`-1.0` to `1.0`): Steering rotation (yaw).
 
-### The Genetic Algorithm
+### Fitness Function
 At the end of each generation, dead agents are sorted by their **Fitness Score**.
 * **Prey Fitness:** Scaled by time lived and total grass eaten.
 * **Predator Fitness:** Scaled strictly by the number of prey killed and eaten.
@@ -36,16 +30,13 @@ The top percentage of agents are saved in a "Hall of Fame." The next generation 
 
 ---
 
-## ⚙️ Installation & Building
-
-This project uses CMake to automatically download and link SFML 2.6.1 at compile-time.
+## Installation
 
 ### Prerequisites
-* **C++17** (or higher) compatible compiler
-* **CMake** (3.14 or higher)
+* **C++17** (or higher)
+* **CMake**
 
-### Linux (Debian/Ubuntu)
-When building SFML from source via CMake, you need its underlying graphical and audio dependencies:
+You need SFML's graphical and audio dependencies:
 
 ```bash
 # Install SFML build dependencies
@@ -65,9 +56,9 @@ cmake --build .
 
 ---
 
-## 🎮 Usage & Controls
+## Usage
 
-### Training Mode vs. Real-Time (The 'R' Key)
+### Training and Rendering Modes
 By default, the simulation starts in Real-Time rendering mode. You can press the **`R` key** at any time to toggle between rendering and training:
 * **Real-Time Mode:** Capped to a set framerate. Renders the world, agents, and debug overlays so you can observe the behaviors visually.
 * **Training Mode:** Headless mode. Rendering is disabled, the framerate is uncapped, and the simulation dynamically batches ticks across CPU cores to evolve generations faster.
@@ -81,14 +72,14 @@ The simulation automatically saves the best weights, Hall of Fame, and elite poo
 
 ---
 
-## 🛠️ Configuration & Tuning
-The entire simulation is highly parametric. You can alter the rules by editing `Core/Config.h`.
+## Configuration & Tuning
+You can alter the simulation's parameters by editing `Core/Config.h`.
 
 **Key areas to tweak:**
-* **`World Settings`:** Adjust map size (`NUM_CELLE_X`, `NUM_CELLE_Y`), starting population, and grass growth rates.
-* **`Agent Settings`:** Tweak max speed, field-of-view (FOV), sensing range, and metabolism costs. 
-* **`Learning Settings`:** Alter the mutation rates (`STARTING_MUTATION_RATE`), mutation strength, and decay rates.
-* **`Effort Multipliers`:** Control the energy drain of sprinting vs. resting to balance the Predator/Prey relationship.
+* **`World Settings`:** Adjust map size, starting population, and food amount.
+* **`Agent Settings`:** Tweak max speed, field-of-view, sensing range, and metabolism costs. 
+* **`Learning Settings`:** Alter the mutation rates, mutation strength, and decay rates.
+* **`Effort Multipliers`:** Control the energy drain of sprinting vs. resting
 
 ### Debug Controls
 For debugging purposes, toggle these constants:

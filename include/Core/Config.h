@@ -80,39 +80,15 @@ constexpr int FOOD_CELL_HEIGHT = 10;
 
 // Food settings per cell
 constexpr float MAX_FOOD = 10.0f;
-
-// Grows food for cells nearby grass
-constexpr float SPREAD_GROWTH_MULTIPLIER = 15.0f;
-
-// Helps prevent starvation
-constexpr int SCARCITY_THRESHOLD = 100;
-
-// Help create islands on world gen
-constexpr int STARTING_ISLANDS = 8;
-constexpr int MINIMUM_ISLAND_SIZE = 5;
-constexpr int MAXIMUM_ISLAND_SIZE = 15;
-
-// Incremental food spawning settings across generations
-constexpr float STARTING_FOOD_EXPANSION_RATE = 0.18f;
-constexpr float MINIMUM_FOOD_EXPANSION_RATE = 0.06f;
-constexpr float FOOD_EXPANSION_RATE_DECAY = 0.0015f;
-
-// Incremental food island spawning settings across generations
-constexpr float STARTING_ISLAND_SPAWN_RATE = 0.4f;
-constexpr float MINIMUM_ISLAND_SPAWN_RATE = 0.1f;
-constexpr float ISLAND_SPAWN_RATE_DECAY = 0.003f;
-
-// How often all of the grass grows
-constexpr float GRASS_GROWTH_INTERVAL = 0.5f; 
-constexpr float GROWTH_MULTIPLIER = 2.0f;
+constexpr int CONSTANT_FOOD_AMOUNT = 500;
 
 // Only saves dead agents with fitness greater than this to be later analyzed
-constexpr float MINIIMUM_FITNESS_TO_BE_SAVED = 5.0f;
+constexpr float MINIMUM_FITNESS_TO_BE_SAVED = 5.0f;
 
 // Set to true for debugging to visualize the map grid, food lattice, or agents' FOV
 const bool SHOW_GRID = false;
 const bool SHOW_FOOD_LATTICE = false;
-const bool SHOW_FOV = true;
+const bool SHOW_FOV = false;
 
 
 
@@ -152,9 +128,9 @@ const float KILL_RANGE_SQ = 5.0f;
 constexpr int PREDATOR_ID = 1;
 constexpr float PREDATOR_MAX_SPEED = 35.0f;
 constexpr float PREDATOR_FORCE = 400.0f;
-constexpr float PREDATOR_VIEW_RADIUS = 100.0f;
+constexpr float PREDATOR_VIEW_RADIUS = 50.0f;
 constexpr float PREDATOR_FOV_ANGLE = 360.0f;
-constexpr float PREDATOR_DIGESTION_TIME = 2.0f;
+constexpr float PREDATOR_DIGESTION_TIME = 1.0f;
 
 // Prredators consume more energy passively, less to sprint
 constexpr float PREDATOR_METABOLISM_MULTIPLIER = 20.0f;
@@ -162,20 +138,17 @@ constexpr float PREDATOR_EFFORT_MULTIPLIER = 1.0f;
 
 // Energy gained by predators when eating prey
 const float PREDATOR_ENERGY_GAIN = MAX_ENERGY / 3;
-constexpr float PREDATOR_ENERGY_FITNESS_MULTIPLIER = 10.0f;
+
+
 
 /* ------------------- Prey Settings ------------------ */
 
 // The radius within which a prey can eat grass
 constexpr float PREY_EAT_RADIUS_SQ = 4.0f;
 
-// Minimum food amount in a cell to be considered worth eating, and if it should be deleted
-constexpr float MINIMUM_BITE_SIZE = 0.0f;
-const float DELETION_THRESHOLD = MINIMUM_BITE_SIZE; 
-
 // Prey-specific parameters
 constexpr int PREY_ID = -1;
-constexpr float PREY_MAX_SPEED = 25.0f;
+constexpr float PREY_MAX_SPEED = 30.0f;
 constexpr float PREY_FORCE = 600.0f;
 constexpr float PREY_VIEW_RADIUS = 20.0f;
 constexpr float PREY_FOV_ANGLE = 360.0f;
@@ -186,6 +159,10 @@ const float PREY_EFFORT_MULTIPLIER = 0.4f;
 // Rewards gaining energy, to discourage standstill
 const float PREY_ENERGY_GAIN = MAX_ENERGY / 2;
 constexpr float PREY_ENERGY_FITNESS_MULTIPLIER = 2.0f;
+
+// Malus for being eaten by a predator, to encourage survival
+const float PREY_HUNTED_PENALTY = 0.1f;
+
 
 
 /* ------------------- Learning Settings ------------------ */

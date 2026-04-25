@@ -15,7 +15,8 @@ const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& 
     const Observation* closestEnemy = nullptr;
     float minDistSq = INFINITY;
     
-    if (this->lockedTargetID != 0) {
+    // Don't give tunnel vision to prey
+    if (this->lockedTargetID != 0 && this->id != PREY_ID) {
         for (const auto& obs : observations) {
             // Tunnel vision lock maintained
             if (obs.otherAgent->id == this->lockedTargetID) {

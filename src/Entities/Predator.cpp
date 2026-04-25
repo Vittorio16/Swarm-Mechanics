@@ -65,7 +65,7 @@ unique_ptr<Agent> Predator::reproduce(){
 }
 
 float Predator::getFitness() const {
-    float fitness = energyGained * PREDATOR_ENERGY_FITNESS_MULTIPLIER;
+    float fitness = energyGained;
 
     if (isnan(fitness) || isinf(fitness)) return -1.0f;
     return fitness;

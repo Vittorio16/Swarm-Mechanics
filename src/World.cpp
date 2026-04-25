@@ -14,9 +14,10 @@ World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)),
                 food_lattice(food_lattice_x_cells * food_lattice_y_cells),
                 gen(random_device{}()), disX(0, NUM_CELLE_X - 1), disY(0, NUM_CELLE_Y - 1) {
 
-    // Spawn initial islands of grass
-    spawnInitialIslands(STARTING_ISLANDS, MINIMUM_ISLAND_SIZE, MAXIMUM_ISLAND_SIZE);
-
+    for (int i = 0; i < CONSTANT_FOOD_AMOUNT; i++) {
+        addFood(disX(gen), disY(gen), MAX_FOOD); 
+    }
+    
     // Puts set number of predators and preys in random positions
     for (int i = 0; i < NUM_PREDATOR; i++){
         float randX = disX(gen);
@@ -66,7 +67,7 @@ vector<float> World::getBestFoodScent(const Agent* agent) {
                 if (dy < -NUM_CELLE_Y * 0.5f) dy += NUM_CELLE_Y;
 
                 float distSq = dx*dx + dy*dy;
-                if (distSq < 0.1f) distSq = 0.1f; // Avoid division by zero
+                if (distSq < 0.1f) distSq = 0.1f;
 
                 if (distSq < agent->grassViewRadius * agent->grassViewRadius){
                     float foodScore = chunk.totalFood*chunk.totalFood / distSq;
@@ -91,7 +92,7 @@ vector<float> World::getBestFoodScent(const Agent* agent) {
         float food = grid[pos.x][pos.y].foodAmount;
 
         // Skips if food eaten this frame, or if too small for bite size
-        if (food <= MINIMUM_BITE_SIZE) continue;
+        if (food <= 0.001f) continue;
 
         float dx = pos.x + 0.5f - agent->x;
         float dy = pos.y + 0.5f - agent->y;
@@ -104,7 +105,7 @@ vector<float> World::getBestFoodScent(const Agent* agent) {
         if (dy < -NUM_CELLE_Y * 0.5f) dy += NUM_CELLE_Y;
 
         float distSq = dx*dx + dy*dy;
-        if (distSq < 0.1f) distSq = 0.1f; // Avoid division by zero
+        if (distSq < 0.1f) distSq = 0.1f; 
 
         float foodScore = food*food / distSq;
 
@@ -116,7 +117,7 @@ vector<float> World::getBestFoodScent(const Agent* agent) {
     }
     if (bestCellFoodScore < 0) return {0.0f, 0.0f};
 
-    // Rotate to Local Space (Agent's Perspective)
+    // Rotate to agent's coordinates
     float heading = agent->facingAngle;
     float c = cos(-heading);
     float s = sin(-heading);
@@ -140,7 +141,6 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
     int centerIndexY = (int)posY;
 
     // Check the 3x3 grid around the agent
-    // This ensures we can eat from a cell even if we drifted into its neighbor
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
             
@@ -151,31 +151,25 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
             tx = ((tx % NUM_CELLE_X) + NUM_CELLE_X) % NUM_CELLE_X;
             ty = ((ty % NUM_CELLE_Y) + NUM_CELLE_Y) % NUM_CELLE_Y;
 
-            // Skip empty - or almost empty - cells
-            if (grid[tx][ty].foodAmount <= MINIMUM_BITE_SIZE) continue;
+            // Skip empty cells
+            if (grid[tx][ty].foodAmount <= 0.001f) continue;
 
-            // Calculate Distance to the CENTER of that target cell
-            // Note: We use the relative (dx, dy) to calculate distance 
-            // This handles the edge-of-world cases automatically.
-            
-            // Agent relative position in its current cell
+            // Calculate Distance to the centre of that target cell
             float fracX = agent->x - (int)agent->x; 
             float fracY = agent->y - (int)agent->y;
             
-            // Vector from Agent to Target Cell Center
-            // (Target Cell Offset) - (Agent Fractional Pos) + (Center Bias)
             float vecX = dx - fracX + 0.5f;
             float vecY = dy - fracY + 0.5f;
 
             float distSq = vecX*vecX + vecY*vecY;
 
+            // Prey begins digesting and gains energy based on the food eaten
             if (distSq < PREY_EAT_RADIUS_SQ) {
-                // Prey begins digesting and gains energy based on the food eaten
                 float foodEaten = grid[tx][ty].foodAmount;
                 
                 agent->remainingDigestion = agent->digestionTime;
-                agent->energyGained += foodEaten * 1.0f;
-                agent->energy += foodEaten * 1.0f; 
+                agent->energyGained += foodEaten;
+                agent->energy += foodEaten; 
                 
                 // Caps the energy to prevent extreme values - could be removed in the future
                 if (agent->energy > 3 * MAX_ENERGY / 2) {
@@ -183,6 +177,15 @@ void World::checkPreyFeeding(unique_ptr<Agent>& agent){
                 }
 
                 grid[tx][ty].foodAmount = 0;
+
+                int newX, newY;
+                // Ensure we don't spawn it on an already full cell
+                do {
+                    newX = disX(gen);
+                    newY = disY(gen);
+                } while (grid[newX][newY].foodAmount > 0.0f);
+
+                addFood(newX, newY, MAX_FOOD);
 
                 // Update the food lattice
                 int cx = tx / FOOD_CELL_WIDTH;
@@ -233,96 +236,96 @@ void World::addFood(int cx, int cy, float growthAmount){
 
 // Grows the grass
 void World::growGrass(float dt, int generationCount){
-    float growthAmount = SPREAD_GROWTH_MULTIPLIER * dt;
+    // float growthAmount = SPREAD_GROWTH_MULTIPLIER * dt;
 
-    static uniform_real_distribution<float> chance(0.0f, 1.0f);
+    // static uniform_real_distribution<float> chance(0.0f, 1.0f);
 
-    // Find all chunks that actually have grass and count total active blades
-    vector<int> activeChunkIndices;
-    int totalActiveCells = 0;
+    // // Find all chunks that actually have grass and count total active blades
+    // vector<int> activeChunkIndices;
+    // int totalActiveCells = 0;
     
-    for (int i = 0; i < food_lattice.size(); i++) {
-        if (!food_lattice[i].activeCells.empty()) {
-            activeChunkIndices.push_back(i);
-            totalActiveCells += food_lattice[i].activeCells.size();
-        }
-    }
+    // for (int i = 0; i < food_lattice.size(); i++) {
+    //     if (!food_lattice[i].activeCells.empty()) {
+    //         activeChunkIndices.push_back(i);
+    //         totalActiveCells += food_lattice[i].activeCells.size();
+    //     }
+    // }
 
-    // Generates around STARTING_ISLAND_SPAWN_RATE new islands per second - decreasing with generation
-    float currentSpontaneousRate = max(MINIMUM_ISLAND_SPAWN_RATE, STARTING_ISLAND_SPAWN_RATE - (generationCount * ISLAND_SPAWN_RATE_DECAY));
+    // // Generates around STARTING_ISLAND_SPAWN_RATE new islands per second - decreasing with generation
+    // float currentSpontaneousRate = max(MINIMUM_ISLAND_SPAWN_RATE, STARTING_ISLAND_SPAWN_RATE - (generationCount * ISLAND_SPAWN_RATE_DECAY));
     
-    int scarcityThreshold = SCARCITY_THRESHOLD;
-    if (totalActiveCells < scarcityThreshold) {
-        float scarcityMultiplier = 1.0f + 9.0f * (1.0f - ((float)totalActiveCells / scarcityThreshold));
-        currentSpontaneousRate *= scarcityMultiplier;
-    }
+    // int scarcityThreshold = SCARCITY_THRESHOLD;
+    // if (totalActiveCells < scarcityThreshold) {
+    //     float scarcityMultiplier = 1.0f + 9.0f * (1.0f - ((float)totalActiveCells / scarcityThreshold));
+    //     currentSpontaneousRate *= scarcityMultiplier;
+    // }
 
-    float exactSpontaneousFloat = currentSpontaneousRate * dt;
+    // float exactSpontaneousFloat = currentSpontaneousRate * dt;
     
-    int spontaneousSpawns = (int)exactSpontaneousFloat;
-    if (chance(gen) < (exactSpontaneousFloat - spontaneousSpawns)) {
-        spontaneousSpawns++; 
-    }
+    // int spontaneousSpawns = (int)exactSpontaneousFloat;
+    // if (chance(gen) < (exactSpontaneousFloat - spontaneousSpawns)) {
+    //     spontaneousSpawns++; 
+    // }
 
-    for (int i = 0; i < spontaneousSpawns; i++){
-        addFood(disX(gen), disY(gen), growthAmount);
-    }
+    // for (int i = 0; i < spontaneousSpawns; i++){
+    //     addFood(disX(gen), disY(gen), growthAmount);
+    // }
 
 
-    if (totalActiveCells > 0) {
-        // The rate scales with existing grass
-        float currentExpansionRate = max(MINIMUM_FOOD_EXPANSION_RATE, STARTING_FOOD_EXPANSION_RATE - (generationCount * FOOD_EXPANSION_RATE_DECAY));
+    // if (totalActiveCells > 0) {
+    //     // The rate scales with existing grass
+    //     float currentExpansionRate = max(MINIMUM_FOOD_EXPANSION_RATE, STARTING_FOOD_EXPANSION_RATE - (generationCount * FOOD_EXPANSION_RATE_DECAY));
         
-        // Each individual blade of grass has a X% chance to spread per second
-        float exactExpansionFloat = totalActiveCells * currentExpansionRate * dt;
+    //     // Each individual blade of grass has a X% chance to spread per second
+    //     float exactExpansionFloat = totalActiveCells * currentExpansionRate * dt;
         
-        int expansionSpawns = (int)exactExpansionFloat;
-        if (chance(gen) < (exactExpansionFloat - expansionSpawns)) {
-            expansionSpawns++;
-        }
+    //     int expansionSpawns = (int)exactExpansionFloat;
+    //     if (chance(gen) < (exactExpansionFloat - expansionSpawns)) {
+    //         expansionSpawns++;
+    //     }
 
-        static uniform_int_distribution<int> disDir(0, 3); // 0=Right, 1=Left, 2=Down, 3=Up
+    //     static uniform_int_distribution<int> disDir(0, 3); // 0=Right, 1=Left, 2=Down, 3=Up
 
-        for (int i = 0; i < expansionSpawns; i++){
-            // Pick a random chunk from the active ones
-            uniform_int_distribution<int> disChunk(0, activeChunkIndices.size() - 1);
-            int chunkIdx = activeChunkIndices[disChunk(gen)];
+    //     for (int i = 0; i < expansionSpawns; i++){
+    //         // Pick a random chunk from the active ones
+    //         uniform_int_distribution<int> disChunk(0, activeChunkIndices.size() - 1);
+    //         int chunkIdx = activeChunkIndices[disChunk(gen)];
             
-            // Pick a random blade of grass inside this chunk
-            uniform_int_distribution<int> disCell(0, food_lattice[chunkIdx].activeCells.size() - 1);
-            sf::Vector2i sourceCell = food_lattice[chunkIdx].activeCells[disCell(gen)];
+    //         // Pick a random blade of grass inside this chunk
+    //         uniform_int_distribution<int> disCell(0, food_lattice[chunkIdx].activeCells.size() - 1);
+    //         sf::Vector2i sourceCell = food_lattice[chunkIdx].activeCells[disCell(gen)];
 
-            // Pick a random neighbor (with Toroidal wrap)
-            int dir = disDir(gen);
-            int nx = sourceCell.x;
-            int ny = sourceCell.y;
+    //         // Pick a random neighbor (with Toroidal wrap)
+    //         int dir = disDir(gen);
+    //         int nx = sourceCell.x;
+    //         int ny = sourceCell.y;
 
-            if (dir == 0) nx = (nx + 1) % NUM_CELLE_X;
-            else if (dir == 1) nx = (nx - 1 + NUM_CELLE_X) % NUM_CELLE_X;
-            else if (dir == 2) ny = (ny + 1) % NUM_CELLE_Y;
-            else if (dir == 3) ny = (ny - 1 + NUM_CELLE_Y) % NUM_CELLE_Y;
+    //         if (dir == 0) nx = (nx + 1) % NUM_CELLE_X;
+    //         else if (dir == 1) nx = (nx - 1 + NUM_CELLE_X) % NUM_CELLE_X;
+    //         else if (dir == 2) ny = (ny + 1) % NUM_CELLE_Y;
+    //         else if (dir == 3) ny = (ny - 1 + NUM_CELLE_Y) % NUM_CELLE_Y;
 
-            // Grow the neighbor
-            addFood(nx, ny, growthAmount);
-        }
-    }
-    // Makes all of the grass grow
-    timeSinceLastGrowth += dt;
+    //         // Grow the neighbor
+    //         addFood(nx, ny, growthAmount);
+    //     }
+    // }
+    // // Makes all of the grass grow
+    // timeSinceLastGrowth += dt;
 
-    if (timeSinceLastGrowth >= GRASS_GROWTH_INTERVAL) {
-        float batchGrowth = GROWTH_MULTIPLIER * timeSinceLastGrowth; 
+    // if (timeSinceLastGrowth >= GRASS_GROWTH_INTERVAL) {
+    //     float batchGrowth = GROWTH_MULTIPLIER * timeSinceLastGrowth; 
         
-        for (int chunkIndex = 0; chunkIndex < food_lattice.size(); chunkIndex++) {
-            if (food_lattice[chunkIndex].totalFood <= 0) continue;
+    //     for (int chunkIndex = 0; chunkIndex < food_lattice.size(); chunkIndex++) {
+    //         if (food_lattice[chunkIndex].totalFood <= 0) continue;
             
-            for (const sf::Vector2i& pos : food_lattice[chunkIndex].activeCells) {
-                if (grid[pos.x][pos.y].foodAmount < MAX_FOOD) {
-                    addFood(pos.x, pos.y, batchGrowth);
-                }
-            }
-        }
-        timeSinceLastGrowth = 0.0f;
-    }
+    //         for (const sf::Vector2i& pos : food_lattice[chunkIndex].activeCells) {
+    //             if (grid[pos.x][pos.y].foodAmount < MAX_FOOD) {
+    //                 addFood(pos.x, pos.y, batchGrowth);
+    //             }
+    //         }
+    //     }
+    //     timeSinceLastGrowth = 0.0f;
+    // }
 }
 
 // Populates the world with some initial grass islands
@@ -437,7 +440,7 @@ void World::update(float dt, int generationCount){
     // Move the dead agents into the graveyard
     for (auto it = firstDead; it != agents.end(); ++it) {
         // Only save them if they actually did something useful
-        if ((*it)->getFitness() > MINIIMUM_FITNESS_TO_BE_SAVED) { 
+        if ((*it)->getFitness() > MINIMUM_FITNESS_TO_BE_SAVED) { 
             graveyard.push_back(std::move(*it));
         }
     }
@@ -449,7 +452,7 @@ void World::update(float dt, int generationCount){
         chunk.activeCells.erase(
             remove_if(chunk.activeCells.begin(), chunk.activeCells.end(), 
             [&](const sf::Vector2i& pos) {
-                return grid[pos.x][pos.y].foodAmount <= DELETION_THRESHOLD;}),
+                return grid[pos.x][pos.y].foodAmount <= 0.001f;}),
                 chunk.activeCells.end()
             );
     }
