@@ -106,7 +106,7 @@ void SimulationManager::update(float dt, bool renderEnabled) {
     }
 }
 
-// Evolves agents by merging best ones and getting their weights 
+// Evolves agents by polling best ones 
 void SimulationManager::evolve() {
     cout << "--- Generation " << generationCount << " Complete ---" << endl;
     
@@ -146,7 +146,7 @@ void SimulationManager::evolve() {
             return a->getFitness() > b->getFitness();
         });
 
-    // --- PREY EVOLUTION ---
+    // Prey Evolution
     if (!allPrey.empty()){
         if (generationCount % HOF_GENERATION_UPDATE_RATE == 0){
             preyHallOfFame.push_back(allPrey[0]->getBrain().getWeights());
@@ -166,11 +166,10 @@ void SimulationManager::evolve() {
             elitePreyBrains.push_back(allPrey[i]->getBrain().getWeights());
         }
 
-        // Logging only
         this->bestWeightsPrey = allPrey[0]->getBrain().getWeights();
     }
     
-    // --- PREDATOR EVOLUTION ---
+    // Predator evolution
     if (!allPredators.empty()){
         if (generationCount % HOF_GENERATION_UPDATE_RATE == 0){
             predatorHallOfFame.push_back(allPredators[0]->getBrain().getWeights());
@@ -194,7 +193,7 @@ void SimulationManager::evolve() {
         this->bestWeightsPredator = allPredators[0]->getBrain().getWeights();
     }
 
-    // --- LOGGING & CHECKPOINTING ---
+    // Logging
     float bestPreyFit = allPrey.empty() ? 0 : allPrey[0]->getFitness();
     float bestPredFit = allPredators.empty() ? 0 : allPredators[0]->getFitness();
 
@@ -234,6 +233,7 @@ void SimulationManager::evolve() {
     resetSimulation();
 }
 
+
 void SimulationManager::resetSimulation() {
     // Re-create worlds
     worlds.clear(); 
@@ -245,12 +245,12 @@ void SimulationManager::resetSimulation() {
     float dynamicRate = std::max(MINIMUM_MUTATION_RATE, STARTING_MUTATION_RATE - (generationCount * MUTATION_RATE_DECAY));
     float dynamicStrength = std::max(MINIMUM_MUTATION_STRENGTH, STARTING_MUTATION_STRENGTH - (generationCount * MUTATION_STRENGTH_DECAY));
 
-    // Give every new prey and predator the "Master Brain" + Mutation
+    // Give every new prey and predator the previous agent's brain + mutation
     for (auto& world : worlds) {
         for (auto& agent : world->agents) {
             float roll = randomFloat(0.0f, 1.0f);
 
-            // PREY
+            // Prey
             if (agent->speciesID == PREY_ID && !elitePreyBrains.empty()) {
                 Prey* p = static_cast<Prey*>(agent.get());
 
@@ -275,7 +275,7 @@ void SimulationManager::resetSimulation() {
                 }
             }
             
-            // PREDATORS
+            // Predators
             if (agent->speciesID == PREDATOR_ID && !elitePredatorBrains.empty()) {
                 Predator* p = static_cast<Predator*>(agent.get());
                 

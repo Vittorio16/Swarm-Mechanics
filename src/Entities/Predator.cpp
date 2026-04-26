@@ -42,8 +42,7 @@ void Predator::updateEnergy(float thrust, float turn, float dt) {
     if (energy > 3 * MAX_ENERGY / 2) energy = 3 * MAX_ENERGY / 2;
 };
 
-// Makes an agent reproduce, diminishing its energy
-// and creating a new agent with similar weights
+// Makes a predator reproduce
 unique_ptr<Agent> Predator::reproduce(){
     float energyCost = BASE_REPRODUCTION_COST;
     energy -= energyCost * (1 + REPRODUCTION_COST_SCALING * childCount);

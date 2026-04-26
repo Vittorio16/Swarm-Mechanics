@@ -29,8 +29,7 @@ void Prey::updateEnergy(float thrust, float turn, float dt) {
     // Prey gain energy by eating grass -- handled in world.update
 };
 
-// Makes an agent reproduce, diminishing its energy 
-// and creating a new agent with similar weights 
+// Makes a prey reproduce
 unique_ptr<Agent> Prey::reproduce(){
     float energyCost = BASE_REPRODUCTION_COST;
     energy -= energyCost * (1 + REPRODUCTION_COST_SCALING * childCount);

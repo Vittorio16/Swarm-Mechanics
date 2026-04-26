@@ -23,7 +23,7 @@ class SimplePerceptron{
     SimplePerceptron();
     SimplePerceptron(const SimplePerceptron& oldObj) = default;
 
-    // Given sensory inputs, returns ax and ay between -1 and 1
+    // Given sensory inputs, returns thrust intent and turn intent
     vector<float> feedForward(const vector<float>& inputs);
     
     // Helper function to mutate brain of newborns

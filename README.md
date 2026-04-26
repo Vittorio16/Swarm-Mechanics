@@ -5,7 +5,7 @@
 Agents are driven by **Feed-Forward Neural Networks (Perceptrons)**. Over successive generations, a Genetic Algorithm is used to "breed" the most successful agents.
 
 * **Neuroevolution:** Agents possess simple brains - 3 layer perceptrons. The best-performing agents (based on energy gathered and time lived) pass their mutated neural weights to the next generation.
-* **Digestion Cooldowns** prevent "spawn camping" of resources and population explotions.
+* **Digestion Cooldowns** prevent population explotions.
 * **Performance Optimization:** Uses **Spatial Partitioning (Lattice Grids)** to optimize vision, collision checks, and grass detection; it implements **Multithreading** to simulate batch generations concurrently across multiple CPU cores.
 
 ---

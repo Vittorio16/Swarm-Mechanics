@@ -17,39 +17,38 @@ class World{
     // Uniform lattices for efficient enemy lookup and prey feeding
     int lattice_x_cells, lattice_y_cells;
     vector<vector<Agent*>> spatial_lattice;
+
+    // Erases and updates the spatial lattice
+    void update_buckets();
     
     int food_lattice_x_cells, food_lattice_y_cells;
     vector<FoodChunk> food_lattice;
-
-    void update_buckets();
-    
-    sf::RenderTexture gridTexture; 
-    bool gridTextureValid = false; 
-  
-    // timer to control grass growth
-    float timeSinceLastGrowth = 0.0f;
-    // RNG for spawning entities and grass
-    mt19937 gen;
-    uniform_int_distribution<int> disX;
-    uniform_int_distribution<int> disY;
     
     vector<Observation> getObservation(const Agent* observer); 
     
     // Helpers to grow the grass
     void addFood(int cx, int cy, float amount);
-    void spawnInitialIslands(int numIslands, int minRadius, int maxRadius);
-
-    // Helpers to check for prey eating grass and growing grass
+    
+    // Helpers for agent interaction with grass
     vector<float> getBestFoodScent(const Agent* agent); 
     void checkPreyFeeding(unique_ptr<Agent>& agent);
-    void growGrass(float dt, int generationCount);
-
+    
+    // Texture
+    sf::RenderTexture gridTexture; 
+    bool gridTextureValid = false; 
+    
+    // RNG for spawning entities and grass
+    mt19937 gen;
+    uniform_int_distribution<int> disX;
+    uniform_int_distribution<int> disY;
+    
     public:
     vector<unique_ptr<Agent>> agents;
     vector<unique_ptr<Agent>> graveyard;
 
     World();
 
+    // Updattes the world each tick of the simulation
     void update(float dt, int generationCount);
 
     // Methods used for visual representation

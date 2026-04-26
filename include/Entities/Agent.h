@@ -53,7 +53,6 @@ class Agent{
     float friction;
     float force;
     float maxSpeed;
-    float ax, ay;
     
     public:
 

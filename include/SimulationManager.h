@@ -37,23 +37,24 @@ private:
     vector<vector<float>> predatorHallOfFame;
     vector<vector<float>> preyHallOfFame;
     
-    // Genetic Algorithm Settings
-    float generationTimer = 0.0f;
-    int generationCount = 0;
     
-    // The "Master Brain" (pools from this for new agents), and average of the best from previous gen
+    // Pool to pick from for next generation
     vector<vector<float>> elitePreyBrains;
     vector<vector<float>> elitePredatorBrains;
     
     vector<float> bestWeightsPrey;
     vector<float> bestWeightsPredator;
+    
+    // Genetic Algorithm Settings
+    float generationTimer = 0.0f;
+    int generationCount = 0;
 
+    void evolve();
 public:
     SimulationManager(int cores);
     ~SimulationManager();
-    
+
     void update(float dt, bool renderEnabled);
-    void evolve();
 
     void resetSimulation();
 

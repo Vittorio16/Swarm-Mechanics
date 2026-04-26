@@ -15,6 +15,16 @@ const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& 
     const Observation* closestEnemy = nullptr;
     float minDistSq = INFINITY;
     
+    // If any prey is within kill range, eat it (predators only)
+    if (this->speciesID == PREDATOR_ID) {
+        for (const auto& obs : observations) {
+            if (obs.otherAgent->speciesID == PREY_ID && obs.distSq <= KILL_RANGE_SQ) {
+                this->lockedTargetID = obs.otherAgent->id;
+                return &obs;
+            }
+        }
+    }
+
     // Don't give tunnel vision to prey
     if (this->lockedTargetID != 0 && this->id != PREY_ID) {
         for (const auto& obs : observations) {
@@ -46,8 +56,7 @@ const Observation* Agent::getClosestEnemyObservation(const vector<Observation>& 
 // Constructor
 Agent::Agent(float startX, float startY) : 
         timeLived(0), energyGained(0),
-        x(startX), y(startY), vx(0), vy(0), speed(0), facingAngle(0),
-        ax(0), ay(0), friction(FRICTION_COEFFICIENT), 
+        x(startX), y(startY), vx(0), vy(0), speed(0), facingAngle(0), friction(FRICTION_COEFFICIENT), 
         energy(STARTING_ENERGY), childCount(0), reproductionCooldown(0),
         sensingRange(SENSING_RANGE),  grassViewRadius(GRASS_SENSING_RADIUS), isAlive(true),
         previousThrustIntent(0), previousTurnIntent(0),
@@ -57,12 +66,9 @@ Agent::Agent(float startX, float startY) :
         this->lockedTargetID = 0;
     }
 
-// Transforms an array of observations (1 per visible agent) 
-// into sensory data processable by the brain
-// It returns the data about the closest agent of a different species
+// Transforms an array of observations (1 per visible agent) into sensory data processable by the brain
 void Agent::updateSensoryData(const vector<Observation>& observations, const vector<float>& scents){
     sensors.agentSpeed = speed;
-
     sensors.closestEnemyX = 0;
     sensors.closestEnemyY = 0;
     sensors.closestEnemyDist = 1.0f;
@@ -144,7 +150,7 @@ void Agent::updateSensoryData(const vector<Observation>& observations, const vec
         float vLongitudinal = relvx * c - relvy * s;
         float vTangential = relvx * s + relvy * c;
 
-        // Normalize them here since I don't have access to enemy max speed in think
+        // Normalize 
         sensors.enemyClosingSpeed = vLongitudinal / closestEnemyObservation->otherAgent->maxSpeed;
         sensors.enemyTangentialSpeed = vTangential / closestEnemyObservation->otherAgent->maxSpeed;
         sensors.closestEnemy = closestEnemyObservation->otherAgent;
@@ -152,6 +158,7 @@ void Agent::updateSensoryData(const vector<Observation>& observations, const vec
     return;
 }
 
+// Feeds the sensory data to the brain and updates thrust and turn intents
 void Agent::think(){
     vector<float> neuralInputs = { 
         previousThrustIntent, previousTurnIntent,
@@ -173,7 +180,7 @@ void Agent::think(){
     previousTurnIntent = turnIntent;
 }
 
-// Aggiorna la posizione dell'agente usando accelerazioni e dt
+// Updates the agent's position and velocity
 void Agent::move(float dt){
     timeLived += dt;
 
@@ -184,14 +191,13 @@ void Agent::move(float dt){
     if (facingAngle > M_PI) facingAngle -= 2 * M_PI;
 
     // Apply thrust in the direction of facingAngle
-    ax = thrustIntent * cos(facingAngle) * force;
-    ay = thrustIntent * sin(facingAngle) * force;
+    float ax = thrustIntent * cos(facingAngle) * force;
+    float ay = thrustIntent * sin(facingAngle) * force;
 
     // Update velocity using acceleration and friction
     vx += ax * dt;
     vy += ay * dt;
     
-    // Ensures friction never reverses velocity
     float retention = max(0.0f, 1.0f - (friction * dt));
     vx *= retention;
     vy *= retention;
@@ -211,9 +217,9 @@ void Agent::move(float dt){
     y += vy * dt;
 
     // Updates the agent's energy and checks reproduction
-    if (remainingDigestion != 0){
+    if (remainingDigestion > 0.0f){
         remainingDigestion -= dt;
-        if (remainingDigestion < 0) remainingDigestion = 0; 
+        if (remainingDigestion <= 0.001f) remainingDigestion = 0; 
     }
     if (reproductionCooldown > 0){
         reproductionCooldown -= dt;
@@ -223,12 +229,9 @@ void Agent::move(float dt){
     updateEnergy(thrustIntent, turnIntent, dt);
     if (energy <= 0) isAlive = false;
     
-    // Reset acceleration for next frame
-    ax = 0;
-    ay = 0;
 }
 
-// Sets the brain's weights like the given one -- for newborns
+// Sets the brain's weights like the given one
 void Agent::setBrain(const SimplePerceptron& newBrain){
     this->brain = newBrain;
 }

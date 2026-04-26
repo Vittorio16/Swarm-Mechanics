@@ -4,11 +4,11 @@
 
 #include "Core/Physics.h"
 #include <cmath>
-#include <vector> // Required for std::vector
+#include <vector>
 
 using namespace std;
 
-// Returns {distanceSquared, angle}
+// Returns all the relevant data for sensory processing
 ThoroidalData getThoroidalCoordinates(float obsX, float obsY, float targetX, float targetY, int worldWidth, int worldHeight){
 
     float dx = targetX - obsX;
@@ -33,17 +33,4 @@ ThoroidalData getThoroidalCoordinates(float obsX, float obsY, float targetX, flo
     float angleToTarget = atan2(dy, dx);
     
     return {dist, distSq, angleToTarget, dx, dy};
-}
-
-// Returns a new heading, based on the wanted heading and turning factor
-float lerpAngle(float current, float target, float factor) {
-    float diff = target - current;
-    
-    // Handle wrapping (shortest path)
-    if (isnan(diff) || isinf(diff)) diff = 0.0f;
-    diff = fmod(diff, 2*M_PI);
-    if (diff <= -M_PI) diff += 2 * M_PI;
-    if (diff > M_PI) diff -= 2 * M_PI;
-    
-    return current + diff * factor;
 }

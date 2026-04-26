@@ -24,7 +24,6 @@ int main() {
 
     // Optional: Start in replay mode with a pre-trained brain
     if (REPLAY_MODE_ENABLED) {
-        // Load the sickest generation with FULL genetic diversity
         simManager.loadPreTrainedBrains(
             51, 
             "../elite_logs/weights_prey_gen_51.txt", 
@@ -62,16 +61,15 @@ int main() {
             }
         }
 
-        // --- ALWAYS UPDATE LOGIC ---
         // Even if we don't draw, the simulation continues.
         float dt;
 
         if (renderingEnabled) {
-            // MODE A: Real-Time
+            // Rendering mode
             dt = clock.restart().asSeconds();
             if (dt > MINIMUM_REAL_TIME_STEP) dt = MINIMUM_REAL_TIME_STEP; // Cap to prevent huge jumps
         } else {
-            // MODE B: Training
+            // Training Mode
             if (DEBUGGING_ENABLED) {
                 dt = 0;
             } else {
@@ -82,7 +80,6 @@ int main() {
 
         simManager.update(dt, renderingEnabled);
 
-        // --- 2. CONDITIONALLY DRAW ---
         if (renderingEnabled) {
             window.clear();
             simManager.draw(window);
