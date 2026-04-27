@@ -47,6 +47,7 @@ sudo apt-get install libfreetype6-dev libx11-dev libxrandr-dev libudev-dev libop
 git clone [https://github.com/yourusername/SwarmSim.git](https://github.com/yourusername/SwarmSim.git)
 cd SwarmSim
 mkdir build && cd build
+cmake ..
 cmake --build .
 
 # Run the simulation
