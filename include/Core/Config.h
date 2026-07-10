@@ -21,7 +21,8 @@ constexpr int MAX_FPS = 170;
 constexpr bool REPLAY_MODE_ENABLED = false;
 // Enable to stop time when pressing R
 constexpr bool DEBUGGING_ENABLED = false;
-
+// Enable to run profiling tests on the simulation, which will output a CSV file with performance data
+constexpr bool PROFILING_ENABLED = true;
 
 
 /* ------------------- Simulation Settings ------------------ */
@@ -195,4 +196,15 @@ struct FoodChunk {
     vector<sf::Vector2i> activeCells;
 
     FoodChunk() : totalFood(0.0f), sumFoodX(0.0f), sumFoodY(0.0f) {}
+};
+
+// Profiling data used for performance analysis of the simulation
+struct ProfilingData {
+    double t_buckets;
+    double t_obs;
+    double t_think;
+    double t_move;
+    double t_cleanup;
+    double t_total;
+    double check_t_total;
 };

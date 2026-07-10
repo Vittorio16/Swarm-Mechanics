@@ -1,5 +1,6 @@
 #include <cmath>
 #include <algorithm>
+#include <chrono>
 #include "World.h"
 #include "Core/Physics.h"
 using namespace std;
@@ -26,6 +27,33 @@ World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)),
         agents.push_back(make_unique<Predator>(randX, randY));
     }
     for (int i = 0; i < NUM_PREY; i++){
+        float randX = disX(gen);
+        float randY = disY(gen);
+
+        agents.push_back(make_unique<Prey>(randX, randY));
+    }
+}
+
+// Constructor used for profiling purposes
+World::World(int numPrey, int numPredators) : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)), 
+                lattice_x_cells((int)ceil((float)NUM_CELLE_X / LATTICE_CELL_WIDTH)), lattice_y_cells((int)ceil((float)NUM_CELLE_Y / LATTICE_CELL_HEIGHT)),
+                spatial_lattice(lattice_x_cells * lattice_y_cells),
+                food_lattice_x_cells((int)ceil((float)NUM_CELLE_X / FOOD_CELL_WIDTH)), food_lattice_y_cells((int)ceil((float)NUM_CELLE_Y / FOOD_CELL_HEIGHT)),
+                food_lattice(food_lattice_x_cells * food_lattice_y_cells),
+                gen(random_device{}()), disX(0, NUM_CELLE_X - 1), disY(0, NUM_CELLE_Y - 1) {
+
+    for (int i = 0; i < CONSTANT_FOOD_AMOUNT; i++) {
+        addFood(disX(gen), disY(gen), MAX_FOOD); 
+    }
+    
+    // Puts set number of predators and preys in random positions
+    for (int i = 0; i < numPredators; i++){
+        float randX = disX(gen);
+        float randY = disY(gen);
+
+        agents.push_back(make_unique<Predator>(randX, randY));
+    }
+    for (int i = 0; i < numPrey; i++){
         float randX = disX(gen);
         float randY = disY(gen);
 
@@ -255,13 +283,30 @@ void World::update_buckets(){
 
 
 // Updates the world each tick of the simulation
-void World::update(float dt, int generationCount){
+ProfilingData World::update(float dt, int generationCount){
+    // Profiling of needed time
+    using namespace std::chrono;
     // Place each agent in the correct bucket in the spatial lattice
+    auto start = high_resolution_clock::now();
+    auto start_buckets = high_resolution_clock::now();
+
     update_buckets();
+    
+    auto end_buckets = high_resolution_clock::now();
+
+    auto start_obs = high_resolution_clock::now();
+    auto start_think = high_resolution_clock::now();
+
+    double total_obs_time = 0.0;
+    double size_agents = 0.0;
 
     // First it checks the system state and lets agents think
     for (auto& agent : agents){
         if (!agent->isAlive) continue;
+        size_agents++;
+
+        auto s_obs = high_resolution_clock::now();
+
         vector<Observation> agentsInFOV = getObservation(agent.get());
 
         vector<float> scents = {0.0f, 0.0f, 0.0f};
@@ -270,9 +315,15 @@ void World::update(float dt, int generationCount){
         scents = getBestFoodScent(a);
 
         agent->updateSensoryData(agentsInFOV, scents);
+
+        auto e_obs = high_resolution_clock::now();
+        total_obs_time += duration_cast<nanoseconds>(e_obs - s_obs).count();
+        
         agent->think();
     }
-
+    auto end_think_obs = high_resolution_clock::now();
+    auto start_move = high_resolution_clock::now();
+    
     vector<unique_ptr<Agent>> nursery;
 
     // Then updates everything at the same time
@@ -301,6 +352,9 @@ void World::update(float dt, int generationCount){
         }
     }
     
+    auto end_move = high_resolution_clock::now();
+    auto start_cleanup = high_resolution_clock::now();
+
     // Add newly born agents
     for (auto& baby : nursery){ 
         agents.push_back(std::move(baby));
@@ -330,6 +384,18 @@ void World::update(float dt, int generationCount){
                 chunk.activeCells.end()
             );
     }
+    auto end_cleanup = high_resolution_clock::now();
+    auto end = high_resolution_clock::now();
+    // Profiling output
+    double t_buckets = duration_cast<microseconds>(end_buckets - start_buckets).count();
+    double t_obs = total_obs_time / 1000.0; 
+    double t_think = duration_cast<microseconds>(end_think_obs - start_think).count() - t_obs;
+    double t_move = duration_cast<microseconds>(end_move - start_move).count();
+    double t_cleanup = duration_cast<microseconds>(end_cleanup - start_cleanup).count();
+    double t_total = duration_cast<microseconds>(end - start).count();
+    double check_t_total = t_buckets + t_obs + t_think + t_move + t_cleanup;
+
+    return {t_buckets, t_obs, t_think, t_move, t_cleanup, t_total, check_t_total};
 }
 
 // Given an observer, returns a vector of pointers to all the agents it can see
