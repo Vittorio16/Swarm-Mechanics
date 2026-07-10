@@ -18,6 +18,7 @@ void runProfiling(){
     vector<int> prey_count = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     vector<int> predator_count = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384};
 
+    // Iterations for averaging the profiling results
     int iterations = 200;
 
     for (int i = 0; i < prey_count.size(); i++) {
