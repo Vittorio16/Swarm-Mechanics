@@ -34,6 +34,33 @@ World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)),
     }
 }
 
+// Constructor used for profiling purposes
+World::World(int numPrey, int numPredators) : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)), 
+                lattice_x_cells((int)ceil((float)NUM_CELLE_X / LATTICE_CELL_WIDTH)), lattice_y_cells((int)ceil((float)NUM_CELLE_Y / LATTICE_CELL_HEIGHT)),
+                spatial_lattice(lattice_x_cells * lattice_y_cells),
+                food_lattice_x_cells((int)ceil((float)NUM_CELLE_X / FOOD_CELL_WIDTH)), food_lattice_y_cells((int)ceil((float)NUM_CELLE_Y / FOOD_CELL_HEIGHT)),
+                food_lattice(food_lattice_x_cells * food_lattice_y_cells),
+                gen(random_device{}()), disX(0, NUM_CELLE_X - 1), disY(0, NUM_CELLE_Y - 1) {
+
+    for (int i = 0; i < CONSTANT_FOOD_AMOUNT; i++) {
+        addFood(disX(gen), disY(gen), MAX_FOOD); 
+    }
+    
+    // Puts set number of predators and preys in random positions
+    for (int i = 0; i < numPredators; i++){
+        float randX = disX(gen);
+        float randY = disY(gen);
+
+        agents.push_back(make_unique<Predator>(randX, randY));
+    }
+    for (int i = 0; i < numPrey; i++){
+        float randX = disX(gen);
+        float randY = disY(gen);
+
+        agents.push_back(make_unique<Prey>(randX, randY));
+    }
+}
+
 // Helper to return to a prey the food scent (x, y) of the best food cell in its vision range
 vector<float> World::getBestFoodScent(const Agent* agent) {
     int cx = (int)(agent->x / FOOD_CELL_WIDTH);
@@ -256,7 +283,7 @@ void World::update_buckets(){
 
 
 // Updates the world each tick of the simulation
-void World::update(float dt, int generationCount){
+ProfilingData World::update(float dt, int generationCount){
     // Profiling of needed time
     using namespace std::chrono;
     // Place each agent in the correct bucket in the spatial lattice
@@ -367,6 +394,8 @@ void World::update(float dt, int generationCount){
     double t_cleanup = duration_cast<microseconds>(end_cleanup - start_cleanup).count();
     double t_total = duration_cast<microseconds>(end - start).count();
     double check_t_total = t_buckets + t_obs + t_think + t_move + t_cleanup;
+
+    return {t_buckets, t_obs, t_think, t_move, t_cleanup, t_total, check_t_total};
 }
 
 // Given an observer, returns a vector of pointers to all the agents it can see

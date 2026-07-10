@@ -47,9 +47,10 @@ class World{
     vector<unique_ptr<Agent>> graveyard;
 
     World();
-
+    World(int numPrey, int numPredators);
+    
     // Updattes the world each tick of the simulation
-    void update(float dt, int generationCount);
+    ProfilingData update(float dt, int generationCount);
 
     // Methods used for visual representation
     void draw(sf::RenderWindow& window);
