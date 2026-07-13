@@ -48,7 +48,7 @@ class World{
 
     World();
     World(int numPrey, int numPredators);
-    
+
     // Updattes the world each tick of the simulation
     ProfilingData update(float dt, int generationCount);
 
