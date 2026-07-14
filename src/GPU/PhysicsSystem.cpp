@@ -1,0 +1,54 @@
+#include "GPU/PhysicSystem.h"
+
+void PhysicsSystem::update(SwarmData& swarm, float dt){
+    for (int i = 0; i < swarm.current_count; i++){
+        if (!swarm.agentIdentifications.isAlive[i]) continue;
+
+        swarm.fitnessMetrics.timeLived[i] += dt;
+
+        // Update heading and acceleration based on brain output
+        swarm.physics.facingAngle[i] += swarm.neuralOutputs.turnIntent[i] * MAXIMUM_TURNING_SPEED * dt;
+        swarm.physics.facingAngle[i] = fmodf(swarm.physics.facingAngle[i], 2 * M_PI);
+        if (swarm.physics.facingAngle[i] <= -M_PI) swarm.physics.facingAngle[i] += 2 * M_PI;
+        if (swarm.physics.facingAngle[i] > M_PI) swarm.physics.facingAngle[i] -= 2 * M_PI;
+
+        // Apply thrust in the direction of facingAngle
+        float ax = swarm.neuralOutputs.thrustIntent[i] * cosf(swarm.physics.facingAngle[i]) * swarm.physics.force[i];
+        float ay = swarm.neuralOutputs.thrustIntent[i] * sinf(swarm.physics.facingAngle[i]) * swarm.physics.force[i];
+
+        // Update velocity using acceleration and friction
+        swarm.physics.vx[i] += ax * dt;
+        swarm.physics.vy[i] += ay * dt;
+        
+        float retention = max(0.0f, 1.0f - (swarm.physics.friction[i] * dt));
+        swarm.physics.vx[i] *= retention;
+        swarm.physics.vy[i] *= retention;
+
+        // Checks constraint on speed
+        swarm.physics.speed[i] = hypotf(swarm.physics.vx[i], swarm.physics.vy[i]);
+        
+        if (swarm.physics.speed[i] > swarm.physics.maxSpeed[i]){
+            float excessRatio = swarm.physics.maxSpeed[i] / swarm.physics.speed[i];
+            swarm.physics.vx[i] *= excessRatio;
+            swarm.physics.vy[i] *= excessRatio;
+            swarm.physics.speed[i] = swarm.physics.maxSpeed[i];
+        }
+
+        // Update position
+        swarm.physics.x[i] += swarm.physics.vx[i] * dt;
+        swarm.physics.y[i] += swarm.physics.vy[i] * dt;
+
+        // Updates the agent's energy and checks reproduction
+        if (swarm.energyMetrics.remainingDigestion[i] > 0.0f){
+            swarm.energyMetrics.remainingDigestion[i] -= dt;
+            if (swarm.energyMetrics.remainingDigestion[i] <= 0.001f) swarm.energyMetrics.remainingDigestion[i] = 0; 
+        }
+        if (swarm.energyMetrics.reproductionCooldown[i] > 0){
+            swarm.energyMetrics.reproductionCooldown[i] -= dt;
+            if (swarm.energyMetrics.reproductionCooldown[i] < 0) swarm.energyMetrics.reproductionCooldown[i] = 0;
+        }
+
+        EnergySystem::update(swarm.neuralOutputs.thrustIntent[i], swarm.neuralOutputs.turnIntent[i], dt);
+        if (swarm.energyMetrics.energy[i] <= 0) swarm.agentIdentifications.isAlive[i] = false;
+    }
+}
