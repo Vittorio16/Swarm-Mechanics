@@ -1,0 +1,75 @@
+#include <cmath>
+#include <random>
+#include "GPU/functions/DecisionSystem.h"
+
+// Initializes the neural network weights and biases for each agent in the swarm randomly
+void DecisionSystem::initRandom(SwarmData& swarm){
+    for (int i = 0; i < swarm.current_count; i++){
+    }
+}
+
+// Given sensory inputs, decides on the agent's actions using a feed forward neural network
+void DecisionSystem::think(SwarmData& swarm){
+    for (int i = 0; i < swarm.current_count; i++){
+        if (!swarm.agentIdentifications.isAlive[i]) continue;
+
+        // Prepare the inputs for the neural network
+        float inputs[INPUT_LAYER_SIZE];
+        inputs[0] = swarm.neuralOutputs.previousThrustIntent[i]; 
+        inputs[1] = swarm.neuralOutputs.previousTurnIntent[i];
+        inputs[2] = swarm.physics.speed[i] / swarm.physics.maxSpeed[i]; 
+        inputs[3] = swarm.sensors.closestEnemyX[i]; 
+        inputs[4] = swarm.sensors.closestEnemyY[i]; 
+        inputs[5] = swarm.sensors.closestEnemyDist[i];
+        inputs[6] = swarm.sensors.enemyClosingSpeed[i];
+        inputs[7] = swarm.sensors.enemyTangentialSpeed[i];
+        inputs[8] = swarm.sensors.foodSenseX[i];
+        inputs[9] = swarm.sensors.foodSenseY[i];
+        inputs[10] = swarm.sensors.foodDistance[i];
+        inputs[11] = swarm.sensors.foodClosingVelocity[i];
+        inputs[12] = swarm.sensors.foodTangentialVelocity[i];
+        inputs[13] = swarm.sensors.energyReserve[i];
+
+        // Calculate the indeces of the weights and biases for the current agent
+        int w01_start = i * (INPUT_LAYER_SIZE * HIDDEN_LAYER_SIZE);
+        int w12_start = i * (HIDDEN_LAYER_SIZE * OUTPUT_LAYER_SIZE);
+        int b0_start = i * HIDDEN_LAYER_SIZE;
+        int b1_start = i * OUTPUT_LAYER_SIZE;
+
+        float hiddenValues[HIDDEN_LAYER_SIZE];
+        float outputValues[OUTPUT_LAYER_SIZE];
+
+        // Updates the neurons in the hidden node
+        for (int h = 0; h < HIDDEN_LAYER_SIZE; h++){
+            float sum = 0.0f;
+
+            for (int j = 0; j < INPUT_LAYER_SIZE; j++){
+                int weight_index = w01_start + (j * HIDDEN_LAYER_SIZE + h);
+                sum += inputs[j] * swarm.brains.w01[weight_index];
+            }
+            sum += swarm.brains.b0[b0_start + h];
+            // Activation function
+            hiddenValues[i] = tanhf(sum);
+        }
+        
+        // Updates the neurons of the output layer
+        for (int o = 0; o < OUTPUT_LAYER_SIZE; o++){
+            float sum = 0.0f;
+            
+            for (int j = 0; j < HIDDEN_LAYER_SIZE; j++){
+                int weight_index = w12_start + (j * OUTPUT_LAYER_SIZE + o);
+                sum += hiddenValues[j] * swarm.brains.w12[weight_index];
+            }
+            sum += swarm.brains.b1[b1_start + o];
+            // Activation function
+            outputValues[i] = tanhf(sum);
+        }
+
+        // Outputs are thrust and turn intents
+        swarm.neuralOutputs.thrustIntent[i] = max(0.0f, outputValues[0]);
+        swarm.neuralOutputs.turnIntent[i] = outputValues[1];
+
+        swarm.neuralOutputs.previousThrustIntent[i] = swarm.neuralOutputs.thrustIntent[i];
+        swarm.neuralOutputs.previousTurnIntent[i] = swarm.neuralOutputs.turnIntent[i];
+    }
+}

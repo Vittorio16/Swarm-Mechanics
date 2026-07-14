@@ -1,5 +1,6 @@
-#include "GPU/PhysicSystem.h"
+#include "GPU/functions/PhysicSystem.h"
 
+// Moves the agents based on their current velocity and updates their facing angle based on neural outputs
 void PhysicsSystem::update(SwarmData& swarm, float dt){
     for (int i = 0; i < swarm.current_count; i++){
         if (!swarm.agentIdentifications.isAlive[i]) continue;
@@ -47,8 +48,5 @@ void PhysicsSystem::update(SwarmData& swarm, float dt){
             swarm.energyMetrics.reproductionCooldown[i] -= dt;
             if (swarm.energyMetrics.reproductionCooldown[i] < 0) swarm.energyMetrics.reproductionCooldown[i] = 0;
         }
-
-        EnergySystem::update(swarm.neuralOutputs.thrustIntent[i], swarm.neuralOutputs.turnIntent[i], dt);
-        if (swarm.energyMetrics.energy[i] <= 0) swarm.agentIdentifications.isAlive[i] = false;
     }
 }

@@ -72,6 +72,7 @@ constexpr int NUM_CELLE_X = 960;
 constexpr int NUM_CELLE_Y = 540;
 
 // Enemy observation lattice parameters
+constexpr int MAX_AGENTS_PER_CELL = 128;
 constexpr int LATTICE_CELL_WIDTH = 30;
 constexpr int LATTICE_CELL_HEIGHT = 30;
 

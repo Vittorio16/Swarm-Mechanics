@@ -13,10 +13,6 @@ using namespace std;
 class World{
     private:
     vector<vector<Cell>> grid;
-    
-    // Uniform lattices for efficient enemy lookup and prey feeding
-    int lattice_x_cells, lattice_y_cells;
-    vector<vector<Agent*>> spatial_lattice;
 
     // Erases and updates the spatial lattice
     void update_buckets();
@@ -43,6 +39,10 @@ class World{
     uniform_int_distribution<int> disY;
     
     public:
+    // Uniform lattices for efficient enemy lookup and prey feeding
+    int lattice_x_cells, lattice_y_cells;
+    vector<vector<Agent*>> spatial_lattice;
+    
     vector<unique_ptr<Agent>> agents;
     vector<unique_ptr<Agent>> graveyard;
 
