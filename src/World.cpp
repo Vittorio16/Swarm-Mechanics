@@ -47,13 +47,13 @@ World::World(int numPrey, int numPredators) : grid(NUM_CELLE_X, vector<Cell>(NUM
     }
     
     // Puts set number of predators and preys in random positions
-    for (int i = 0; i < numPredators; i++){
+    for (int i = 0; i < NUM_PREDATOR; i++){
         float randX = disX(gen);
         float randY = disY(gen);
 
         agents.push_back(make_unique<Predator>(randX, randY));
     }
-    for (int i = 0; i < numPrey; i++){
+    for (int i = 0; i < NUM_PREY; i++){
         float randX = disX(gen);
         float randY = disY(gen);
 

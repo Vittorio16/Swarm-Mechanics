@@ -25,8 +25,8 @@ void SensorySystem::update(SwarmData& swarm, const SpatialLatticeData& lattice, 
         bx = (bx % lattice.num_cells_x + lattice.num_cells_x) % lattice.num_cells_x;
         by = (by % lattice.num_cells_y + lattice.num_cells_y) % lattice.num_cells_y;
         
-        int max_x_distance = (int)ceil(swarm.perceptions.viewRadius[i] / LATTICE_CELL_WIDTH);
-        int max_y_distance = (int)ceil(swarm.perceptions.viewRadius[i] / LATTICE_CELL_HEIGHT);
+        int max_x_distance = (int)ceilf(swarm.perceptions.viewRadius[i] / LATTICE_CELL_WIDTH);
+        int max_y_distance = (int)ceilf(swarm.perceptions.viewRadius[i] / LATTICE_CELL_HEIGHT);
 
         for (int h = - max_x_distance; h <= max_x_distance; h++){
             for (int j = -max_y_distance; j <= max_y_distance; j++){
@@ -87,13 +87,53 @@ void SensorySystem::update(SwarmData& swarm, const SpatialLatticeData& lattice, 
                 }
             }
         }
+        TARGET_FOUND:
+        // Updates the agent's sensory data with the observation
+        swarm.sensors.closestEnemyIndex[i] = bestEnemyIndex;
+
+        swarm.sensors.energyReserve[i] = 1 - swarm.energyMetrics.energy[i] / MAX_ENERGY;
+
+        // Terminate early if no enemies are visible
+        if (bestEnemyIndex != -1){
+            float c = cosf(-observerHeading);
+            float s = sinf(-observerHeading);
+            
+            float localX = bestDx * c - bestDy * s;
+            float localY = bestDx * s + bestDy * c;
+
+            if (bestDist <= 0.001f){
+                swarm.sensors.closestEnemyX[i] = 0;
+                swarm.sensors.closestEnemyY[i] = 0;
+            } else {
+                swarm.sensors.closestEnemyX[i] = localX / bestDist;
+                swarm.sensors.closestEnemyY[i] = localY / bestDist;
+            }
+
+            swarm.sensors.closestEnemyDist[i] = bestDist / swarm.perceptions.viewRadius[i];
+
+            float relvx = swarm.physics.vx[bestEnemyIndex] - swarm.physics.vx[i];
+            float relvy = swarm.physics.vy[bestEnemyIndex] - swarm.physics.vy[i];
+
+            float vLongitudinal = relvx * c - relvy * s;
+            float vTangential = relvx * s + relvy * c;
+
+            // Normalize 
+            swarm.sensors.enemyClosingSpeed[i] = vLongitudinal / swarm.physics.maxSpeed[bestEnemyIndex];
+            swarm.sensors.enemyTangentialSpeed[i] = vTangential / swarm.physics.maxSpeed[bestEnemyIndex];
+        } else {
+            swarm.sensors.closestEnemyX[i] = 0.0f;
+            swarm.sensors.closestEnemyY[i] = 0.0f;
+            swarm.sensors.closestEnemyDist[i] = 1.0f;
+            swarm.sensors.enemyClosingSpeed[i] = 0.0f;
+            swarm.sensors.enemyTangentialSpeed[i] = 0.0f;
+        }
+
         // Gets the food scent for each agent
         // First finds the best food chunk
-        TARGET_FOUND:
         int cx = (int)(swarm.physics.x[i] / FOOD_CELL_WIDTH);
         int cy = (int)(swarm.physics.y[i] / FOOD_CELL_HEIGHT);
         
-        int max_distance = ceil(swarm.perceptions.grassViewRadius[i] / FOOD_CELL_WIDTH);
+        int max_distance = ceilf(swarm.perceptions.grassViewRadius[i] / FOOD_CELL_WIDTH);
         float bestFoodScore = -1.0f;
         int bestChunkIndex = -1;
 
@@ -188,14 +228,49 @@ void SensorySystem::update(SwarmData& swarm, const SpatialLatticeData& lattice, 
         }
 
         CHUNK_FOUND:
-        // Rotate to agent's coordinates
-        float heading = swarm.physics.facingAngle[i];
-        float c = cos(-heading);
-        float s = sin(-heading);
+        if (bestCellFoodScore >= 0.0f){
+            // Rotate to agent's coordinates
+            float c = cosf(-observerHeading);
+            float s = sinf(-observerHeading);
 
-        float bestFoodX = bestCellDx * c - bestCellDy * s;
-        float bestFoodY = bestCellDx * s + bestCellDy * c;
+            float bestFoodX = bestCellDx * c - bestCellDy * s;
+            float bestFoodY = bestCellDx * s + bestCellDy * c;
 
+            // Grass inputs  
+            float normalization = swarm.perceptions.grassViewRadius[i];
+            
+            float distToFood = hypotf(bestFoodX, bestFoodY);
+            if (distToFood < 0.001f) distToFood = 0.001f;
+
+            // Normalize the food sense vector, dividing the direction vector from the distance
+            float normFoodX = bestFoodX / distToFood;
+            float normFoodY = bestFoodY / distToFood;
+            
+            swarm.sensors.foodSenseX[i] = normFoodX;
+            swarm.sensors.foodSenseY[i] = normFoodY;
         
+            float foodDistance = distToFood / normalization;
+            swarm.sensors.foodDistance[i] = foodDistance;
+        
+            // Calculate the agent's heading for closing and tangential velocity calculations
+            // Maybe needless to use facingAngle
+            // float c = cosf(-swarm.physics.facingAngle[i]);
+            // float s = sinf(-swarm.physics.facingAngle[i]);
+        
+            float vLongitudinal = swarm.physics.vx[i] * c - swarm.physics.vy[i] * s;
+            float vTangential = swarm.physics.vx[i] * s + swarm.physics.vy[i] * c;
+        
+            float closingVelocity = vLongitudinal * normFoodX + vTangential * normFoodY;
+            float tangentialVelocity = vLongitudinal * normFoodY - vTangential * normFoodX;
+        
+            swarm.sensors.foodClosingVelocity[i] = closingVelocity / swarm.physics.maxSpeed[i];
+            swarm.sensors.foodTangentialVelocity[i] = tangentialVelocity / swarm.physics.maxSpeed[i];
+        } else {
+            swarm.sensors.foodSenseX[i] = 0.0f;
+            swarm.sensors.foodSenseY[i] = 0.0f;
+            swarm.sensors.foodDistance[i] = 1.0f;
+            swarm.sensors.foodClosingVelocity[i] = 0.0f;
+            swarm.sensors.foodTangentialVelocity[i] = 0.0f;
+        }
     }
 }
