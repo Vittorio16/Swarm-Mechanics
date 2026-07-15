@@ -1,11 +1,24 @@
 #include "GPU/functions/SensorySystem.h"
 #include "Core/Physics.h"
 
-void SensorySystem::update(SwarmData& swarm, const SpatialLatticeData& lattice){
+void SensorySystem::update(SwarmData& swarm, const SpatialLatticeData& lattice, const FoodLatticeData& foodLattice){
     // Gets an observation of the closest enemy for each agent in the swarm
     for (int i = 0; i < swarm.current_count; i++){
         float observerHeading = swarm.physics.facingAngle[i];
-    
+        int mySpecies = swarm.agentIdentifications.speciesID[i];
+
+        uint64_t lockedIndex = swarm.sensors.lockedEnemyIndex[i];
+        bool foundLockedTarget = false;
+
+        // Used to keep track of "best" observation
+        float minDistSq = INFINITY;
+        int bestEnemyIndex = -1;
+        float bestDist = INFINITY;
+        float bestAngleToTarget = 0.0f;
+        float bestDx = 0.0f;
+        float bestDy = 0.0f;
+
+        // Checking the adjacent lattice cells
         int bx = (int)(swarm.physics.x[i] / LATTICE_CELL_WIDTH);
         int by = (int)(swarm.physics.y[i] / LATTICE_CELL_HEIGHT);
         
@@ -14,7 +27,7 @@ void SensorySystem::update(SwarmData& swarm, const SpatialLatticeData& lattice){
         
         int max_x_distance = (int)ceil(swarm.perceptions.viewRadius[i] / LATTICE_CELL_WIDTH);
         int max_y_distance = (int)ceil(swarm.perceptions.viewRadius[i] / LATTICE_CELL_HEIGHT);
-        
+
         for (int h = - max_x_distance; h <= max_x_distance; h++){
             for (int j = -max_y_distance; j <= max_y_distance; j++){
                 int temp_bx = ((bx + h) % lattice.num_cells_x + lattice.num_cells_x) % lattice.num_cells_x;
@@ -25,39 +38,164 @@ void SensorySystem::update(SwarmData& swarm, const SpatialLatticeData& lattice){
                 for (int cur_idx = 0; cur_idx < lattice.cell_counts[cell_index]; cur_idx++){
                     int idx_in_swarm = lattice.cell_agent_indices[cell_index * MAX_AGENTS_PER_CELL + cur_idx];
 
-                    if (idx_in_swarm == i || !swarm.agentIdentifications.isAlive[idx_in_swarm]) continue;
+                    if (idx_in_swarm == i || !swarm.agentIdentifications.isAlive[idx_in_swarm] || mySpecies == swarm.agentIdentifications.speciesID[idx_in_swarm]) continue;
         
                     ThoroidalData coords = getThoroidalCoordinates(
                         swarm.physics.x[i], swarm.physics.y[i], swarm.physics.x[idx_in_swarm], swarm.physics.y[idx_in_swarm], NUM_CELLE_X, NUM_CELLE_Y
                     );
             
-                    float dist = coords.dist;
-                    float distSq = coords.distSq;
-                    float angleToTarget = coords.angleToTarget;
-                    float dx = coords.dx;
-                    float dy = coords.dy;
-            
-                    // Senses an area around the agent
-                    if (distSq < swarm.perceptions.sensingRange[i]){
-                        observations.emplace_back(dx, dy, dist, distSq, otherAgent);
+                    // If enemy isn't visible, continue
+                    if (coords.distSq > (swarm.perceptions.viewRadius[i] * swarm.perceptions.viewRadius[i]) && coords.distSq >= swarm.perceptions.sensingRange[i])
+                        continue;
+                    
+                    if (coords.distSq > swarm.perceptions.sensingRange[i]){
+                        float angleDiff = coords.angleToTarget - observerHeading;
+                        if (isnan(angleDiff) || isinf(angleDiff)) angleDiff = 0.0f;
+                
+                        angleDiff = fmodf(angleDiff, 2*M_PI);
+                        if (angleDiff <= -M_PI) angleDiff += 2 * M_PI;
+                        if (angleDiff > M_PI) angleDiff -= 2 * M_PI;
+                
+                        if (fabsf(angleDiff) > swarm.perceptions.fovAngle[i] * M_PI / 360.0f){
+                            continue; // Troppo di lato, non lo vede
+                        }
+                    }
+
+                    // If prey is close enough to be eaten, it ignores tunnel vision
+                    if (mySpecies == PREDATOR_ID && coords.distSq <= KILL_RANGE_SQ) {
+                        bestEnemyIndex = idx_in_swarm;
+                        bestDx = coords.dx; bestDy = coords.dy; bestDist = coords.dist;
+                        goto TARGET_FOUND; 
+                    }
+
+                    // Handles tunnel vision for predators
+                    if (lockedIndex != 0 && swarm.agentIdentifications.ID[idx_in_swarm] == lockedIndex && mySpecies != PREY_ID) {
+                        bestEnemyIndex = idx_in_swarm;
+                        bestDx = coords.dx; bestDy = coords.dy; bestDist = coords.dist;
+                        foundLockedTarget = true; 
                         continue;
                     }
-            
-                    if (distSq > (swarm.perceptions.viewRadius[i]*swarm.perceptions.viewRadius[i])) continue;
-            
-                    float angleDiff = angleToTarget - observerHeading;
-                    // Normalize angle difference to be between -PI and PI
-                    if (isnan(angleDiff) || isinf(angleDiff)) angleDiff = 0.0f;
-            
-                    angleDiff = fmodf(angleDiff, 2*M_PI);
-                    if (angleDiff <= -M_PI) angleDiff += 2 * M_PI;
-                    if (angleDiff > M_PI) angleDiff -= 2 * M_PI;
-            
-                    if (abs(angleDiff) < swarm.perceptions.fovAngle[i] * M_PI / 360.0f){
-                        observations.emplace_back(dx, dy, dist, distSq, otherAgent);
+
+                    // Default
+                    if (!foundLockedTarget && coords.distSq < minDistSq) {
+                        minDistSq = coords.distSq;
+                        bestEnemyIndex = idx_in_swarm;
+                        bestDx = coords.dx;
+                        bestDy = coords.dy;
+                        bestDist = coords.dist;
                     }
                 }
             }
         }
+        // Gets the food scent for each agent
+        // First finds the best food chunk
+        TARGET_FOUND:
+        int cx = (int)(swarm.physics.x[i] / FOOD_CELL_WIDTH);
+        int cy = (int)(swarm.physics.y[i] / FOOD_CELL_HEIGHT);
+        
+        int max_distance = ceil(swarm.perceptions.grassViewRadius[i] / FOOD_CELL_WIDTH);
+        float bestFoodScore = -1.0f;
+        int bestChunkIndex = -1;
+
+        // Loop through nearby chunks in the food lattice
+        for (int h = -max_distance; h <= max_distance; h++) {
+            for (int j = -max_distance; j <= max_distance; j++) {
+                int tx = ((cx + h) % foodLattice.num_chunks_x + foodLattice.num_chunks_x) % foodLattice.num_chunks_x;
+                int ty = ((cy + j) % foodLattice.num_chunks_y + foodLattice.num_chunks_y) % foodLattice.num_chunks_y;
+
+                int chunk_index = ty * foodLattice.num_chunks_x + tx;   
+
+                if (foodLattice.totalFood[chunk_index] > 0.001f){
+                    float centerX = foodLattice.sumFoodX[chunk_index] / foodLattice.totalFood[chunk_index];
+                    float centerY = foodLattice.sumFoodY[chunk_index] / foodLattice.totalFood[chunk_index];
+
+                    // Calculate distance from agent to this chunk's center of mass
+                    float dx = centerX - swarm.physics.x[i];
+                    float dy = centerY - swarm.physics.y[i];
+
+                    // Handle wrapping for distance calculation
+                    if (dx > NUM_CELLE_X * 0.5f) dx -= NUM_CELLE_X;
+                    if (dx < -NUM_CELLE_X * 0.5f) dx += NUM_CELLE_X;
+
+                    if (dy > NUM_CELLE_Y * 0.5f) dy -= NUM_CELLE_Y;
+                    if (dy < -NUM_CELLE_Y * 0.5f) dy += NUM_CELLE_Y;
+
+                    float distSq = dx*dx + dy*dy;
+                    if (distSq < 0.1f) distSq = 0.1f;
+
+                    if (distSq < swarm.perceptions.grassViewRadius[i] * swarm.perceptions.grassViewRadius[i]){
+                        float foodScore = foodLattice.totalFood[chunk_index]*foodLattice.totalFood[chunk_index] / distSq;
+
+                        if (foodScore > bestFoodScore) {
+                            bestFoodScore = foodScore;
+                            bestChunkIndex = chunk_index;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Now loop inside the best chunk to find the best cell, to improve precision when close to food
+        int chunk_x = bestChunkIndex % foodLattice.num_chunks_x;
+        int chunk_y = bestChunkIndex / foodLattice.num_chunks_x;
+
+        int start_cell_x = chunk_x * FOOD_CELL_WIDTH;
+        int start_cell_y = chunk_y * FOOD_CELL_HEIGHT;
+
+        float bestCellFoodScore = -1.0f;
+        float bestCellDx = 0.0f;
+        float bestCellDy = 0.0f;
+
+         // If no food found, return (0, 0)
+        if (bestChunkIndex == -1) 
+            goto CHUNK_FOUND;
+
+        for (int cell_dx = 0; cell_dx < FOOD_CELL_WIDTH; cell_dx++) {
+            for (int cell_dy = 0; cell_dy < FOOD_CELL_HEIGHT; cell_dy++) {
+                
+                int cell_x = start_cell_x + cell_dx;
+                int cell_y = start_cell_y + cell_dy;
+                
+                // Indeces for flat food grid
+                int cell_index = cell_y * foodLattice.num_cells_x + cell_x;
+                
+                float foodAmount = foodLattice.foodGrid[cell_index];
+
+                if (foodAmount <= 0.001f) continue;
+
+                // Thoroidal distance calculation
+                float dx = cell_x + 0.5f - swarm.physics.x[i];
+                float dy = cell_y + 0.5f - swarm.physics.y[i];
+
+                // Handle wrapping for distance calculation
+                if (dx > NUM_CELLE_X * 0.5f) dx -= NUM_CELLE_X;
+                if (dx < -NUM_CELLE_X * 0.5f) dx += NUM_CELLE_X;
+
+                if (dy > NUM_CELLE_Y * 0.5f) dy -= NUM_CELLE_Y;
+                if (dy < -NUM_CELLE_Y * 0.5f) dy += NUM_CELLE_Y;
+
+                float distSq = dx*dx + dy*dy;
+                if (distSq < 0.1f) distSq = 0.1f; 
+
+                float foodScore = foodAmount * foodAmount / distSq;
+                
+                if (foodScore > bestCellFoodScore) {
+                    bestCellFoodScore = foodScore;
+                    bestCellDx = dx;
+                    bestCellDy = dy;
+                }
+            }
+        }
+
+        CHUNK_FOUND:
+        // Rotate to agent's coordinates
+        float heading = swarm.physics.facingAngle[i];
+        float c = cos(-heading);
+        float s = sin(-heading);
+
+        float bestFoodX = bestCellDx * c - bestCellDy * s;
+        float bestFoodY = bestCellDx * s + bestCellDy * c;
+
+        
     }
 }

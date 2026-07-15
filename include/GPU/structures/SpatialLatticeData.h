@@ -1,6 +1,5 @@
 #pragma once
 #include <atomic>
-#include <vector>
 #include "Core/Config.h"
 
 using namespace std;
