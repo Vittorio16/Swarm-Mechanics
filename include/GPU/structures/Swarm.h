@@ -75,13 +75,13 @@ struct SwarmData{
         vector<float> sensingRange;     // Senses enemies within this range
         vector<float> viewRadius;
         vector<float> fovAngle;
-        vector<int> grassViewRadius;
+        vector<float> grassViewRadius;
 
         PerceptionData(int capacity): 
             sensingRange(capacity, 0.0f), 
             viewRadius(capacity, 0.0f), 
             fovAngle(capacity, 0.0f), 
-            grassViewRadius(capacity, 0) {}
+            grassViewRadius(capacity, 0.0f) {}
     } perceptions;
 
     // Sensory Data

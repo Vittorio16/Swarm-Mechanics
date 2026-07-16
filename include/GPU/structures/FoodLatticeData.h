@@ -8,6 +8,7 @@ struct FoodLatticeData{
     int num_chunks_x;
     int num_chunks_y;
     int total_chunks;
+    int foodToSpawn;
 
     vector<float> totalFood;
     vector<float> sumFoodX;
@@ -23,6 +24,7 @@ struct FoodLatticeData{
     num_chunks_x(chunks_x),
     num_chunks_y(chunks_y),
     total_chunks(chunks_x * chunks_y),
+    foodToSpawn(CONSTANT_FOOD_AMOUNT),
     totalFood(chunks_x * chunks_y, 0.0f),
     sumFoodX(chunks_x * chunks_y, 0.0f),
     sumFoodY(chunks_x* chunks_y, 0.0f),

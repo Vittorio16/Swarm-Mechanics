@@ -83,6 +83,7 @@ constexpr int FOOD_CELL_HEIGHT = 10;
 // Food settings per cell
 constexpr float MAX_FOOD = 10.0f;
 constexpr int CONSTANT_FOOD_AMOUNT = 500;
+constexpr int MAX_SPAWN_ATTEMPTS = 10;
 
 // Only saves dead agents with fitness greater than this to be later analyzed
 constexpr float MINIMUM_FITNESS_TO_BE_SAVED = 5.0f;
@@ -156,6 +157,7 @@ constexpr float PREY_VIEW_RADIUS = 30.0f;
 constexpr float PREY_FOV_ANGLE = 360.0f;
 constexpr float PREY_DIGESTION_TIME = 0.25f;
 
+const float PREY_METABOLISM_MULTIPLIER = 1.0f;
 const float PREY_EFFORT_MULTIPLIER = 0.4f;
 
 // Rewards gaining energy, to discourage standstill

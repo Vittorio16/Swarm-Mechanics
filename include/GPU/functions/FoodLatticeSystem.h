@@ -8,6 +8,6 @@ namespace FoodLatticeSystem {
     thread_local std::uniform_int_distribution<int> disX(0, NUM_CELLE_X - 1);
     thread_local std::uniform_int_distribution<int> disY(0, NUM_CELLE_Y - 1);
 
-    void build(FoodLatticeData& foodLattice);
-    void addFood(FoodLatticeData& foodLattice, int cx, int cy, float growthAmount);
+    // When first building the sym, pass CONSTANT_FOOD_AMOUNT
+    void grow(FoodLatticeData& foodLattice, float growthAmount);
 }

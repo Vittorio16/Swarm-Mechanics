@@ -1,6 +1,7 @@
 #include "GPU/functions/SensorySystem.h"
 #include "Core/Physics.h"
 
+// Gets an observation of the closest enemy, of food and parses it into the sensors
 void SensorySystem::update(SwarmData& swarm, const SpatialLatticeData& lattice, const FoodLatticeData& foodLattice){
     // Gets an observation of the closest enemy for each agent in the swarm
     for (int i = 0; i < swarm.current_count; i++){
@@ -95,6 +96,8 @@ void SensorySystem::update(SwarmData& swarm, const SpatialLatticeData& lattice, 
 
         // Terminate early if no enemies are visible
         if (bestEnemyIndex != -1){
+            swarm.sensors.lockedEnemyIndex[i] = swarm.agentIdentifications.ID[bestEnemyIndex];
+
             float c = cosf(-observerHeading);
             float s = sinf(-observerHeading);
             
@@ -121,6 +124,8 @@ void SensorySystem::update(SwarmData& swarm, const SpatialLatticeData& lattice, 
             swarm.sensors.enemyClosingSpeed[i] = vLongitudinal / swarm.physics.maxSpeed[bestEnemyIndex];
             swarm.sensors.enemyTangentialSpeed[i] = vTangential / swarm.physics.maxSpeed[bestEnemyIndex];
         } else {
+            swarm.sensors.lockedEnemyIndex[i] = 0;
+            
             swarm.sensors.closestEnemyX[i] = 0.0f;
             swarm.sensors.closestEnemyY[i] = 0.0f;
             swarm.sensors.closestEnemyDist[i] = 1.0f;

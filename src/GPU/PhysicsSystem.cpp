@@ -38,15 +38,5 @@ void PhysicsSystem::update(SwarmData& swarm, float dt){
         // Update position
         swarm.physics.x[i] += swarm.physics.vx[i] * dt;
         swarm.physics.y[i] += swarm.physics.vy[i] * dt;
-
-        // Updates the agent's energy and checks reproduction
-        if (swarm.energyMetrics.remainingDigestion[i] > 0.0f){
-            swarm.energyMetrics.remainingDigestion[i] -= dt;
-            if (swarm.energyMetrics.remainingDigestion[i] <= 0.001f) swarm.energyMetrics.remainingDigestion[i] = 0; 
-        }
-        if (swarm.energyMetrics.reproductionCooldown[i] > 0){
-            swarm.energyMetrics.reproductionCooldown[i] -= dt;
-            if (swarm.energyMetrics.reproductionCooldown[i] < 0) swarm.energyMetrics.reproductionCooldown[i] = 0;
-        }
     }
 }
