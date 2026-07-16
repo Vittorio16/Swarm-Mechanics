@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "Learning/Perceptron.h"
+#include "Core/Config.h"
 
 using namespace std;
 

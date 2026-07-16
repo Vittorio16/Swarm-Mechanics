@@ -1,12 +1,14 @@
 #pragma once
 #include "GPU/structures/Swarm.h"
+#include "GPU/structures/GraveyardData.h"
 
 namespace LifeSystem {
-    thread_local std::mt19937 gen(std::random_device{}());
-    thread_local std::uniform_int_distribution<int> disX(0, NUM_CELLE_X - 1);
-    thread_local std::uniform_int_distribution<int> disY(0, NUM_CELLE_Y - 1);
+    extern thread_local std::mt19937 gen;
+    extern thread_local std::uniform_int_distribution<int> disX;
+    extern thread_local std::uniform_int_distribution<int> disY;
 
     void initSwarm(SwarmData& swarm, int num_prey, int num_predators);
-    void handleDeaths(SwarmData& swarm);
-    void handleBirths(SwarmData& swarm);
+    void handleDeaths(SwarmData& swarm, GraveyardData& graveyard);
+    void handleBirths(SwarmData& swarm, int mutationRate, int mutationStrength);
+    float getFitness(SwarmData& swarm, int index);
 }

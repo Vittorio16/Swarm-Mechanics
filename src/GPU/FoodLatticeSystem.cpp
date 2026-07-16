@@ -1,6 +1,12 @@
 #include <algorithm>
 #include "GPU/functions/FoodLatticeSystem.h"
 
+namespace FoodLatticeSystem {
+    thread_local std::mt19937 gen(std::random_device{}());
+    thread_local std::uniform_int_distribution<int> disX(0, NUM_CELLE_X - 1);
+    thread_local std::uniform_int_distribution<int> disY(0, NUM_CELLE_Y - 1);
+}
+
 void FoodLatticeSystem::grow(FoodLatticeData& foodLattice, float growthAmount){
     for (int i = 0; i < foodLattice.foodToSpawn; i++){
         int cx;

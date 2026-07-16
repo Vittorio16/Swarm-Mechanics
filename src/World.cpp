@@ -1,10 +1,8 @@
-#include <cmath>
-#include <algorithm>
 #include <chrono>
 #include "World.h"
 #include "Core/Physics.h"
 
-#include "GPU/functions/DecisionSystem.h"
+#include "GPU/functions/BrainSystem.h"
 #include "GPU/functions/EnergySystem.h"
 #include "GPU/functions/LatticeSystem.h"
 #include "GPU/functions/FoodLatticeSystem.h"
@@ -18,9 +16,10 @@ using namespace std;
 
 // Constructor
 World::World(int num_prey, int num_predators) : 
-    swarm(MAX_CAPACITY),
+    swarm(MAX_SWARM_CAPACITY),
     spatialLattice(NUM_CELLE_X / LATTICE_CELL_WIDTH, NUM_CELLE_Y / LATTICE_CELL_HEIGHT),
-    foodLattice(NUM_CELLE_X / FOOD_CELL_WIDTH, NUM_CELLE_Y / FOOD_CELL_HEIGHT, NUM_CELLE_X, NUM_CELLE_Y) {
+    foodLattice(NUM_CELLE_X / FOOD_CELL_WIDTH, NUM_CELLE_Y / FOOD_CELL_HEIGHT, NUM_CELLE_X, NUM_CELLE_Y),
+    graveyard(MAX_GRAVEYARD_CAPACITY) {
 
     LifeSystem::initSwarm(swarm, num_prey, num_predators);
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
@@ -55,7 +54,7 @@ ProfilingData World::update(float dt, int generationCount){
     total_obs_time += duration_cast<nanoseconds>(e_obs - s_obs).count();
     
     // Feed forward neural network for decision making
-    DecisionSystem::think(swarm);
+    BrainSystem::think(swarm);
 
     auto end_think_obs = high_resolution_clock::now();
     auto start_move = high_resolution_clock::now();
@@ -67,9 +66,13 @@ ProfilingData World::update(float dt, int generationCount){
     auto end_move = high_resolution_clock::now();
     auto start_cleanup = high_resolution_clock::now();
 
+    // Adjust mutation parameters based on current generation count
+    float dynamicRate = std::max(MINIMUM_MUTATION_RATE, STARTING_MUTATION_RATE - (generationCount * MUTATION_RATE_DECAY));
+    float dynamicStrength = std::max(MINIMUM_MUTATION_STRENGTH, STARTING_MUTATION_STRENGTH - (generationCount * MUTATION_STRENGTH_DECAY));
+
     // Handles first deaths, then births to keep the array compact
-    LifeSystem::handleDeaths(swarm);
-    LifeSystem::handleBirths(swarm);
+    LifeSystem::handleDeaths(swarm, graveyard);
+    LifeSystem::handleBirths(swarm, dynamicRate, dynamicStrength);
     
     // Handles grass growth
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
@@ -144,7 +147,7 @@ void World::remapBackground(sf::Vector2u windowSize, float scaleX, float scaleY)
             gridTexture.create(windowSize.x, windowSize.y);
         }
 
-        gridTexture.clear(sf::Color::Black);
+        gridTexture.clear(sf::Color::White);
         
         if (SHOW_GRID) {
             sf::RectangleShape cell;
@@ -265,15 +268,15 @@ void drawFOV(sf::RenderWindow& window, const sf::Vector2u& windowSize, const Swa
     float startAngle = heading - (fovAngle / 2.0f);
     float angleStep = fovAngle / (float)(triangleCount - 1);
 
-    for (int i = 0; i < triangleCount; ++i) {
-        float currentAngle = startAngle + (angleStep * i);
+    for (int t = 0; t < triangleCount; ++t) {
+        float currentAngle = startAngle + (angleStep * t);
         
         // Polar coordinates to Cartesian: x = r * cos(theta), y = r * sin(theta)
         float vx = px + cos(currentAngle) * fovRadius;
         float vy = py + sin(currentAngle) * fovRadius;
 
-        fovShape[i + 1].position = sf::Vector2f(vx, vy);
-        fovShape[i + 1].color = fovColor;
+        fovShape[t + 1].position = sf::Vector2f(vx, vy);
+        fovShape[t + 1].color = fovColor;
     }
 
     // We use sqrt because rangeOfVision is considered as squared distance

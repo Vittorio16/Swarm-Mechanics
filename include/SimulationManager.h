@@ -9,11 +9,14 @@
 #include <functional>
 #include <atomic>
 #include "World.h"
-#include "Entities/Prey.h"
-#include "Entities/Predator.h"
 #include "Core/Config.h"
 
 using namespace std;
+
+struct AgentEvaluation {
+    float fitness;
+    vector<float> brain;
+};
 
 class SimulationManager {
 private:

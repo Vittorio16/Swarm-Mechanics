@@ -5,6 +5,7 @@
 #include "GPU/structures/Swarm.h"
 #include "GPU/structures/SpatialLatticeData.h"
 #include "GPU/structures/FoodLatticeData.h"
+#include "GPU/structures/GraveyardData.h"
 
 using namespace std;
 
@@ -18,6 +19,7 @@ class World{
     SwarmData swarm;
     SpatialLatticeData spatialLattice;
     FoodLatticeData foodLattice;
+    GraveyardData graveyard;
 
     World(int numPrey, int numPredators);
 

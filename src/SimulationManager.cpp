@@ -1,4 +1,3 @@
-#include <thread>
 #include <future>
 #include <numeric>
 #include <algorithm>
@@ -6,12 +5,14 @@
 #include <fstream>
 #include "SimulationManager.h"
 #include "Core/GlobalHelpers.h"
+#include "GPU/functions/BrainSystem.h"
+#include "GPU/functions/LifeSystem.h"
 
 // Constructor
 SimulationManager::SimulationManager(int cores) : numCores(cores) {
     // Initialize N worlds
     for (int i = 0; i < numCores; i++) {
-        worlds.push_back(make_unique<World>());
+        worlds.push_back(make_unique<World>(NUM_PREDATOR, NUM_PREY));
 
         // Launch persistent threads
         workers.emplace_back([this] {
@@ -25,7 +26,7 @@ SimulationManager::SimulationManager(int cores) : numCores(cores) {
 
                     if (this->stopPool && this->tasks.empty()) return;
 
-                    task = move(this->tasks.front());
+                    task = std::move(this->tasks.front());
                     this->tasks.pop();
                 }
                 // Execute the task
@@ -110,25 +111,42 @@ void SimulationManager::update(float dt, bool renderEnabled) {
 void SimulationManager::evolve() {
     cout << "--- Generation " << generationCount << " Complete ---" << endl;
     
-    vector<Prey*> allPrey;
-    vector<Predator*> allPredators;
+    vector<AgentEvaluation> allPrey;
+    vector<AgentEvaluation> allPredators;
 
     // Collection of all agents from all worlds
     for (auto& world : worlds){
         // Collect living
-        for (auto& agent : world->agents){
-            if (agent->speciesID == PREY_ID){
-                allPrey.push_back(static_cast<Prey*>(agent.get()));
+        SwarmData& swarm = world->swarm;
+        GraveyardData& graveyard = world->graveyard;
+
+        // Living agents extraction
+        for (int i = 0; i < swarm.current_count; i++){
+            if (!swarm.agentIdentifications.isAlive[i]) continue;
+            float fitness = LifeSystem::getFitness(swarm, i);
+
+            vector<float> brain = BrainSystem::extractBrain(swarm, i);
+            if (swarm.agentIdentifications.speciesID[i] == PREY_ID) {
+                allPrey.push_back({fitness, std::move(brain)});
             } else {
-                allPredators.push_back(static_cast<Predator*>(agent.get()));
+                allPredators.push_back({fitness, std::move(brain)});
             }
         }
-        // Collect dead
-        for (auto& agent : world->graveyard){
-            if (agent->speciesID == PREY_ID){
-                allPrey.push_back(static_cast<Prey*>(agent.get()));
+
+        // Dead agents' extraction from the graveyard
+        for (int i = 0; i < graveyard.current_count; i++){
+            vector<float> brain;
+            brain.reserve(W01_SIZE + W12_SIZE + B0_SIZE + B1_SIZE);
+            
+            for(int j = 0; j < W01_SIZE; j++) brain.push_back(graveyard.w01[i * W01_SIZE + j]);
+            for(int j = 0; j < W12_SIZE; j++) brain.push_back(graveyard.w12[i * W12_SIZE + j]);
+            for(int j = 0; j < B0_SIZE; j++)  brain.push_back(graveyard.b0[i * B0_SIZE + j]);
+            for(int j = 0; j < B1_SIZE; j++)  brain.push_back(graveyard.b1[i * B1_SIZE + j]);
+
+            if (graveyard.speciesID[i] == PREY_ID) {
+                allPrey.push_back({graveyard.fitness[i], std::move(brain)});
             } else {
-                allPredators.push_back(static_cast<Predator*>(agent.get()));
+                allPredators.push_back({graveyard.fitness[i], std::move(brain)});
             }
         }
     }
@@ -137,25 +155,25 @@ void SimulationManager::evolve() {
 
     // Sort for selection
     sort(allPrey.begin(), allPrey.end(),
-        [](Prey* a, Prey* b){
-            return a->getFitness() > b->getFitness();
+        [](const AgentEvaluation& a, const AgentEvaluation& b){
+            return a.fitness > b.fitness;
         });
 
     sort(allPredators.begin(), allPredators.end(),
-        [](Predator* a, Predator* b){
-            return a->getFitness() > b->getFitness();
+        [](const AgentEvaluation& a, const AgentEvaluation& b){
+            return a.fitness > b.fitness;
         });
 
     // Prey Evolution
     if (!allPrey.empty()){
         if (generationCount % HOF_GENERATION_UPDATE_RATE == 0){
-            preyHallOfFame.push_back(allPrey[0]->getBrain().getWeights());
+            preyHallOfFame.push_back(allPrey[0].brain);
             if (preyHallOfFame.size() > HALL_OF_FAME_SIZE){
                 preyHallOfFame.erase(preyHallOfFame.begin());
             }
         }
 
-        cout << "Best Prey Fitness: " << allPrey[0]->getFitness() << endl;
+        cout << "Best Prey Fitness: " << allPrey[0].fitness << endl;
 
         // Take top 10% -- capped to avoid dilution
         int eliteCount = max(1, (int)(allPrey.size() * TOP_PERCENTAGE));
@@ -163,22 +181,22 @@ void SimulationManager::evolve() {
 
         this->elitePreyBrains.clear();
         for (int i = 0; i < eliteCount; i++){
-            elitePreyBrains.push_back(allPrey[i]->getBrain().getWeights());
+            elitePreyBrains.push_back(allPrey[i].brain);
         }
 
-        this->bestWeightsPrey = allPrey[0]->getBrain().getWeights();
+        this->bestWeightsPrey = allPrey[0].brain;
     }
     
     // Predator evolution
     if (!allPredators.empty()){
         if (generationCount % HOF_GENERATION_UPDATE_RATE == 0){
-            predatorHallOfFame.push_back(allPredators[0]->getBrain().getWeights());
+            predatorHallOfFame.push_back(allPredators[0].brain);
             if (predatorHallOfFame.size() > HALL_OF_FAME_SIZE){
                 predatorHallOfFame.erase(predatorHallOfFame.begin());
             }
         }
 
-        cout << "Best Predator Fitness: " << allPredators[0]->getFitness() << endl;
+        cout << "Best Predator Fitness: " << allPredators[0].fitness << endl;
 
         // Take top 10%
         int eliteCount = max(1, (int)(allPredators.size() * TOP_PERCENTAGE));
@@ -186,16 +204,16 @@ void SimulationManager::evolve() {
 
         this->elitePredatorBrains.clear();
         for (int i = 0; i < eliteCount; i++){
-            elitePredatorBrains.push_back(allPredators[i]->getBrain().getWeights());
+            elitePredatorBrains.push_back(allPredators[i].brain);
         }
 
         // Logging only 
-        this->bestWeightsPredator = allPredators[0]->getBrain().getWeights();
+        this->bestWeightsPredator = allPredators[0].brain;
     }
 
     // Logging
-    float bestPreyFit = allPrey.empty() ? 0 : allPrey[0]->getFitness();
-    float bestPredFit = allPredators.empty() ? 0 : allPredators[0]->getFitness();
+    float bestPreyFit = allPrey.empty() ? 0 : allPrey[0].fitness;
+    float bestPredFit = allPredators.empty() ? 0 : allPredators[0].fitness;
 
     ofstream logFile("../logs/generation_stats.csv", ios_base::app);
     if (logFile.is_open()) {
@@ -238,7 +256,7 @@ void SimulationManager::resetSimulation() {
     // Re-create worlds
     worlds.clear(); 
     for (int i = 0; i < numCores; i++) {
-        worlds.push_back(make_unique<World>());
+        worlds.push_back(make_unique<World>(NUM_PREDATOR, NUM_PREY));
     }
 
     // Adjust mutation parameters based on current generation count
@@ -247,56 +265,36 @@ void SimulationManager::resetSimulation() {
 
     // Give every new prey and predator the previous agent's brain + mutation
     for (auto& world : worlds) {
-        for (auto& agent : world->agents) {
+        SwarmData& swarm = world->swarm;
+
+        for (int i = 0; i < swarm.current_count; i++){
             float roll = randomFloat(0.0f, 1.0f);
-
+            int species = swarm.agentIdentifications.speciesID[i];
             // Prey
-            if (agent->speciesID == PREY_ID && !elitePreyBrains.empty()) {
-                Prey* p = static_cast<Prey*>(agent.get());
-
+            if (species == PREY_ID && !elitePreyBrains.empty()) {
                 if (!preyHallOfFame.empty() && roll < HOF_POOL_INJECTION_RATE){
                     int index = (int)(randomFloat(0.0f, preyHallOfFame.size() - 0.001f));
-
-                    SimplePerceptron brain = p->getBrain();
-                    brain.setWeights(preyHallOfFame[index]);
-                    p->setBrain(brain);
-                
-                } else if (roll < RANDOM_INJECTION_RATE){
-                    p->setBrain(SimplePerceptron());
-                
-                } else {
+                    BrainSystem::insertBrain(swarm, i, preyHallOfFame[index]);
+                } else if (roll >= RANDOM_INJECTION_RATE) {
+                    // Over a threshold, pick from elite
                     int parentIndex = (int)(randomFloat(0.0f, elitePreyBrains.size() - 0.001f));
-                
-                    SimplePerceptron brain = p->getBrain();
-                    brain.setWeights(elitePreyBrains[parentIndex]);
-                
-                    brain.mutate(dynamicRate, dynamicStrength); 
-                    p->setBrain(brain);
+                    vector<float> brainToMutate = elitePreyBrains[parentIndex];
+                    BrainSystem::mutateVector(brainToMutate, 0 , brainToMutate.size(), dynamicRate, dynamicStrength);
+                    BrainSystem::insertBrain(swarm, i, brainToMutate);
                 }
             }
             
             // Predators
-            if (agent->speciesID == PREDATOR_ID && !elitePredatorBrains.empty()) {
-                Predator* p = static_cast<Predator*>(agent.get());
-                
+            if (species == PREDATOR_ID && !elitePredatorBrains.empty()) {
                 if (!predatorHallOfFame.empty() && roll < HOF_POOL_INJECTION_RATE){
                     int index = (int)(randomFloat(0.0f, predatorHallOfFame.size() - 0.001f));
-                    
-                    SimplePerceptron brain = p->getBrain();
-                    brain.setWeights(predatorHallOfFame[index]);
-                    p->setBrain(brain);
-                
-                } else if (roll < RANDOM_INJECTION_RATE){
-                    p->setBrain(SimplePerceptron());
-                
-                } else {
+                    BrainSystem::insertBrain(swarm, i, predatorHallOfFame[index]);
+                } else if (roll >= RANDOM_INJECTION_RATE) {
+                    // Over a threshold, pick from elite
                     int parentIndex = (int)(randomFloat(0.0f, elitePredatorBrains.size() - 0.001f));
-                
-                    SimplePerceptron brain = p->getBrain();
-                    brain.setWeights(elitePredatorBrains[parentIndex]);
-                
-                    brain.mutate(dynamicRate, dynamicStrength); 
-                    p->setBrain(brain);
+                    vector<float> brainToMutate = elitePredatorBrains[parentIndex];
+                    BrainSystem::mutateVector(brainToMutate, 0 , brainToMutate.size(), dynamicRate, dynamicStrength);
+                    BrainSystem::insertBrain(swarm, i, brainToMutate);
                 }
             }
         }

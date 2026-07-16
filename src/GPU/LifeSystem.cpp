@@ -1,20 +1,77 @@
 #include "Core/GlobalHelpers.h"
 #include "GPU/functions/LifeSystem.h"
+#include "GPU/functions/BrainSystem.h"
 
-static uint64_t globalAgentIDCounter = 100000;
-
-void LifeSystem::initSwarm(SwarmData& swarm, int num_prey, int num_predators){
-    for (int i = 0; i < num_prey; i++){
-
-    }
-    for (int i = 0; i < num_predators; i++){
-
-    }
+static uint64_t globalAgentIDCounter = 1;
+namespace LifeSystem {
+    thread_local std::mt19937 gen(std::random_device{}());
+    thread_local std::uniform_int_distribution<int> disX(0, NUM_CELLE_X - 1);
+    thread_local std::uniform_int_distribution<int> disY(0, NUM_CELLE_Y - 1);
 }
 
-void LifeSystem::handleDeaths(SwarmData& swarm){
+void LifeSystem::initSwarm(SwarmData& swarm, int num_prey, int num_predators){
+    swarm.current_count = num_prey + num_predators;
+    int current_idx = 0;
+
+    auto initAgent = [&](int i, int species) {
+        swarm.agentIdentifications.ID[i] = globalAgentIDCounter;
+        globalAgentIDCounter++;
+        swarm.agentIdentifications.speciesID[i] = species;
+        swarm.agentIdentifications.isAlive[i] = true;
+
+        swarm.physics.x[i] = randomFloat(0.0f, NUM_CELLE_X);
+        swarm.physics.y[i] = randomFloat(0.0f, NUM_CELLE_Y);
+        swarm.physics.facingAngle[i] = randomFloat(-M_PI, M_PI);
+        swarm.physics.vx[i] = 0.0f;
+        swarm.physics.vy[i] = 0.0f;
+        swarm.physics.speed[i] = 0.0f;
+        swarm.physics.friction[i] = FRICTION_COEFFICIENT;
+
+        swarm.energyMetrics.energy[i] = STARTING_ENERGY;
+        swarm.energyMetrics.digestionTime[i] = (species == PREY_ID) ? PREY_DIGESTION_TIME : PREDATOR_DIGESTION_TIME;
+        swarm.energyMetrics.remainingDigestion[i] = 0.0f;
+        swarm.energyMetrics.reproductionCooldown[i] = 0.0f;
+        swarm.energyMetrics.childCount[i] = 0;
+
+        swarm.physics.maxSpeed[i] = (species == PREY_ID) ? PREY_MAX_SPEED : PREDATOR_MAX_SPEED;
+        swarm.physics.force[i] = (species == PREY_ID) ? PREY_FORCE : PREDATOR_FORCE;
+
+        swarm.perceptions.viewRadius[i] = (species == PREY_ID) ? PREY_VIEW_RADIUS : PREDATOR_VIEW_RADIUS;
+        swarm.perceptions.fovAngle[i] = (species == PREY_ID) ? PREY_FOV_ANGLE : PREDATOR_FOV_ANGLE;
+        swarm.perceptions.sensingRange[i] = SENSING_RANGE;
+        swarm.perceptions.grassViewRadius[i] = GRASS_SENSING_RADIUS;
+
+        swarm.fitnessMetrics.timeLived[i] = 0.0f;
+        swarm.fitnessMetrics.energyGained[i] = 0.0f;
+    };
+
+    for (int i = 0; i < num_prey; i++)      initAgent(current_idx++, PREY_ID);
+    for (int i = 0; i < num_predators; i++) initAgent(current_idx++, PREDATOR_ID);
+
+    // Initializes random brains for the whole swarm
+    BrainSystem::initRandom(swarm);
+}
+
+void LifeSystem::handleDeaths(SwarmData& swarm, GraveyardData& graveyard){
     for (int i = 0; i < swarm.current_count; ){
         if (!swarm.agentIdentifications.isAlive[i]){
+            float fitness = LifeSystem::getFitness(swarm, i);
+
+            if (fitness >= MINIMUM_FITNESS_TO_BE_SAVED) {
+                if (graveyard.current_count >= graveyard.max_capacity) continue;
+
+                int slot = graveyard.current_count;
+                graveyard.speciesID[slot] = swarm.agentIdentifications.speciesID[i];
+                graveyard.fitness[slot] = fitness;
+                
+                for (int j = 0; j < W01_SIZE; j++) graveyard.w01[slot * W01_SIZE + j] = swarm.brains.w01[i * W01_SIZE + j];
+                for (int j = 0; j < W12_SIZE; j++) graveyard.w12[slot * W12_SIZE + j] = swarm.brains.w12[i * W12_SIZE + j];
+                for (int j = 0; j < B0_SIZE; j++) graveyard.b0[slot * B0_SIZE + j] = swarm.brains.b0[i * B0_SIZE + j];
+                for (int j = 0; j < B1_SIZE; j++) graveyard.b1[slot * B1_SIZE + j] = swarm.brains.b1[i * B1_SIZE + j];
+                
+                graveyard.current_count++;
+            }
+
             int last_idx = swarm.current_count - 1;
             swarm.current_count--;
 
@@ -74,11 +131,6 @@ void LifeSystem::handleDeaths(SwarmData& swarm){
             swarm.neuralOutputs.previousTurnIntent[i] = swarm.neuralOutputs.previousTurnIntent[last_idx];
 
             // Brains
-            const int W01_SIZE = INPUT_LAYER_SIZE * HIDDEN_LAYER_SIZE;
-            const int W12_SIZE = HIDDEN_LAYER_SIZE * OUTPUT_LAYER_SIZE;
-            const int B0_SIZE  = HIDDEN_LAYER_SIZE;
-            const int B1_SIZE  = OUTPUT_LAYER_SIZE;
-
             copy_n(&swarm.brains.w01[last_idx * W01_SIZE], W01_SIZE, &swarm.brains.w01[i * W01_SIZE]);
             copy_n(&swarm.brains.w12[last_idx * W12_SIZE], W12_SIZE, &swarm.brains.w12[i * W12_SIZE]);
             copy_n(&swarm.brains.b0[last_idx * B0_SIZE],   B0_SIZE,  &swarm.brains.b0[i * B0_SIZE]);
@@ -90,7 +142,7 @@ void LifeSystem::handleDeaths(SwarmData& swarm){
     }
 }
 
-void LifeSystem::handleBirths(SwarmData& swarm){
+void LifeSystem::handleBirths(SwarmData& swarm, int mutationRate, int mutationStrength){
     int initial_count = swarm.current_count;
 
     for (int i = 0; i < initial_count; i++){
@@ -103,6 +155,11 @@ void LifeSystem::handleBirths(SwarmData& swarm){
             swarm.energyMetrics.energy[i] -= energyCost * (1.0f + REPRODUCTION_COST_SCALING * swarm.energyMetrics.childCount[i]);
             swarm.energyMetrics.reproductionCooldown[i] = REPRODUCTION_COOLDOWN;
             swarm.energyMetrics.childCount[i]++;
+
+            // New agent identification
+            swarm.agentIdentifications.ID[child_idx] = globalAgentIDCounter++;
+            swarm.agentIdentifications.speciesID[child_idx] = swarm.agentIdentifications.speciesID[i];
+            swarm.agentIdentifications.isAlive[child_idx] = true;
 
             float babyX = swarm.physics.x[i] + randomFloat(-1.0f, 1.0f);
             float babyY = swarm.physics.y[i] + randomFloat(-1.0f, 1.0f);
@@ -159,27 +216,26 @@ void LifeSystem::handleBirths(SwarmData& swarm){
             copy_n(&swarm.brains.b1[i * B1_SIZE],   B1_SIZE,  &swarm.brains.b1[child_idx * B1_SIZE]);
 
             // Mutates the brain
-            float mutationRate = STARTING_MUTATION_RATE; // Potrai renderlo dinamico passandolo dal SimulationManager
-            float mutationStrength = STARTING_MUTATION_STRENGTH;
-
-            auto mutateSection = [&](vector<float>& weights_array, int offset, int size) {
-                for (int m = 0; m < size; m++) {
-                    if (randomFloat(0.0f, 1.0f) < mutationRate) {
-                        float change = randomFloat(-mutationStrength, mutationStrength);
-                        int idx = offset + m;
-                        weights_array[idx] += change;
-                        // Clamping
-                        weights_array[idx] = fmaxf(-1.0f, std::fminf(1.0f, weights_array[idx]));
-                    }
-                }
-            };
-
-            mutateSection(swarm.brains.w01, child_idx * W01_SIZE, W01_SIZE);
-            mutateSection(swarm.brains.w12, child_idx * W12_SIZE, W12_SIZE);
-            mutateSection(swarm.brains.b0,  child_idx * B0_SIZE,  B0_SIZE);
-            mutateSection(swarm.brains.b1,  child_idx * B1_SIZE,  B1_SIZE);
+            BrainSystem::mutateVector(swarm.brains.w01, child_idx * W01_SIZE, W01_SIZE, mutationRate, mutationStrength);
+            BrainSystem::mutateVector(swarm.brains.w12, child_idx * W12_SIZE, W12_SIZE, mutationRate, mutationStrength);
+            BrainSystem::mutateVector(swarm.brains.b0,  child_idx * B0_SIZE,  B0_SIZE, mutationRate, mutationStrength);
+            BrainSystem::mutateVector(swarm.brains.b1,  child_idx * B1_SIZE,  B1_SIZE, mutationRate, mutationStrength);
 
             swarm.current_count++;
         }
     }
+}
+
+float LifeSystem::getFitness(SwarmData& swarm, int index){
+    float fitness;
+    if (swarm.agentIdentifications.speciesID[index] == PREY_ID) {
+        fitness = swarm.fitnessMetrics.timeLived[index] + (swarm.fitnessMetrics.energyGained[index] * PREY_ENERGY_FITNESS_MULTIPLIER);
+
+        if (swarm.energyMetrics.energy[index] > 0 && !swarm.agentIdentifications.isAlive[index]) {
+            fitness *= PREY_HUNTED_PENALTY;
+        }
+    } else {
+        fitness = swarm.fitnessMetrics.energyGained[index];
+    }
+    return fitness;
 }

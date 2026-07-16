@@ -1,15 +1,20 @@
 #include <cmath>
 #include <random>
-#include "GPU/functions/DecisionSystem.h"
+#include "GPU/functions/BrainSystem.h"
+#include "Core/GlobalHelpers.h"
 
 // Initializes the neural network weights and biases for each agent in the swarm randomly
-void DecisionSystem::initRandom(SwarmData& swarm){
+void BrainSystem::initRandom(SwarmData& swarm){
     for (int i = 0; i < swarm.current_count; i++){
+        for (int j = 0; j < W01_SIZE; j++) swarm.brains.w01[i * W01_SIZE + j] = randomFloat(-1.0f, 1.0f);
+        for (int j = 0; j < W12_SIZE; j++) swarm.brains.w12[i * W12_SIZE + j] = randomFloat(-1.0f, 1.0f);
+        for (int j = 0; j < B0_SIZE; j++) swarm.brains.b0[i * B0_SIZE + j] = randomFloat(-1.0f, 1.0f);
+        for (int j = 0; j < B1_SIZE; j++) swarm.brains.b1[i * B1_SIZE + j] = randomFloat(-1.0f, 1.0f);
     }
 }
 
 // Given sensory inputs, decides on the agent's actions using a feed forward neural network
-void DecisionSystem::think(SwarmData& swarm){
+void BrainSystem::think(SwarmData& swarm){
     for (int i = 0; i < swarm.current_count; i++){
         if (!swarm.agentIdentifications.isAlive[i]) continue;
 
@@ -72,4 +77,36 @@ void DecisionSystem::think(SwarmData& swarm){
         swarm.neuralOutputs.previousThrustIntent[i] = swarm.neuralOutputs.thrustIntent[i];
         swarm.neuralOutputs.previousTurnIntent[i] = swarm.neuralOutputs.turnIntent[i];
     }
+}
+
+void BrainSystem::mutateVector(vector<float>& weights_array, int offset, int size, float mutationRate, float mutationStrength) {
+    for (int m = 0; m < size; m++) {
+        if (randomFloat(0.0f, 1.0f) < mutationRate) {
+            float change = randomFloat(-mutationStrength, mutationStrength);
+            int idx = offset + m;
+            weights_array[idx] += change;
+            // Clamping
+            weights_array[idx] = fmaxf(-1.0f, std::fminf(1.0f, weights_array[idx]));
+        }
+    }
+};
+
+vector<float> BrainSystem::extractBrain(const SwarmData& swarm, int index){
+    vector<float> brain(W01_SIZE + W12_SIZE + B0_SIZE + B1_SIZE);
+
+    for (int j = 0; j < W01_SIZE; j++) brain[j] = swarm.brains.w01[index * W01_SIZE + j];
+    for (int j = 0; j < W12_SIZE; j++) brain[W01_SIZE + j] = swarm.brains.w12[index * W12_SIZE + j];
+    for (int j = 0; j < B0_SIZE; j++) brain[W01_SIZE + W12_SIZE + j] = swarm.brains.b0[index * B0_SIZE + j];
+    for (int j = 0; j < B1_SIZE; j++) brain[W01_SIZE + W12_SIZE + B0_SIZE + j] = swarm.brains.b1[index * B1_SIZE + j];
+
+    return brain;
+}
+    
+void BrainSystem::insertBrain(SwarmData& swarm, int index, const vector<float>& weights){
+    if(weights.size() != (W01_SIZE + W12_SIZE + B0_SIZE + B1_SIZE)) return;
+
+    for (int j = 0; j < W01_SIZE; j++) swarm.brains.w01[index * W01_SIZE + j] = weights[j];
+    for (int j = 0; j < W12_SIZE; j++) swarm.brains.w12[index * W12_SIZE + j] = weights[W01_SIZE + j];
+    for (int j = 0; j < B0_SIZE; j++)  swarm.brains.b0[index * B0_SIZE + j] = weights[W01_SIZE + W12_SIZE + j];
+    for (int j = 0; j < B1_SIZE; j++) swarm.brains.b1[index * B1_SIZE + j] = weights[W01_SIZE + W12_SIZE + B0_SIZE + j];
 }

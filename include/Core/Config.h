@@ -64,9 +64,12 @@ const float RANDOM_INJECTION_RATE = 0.20f; // minus the hof injection rate
 /* ------------------- World Settings ------------------ */
 
 // Starting agents
-constexpr int MAX_CAPACITY = 10000;
+constexpr int MAX_SWARM_CAPACITY = 30000;
 constexpr int NUM_PREDATOR = 50;
 constexpr int NUM_PREY = 400;
+// Graveyard settings
+
+constexpr int MAX_GRAVEYARD_CAPACITY = 10 * MAX_SWARM_CAPACITY;
 
 // World dimensions
 constexpr int NUM_CELLE_X = 960;
@@ -177,19 +180,23 @@ const int INPUT_LAYER_SIZE = 14;
 const int HIDDEN_LAYER_SIZE = 8;
 const int OUTPUT_LAYER_SIZE = 2;
 
+const int W01_SIZE = INPUT_LAYER_SIZE * HIDDEN_LAYER_SIZE;
+const int W12_SIZE = HIDDEN_LAYER_SIZE * OUTPUT_LAYER_SIZE;
+const int B0_SIZE  = HIDDEN_LAYER_SIZE;
+const int B1_SIZE  = OUTPUT_LAYER_SIZE;
 // Mutation parameters are kept in the simulation section, since they change across generations
 
 
 
 /* ------------------- Utilities ------------------ */
-enum Terrain {Standard};
+// enum Terrain {Standard};
 
-struct Cell{
-    Terrain type;
-    float foodAmount;
+// struct Cell{
+//     Terrain type;
+//     float foodAmount;
 
-    Cell() : type(Terrain::Standard), foodAmount(0.0f) {};
-};
+//     Cell() : type(Terrain::Standard), foodAmount(0.0f) {};
+// };
 
 // A chunk of the world grid, used to optimize food sensing
 struct FoodChunk {
