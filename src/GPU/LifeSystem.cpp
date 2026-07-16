@@ -3,6 +3,15 @@
 
 static uint64_t globalAgentIDCounter = 100000;
 
+void LifeSystem::initSwarm(SwarmData& swarm, int num_prey, int num_predators){
+    for (int i = 0; i < num_prey; i++){
+
+    }
+    for (int i = 0; i < num_predators; i++){
+
+    }
+}
+
 void LifeSystem::handleDeaths(SwarmData& swarm){
     for (int i = 0; i < swarm.current_count; ){
         if (!swarm.agentIdentifications.isAlive[i]){

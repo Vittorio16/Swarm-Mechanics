@@ -64,6 +64,7 @@ const float RANDOM_INJECTION_RATE = 0.20f; // minus the hof injection rate
 /* ------------------- World Settings ------------------ */
 
 // Starting agents
+constexpr int MAX_CAPACITY = 10000;
 constexpr int NUM_PREDATOR = 50;
 constexpr int NUM_PREY = 400;
 

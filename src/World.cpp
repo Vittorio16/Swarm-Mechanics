@@ -3,284 +3,28 @@
 #include <chrono>
 #include "World.h"
 #include "Core/Physics.h"
+
+#include "GPU/functions/DecisionSystem.h"
+#include "GPU/functions/EnergySystem.h"
+#include "GPU/functions/LatticeSystem.h"
+#include "GPU/functions/FoodLatticeSystem.h"
+#include "GPU/functions/LifeSystem.h"
+#include "GPU/functions/PhysicSystem.h"
+#include "GPU/functions/SensorySystem.h"
+
 using namespace std;
 
 #include <iostream>
 
 // Constructor
-World::World() : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)), 
-                lattice_x_cells((int)ceil((float)NUM_CELLE_X / LATTICE_CELL_WIDTH)), lattice_y_cells((int)ceil((float)NUM_CELLE_Y / LATTICE_CELL_HEIGHT)),
-                spatial_lattice(lattice_x_cells * lattice_y_cells),
-                food_lattice_x_cells((int)ceil((float)NUM_CELLE_X / FOOD_CELL_WIDTH)), food_lattice_y_cells((int)ceil((float)NUM_CELLE_Y / FOOD_CELL_HEIGHT)),
-                food_lattice(food_lattice_x_cells * food_lattice_y_cells),
-                gen(random_device{}()), disX(0, NUM_CELLE_X - 1), disY(0, NUM_CELLE_Y - 1) {
+World::World(int num_prey, int num_predators) : 
+    swarm(MAX_CAPACITY),
+    spatialLattice(NUM_CELLE_X / LATTICE_CELL_WIDTH, NUM_CELLE_Y / LATTICE_CELL_HEIGHT),
+    foodLattice(NUM_CELLE_X / FOOD_CELL_WIDTH, NUM_CELLE_Y / FOOD_CELL_HEIGHT, NUM_CELLE_X, NUM_CELLE_Y) {
 
-    for (int i = 0; i < CONSTANT_FOOD_AMOUNT; i++) {
-        addFood(disX(gen), disY(gen), MAX_FOOD); 
-    }
-    
-    // Puts set number of predators and preys in random positions
-    for (int i = 0; i < NUM_PREDATOR; i++){
-        float randX = disX(gen);
-        float randY = disY(gen);
-
-        agents.push_back(make_unique<Predator>(randX, randY));
-    }
-    for (int i = 0; i < NUM_PREY; i++){
-        float randX = disX(gen);
-        float randY = disY(gen);
-
-        agents.push_back(make_unique<Prey>(randX, randY));
-    }
+    LifeSystem::initSwarm(swarm, num_prey, num_predators);
+    FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
 }
-
-// Constructor used for profiling purposes
-World::World(int numPrey, int numPredators) : grid(NUM_CELLE_X, vector<Cell>(NUM_CELLE_Y)), 
-                lattice_x_cells((int)ceil((float)NUM_CELLE_X / LATTICE_CELL_WIDTH)), lattice_y_cells((int)ceil((float)NUM_CELLE_Y / LATTICE_CELL_HEIGHT)),
-                spatial_lattice(lattice_x_cells * lattice_y_cells),
-                food_lattice_x_cells((int)ceil((float)NUM_CELLE_X / FOOD_CELL_WIDTH)), food_lattice_y_cells((int)ceil((float)NUM_CELLE_Y / FOOD_CELL_HEIGHT)),
-                food_lattice(food_lattice_x_cells * food_lattice_y_cells),
-                gen(random_device{}()), disX(0, NUM_CELLE_X - 1), disY(0, NUM_CELLE_Y - 1) {
-
-    for (int i = 0; i < CONSTANT_FOOD_AMOUNT; i++) {
-        addFood(disX(gen), disY(gen), MAX_FOOD); 
-    }
-    
-    // Puts set number of predators and preys in random positions
-    for (int i = 0; i < NUM_PREDATOR; i++){
-        float randX = disX(gen);
-        float randY = disY(gen);
-
-        agents.push_back(make_unique<Predator>(randX, randY));
-    }
-    for (int i = 0; i < NUM_PREY; i++){
-        float randX = disX(gen);
-        float randY = disY(gen);
-
-        agents.push_back(make_unique<Prey>(randX, randY));
-    }
-}
-
-// Helper to return to a prey the food scent (x, y) of the best food cell in its vision range
-vector<float> World::getBestFoodScent(const Agent* agent) {
-    int cx = (int)(agent->x / FOOD_CELL_WIDTH);
-    int cy = (int)(agent->y / FOOD_CELL_HEIGHT);
-    
-    int max_distance = ceil(agent->grassViewRadius / FOOD_CELL_WIDTH);
-    float bestFoodScore = -1.0f;
-    int bestChunkIndex = -1;
-
-    // Loop through nearby chunks in the food lattice
-    for (int i = -max_distance; i <= max_distance; i++) {
-        for (int j = -max_distance; j <= max_distance; j++) {
-            int tx = ((cx + i) % food_lattice_x_cells + food_lattice_x_cells) % food_lattice_x_cells;
-            int ty = ((cy + j) % food_lattice_y_cells + food_lattice_y_cells) % food_lattice_y_cells;
-
-            int chunk_index = ty * food_lattice_x_cells + tx;   
-            FoodChunk& chunk = food_lattice[chunk_index];
-
-            if (chunk.totalFood > 0.001f){
-                float centerX = chunk.sumFoodX / chunk.totalFood;
-                float centerY = chunk.sumFoodY / chunk.totalFood;
-
-                // Calculate distance from agent to this chunk's center of mass
-                float dx = centerX - agent->x;
-                float dy = centerY - agent->y;
-
-                // Handle wrapping for distance calculation
-                if (dx > NUM_CELLE_X * 0.5f) dx -= NUM_CELLE_X;
-                if (dx < -NUM_CELLE_X * 0.5f) dx += NUM_CELLE_X;
-
-                if (dy > NUM_CELLE_Y * 0.5f) dy -= NUM_CELLE_Y;
-                if (dy < -NUM_CELLE_Y * 0.5f) dy += NUM_CELLE_Y;
-
-                float distSq = dx*dx + dy*dy;
-                if (distSq < 0.1f) distSq = 0.1f;
-
-                if (distSq < agent->grassViewRadius * agent->grassViewRadius){
-                    float foodScore = chunk.totalFood*chunk.totalFood / distSq;
-
-                    if (foodScore > bestFoodScore) {
-                        bestFoodScore = foodScore;
-                        bestChunkIndex = chunk_index;
-                    }
-                }
-            }
-        }
-    }
-    // If no food found, return (0, 0)
-    if (bestChunkIndex == -1) return {0.0f, 0.0f};
-
-    // Now loop inside the best chunk to find the best cell, to improve precision when close to food
-    float bestCellFoodScore = -1.0f;
-    float bestCellX = 0.0f;
-    float bestCellY = 0.0f;
-
-    for (const sf::Vector2i& pos : food_lattice[bestChunkIndex].activeCells){
-        float food = grid[pos.x][pos.y].foodAmount;
-
-        // Skips if food eaten this frame, or if too small for bite size
-        if (food <= 0.001f) continue;
-
-        float dx = pos.x + 0.5f - agent->x;
-        float dy = pos.y + 0.5f - agent->y;
-
-        // Handle wrapping for distance calculation
-        if (dx > NUM_CELLE_X * 0.5f) dx -= NUM_CELLE_X;
-        if (dx < -NUM_CELLE_X * 0.5f) dx += NUM_CELLE_X;
-
-        if (dy > NUM_CELLE_Y * 0.5f) dy -= NUM_CELLE_Y;
-        if (dy < -NUM_CELLE_Y * 0.5f) dy += NUM_CELLE_Y;
-
-        float distSq = dx*dx + dy*dy;
-        if (distSq < 0.1f) distSq = 0.1f; 
-
-        float foodScore = food*food / distSq;
-
-        if (foodScore > bestCellFoodScore){
-            bestCellFoodScore = foodScore;
-            bestCellX = dx;
-            bestCellY = dy;
-        }
-    }
-    if (bestCellFoodScore < 0) return {0.0f, 0.0f};
-
-    // Rotate to agent's coordinates
-    float heading = agent->facingAngle;
-    float c = cos(-heading);
-    float s = sin(-heading);
-
-    float localX = bestCellX * c - bestCellY * s;
-    float localY = bestCellX * s + bestCellY * c;
-
-    return {localX, localY};
-}
-
-// Helper to check if prey eats grass
-void World::checkPreyFeeding(unique_ptr<Agent>& agent){
-    if (agent->remainingDigestion > 0.001f) return;
-
-    float posX = agent->x;
-    float posY = agent->y;
-    if (isnan(posX) || isinf(posX)) posX = 0.0f;
-    if (isnan(posY) || isinf(posY)) posY = 0.0f;
-    
-    int centerIndexX = (int)posX;
-    int centerIndexY = (int)posY;
-
-    // Check the 3x3 grid around the agent
-    for (int dx = -1; dx <= 1; dx++) {
-        for (int dy = -1; dy <= 1; dy++) {
-            
-            // Calculate Neighbor Coordinates (with wrapping)
-            int tx = centerIndexX + dx;
-            int ty = centerIndexY + dy;
-            
-            tx = ((tx % NUM_CELLE_X) + NUM_CELLE_X) % NUM_CELLE_X;
-            ty = ((ty % NUM_CELLE_Y) + NUM_CELLE_Y) % NUM_CELLE_Y;
-
-            // Skip empty cells
-            if (grid[tx][ty].foodAmount <= 0.001f) continue;
-
-            // Calculate Distance to the centre of that target cell
-            float fracX = agent->x - (int)agent->x; 
-            float fracY = agent->y - (int)agent->y;
-            
-            float vecX = dx - fracX + 0.5f;
-            float vecY = dy - fracY + 0.5f;
-
-            float distSq = vecX*vecX + vecY*vecY;
-
-            // Prey begins digesting and gains energy based on the food eaten
-            if (distSq < PREY_EAT_RADIUS_SQ) {
-                float foodEaten = grid[tx][ty].foodAmount;
-                
-                agent->remainingDigestion = agent->digestionTime;
-                agent->energyGained += foodEaten;
-                agent->energy += foodEaten; 
-                
-                // Caps the energy to prevent extreme values - could be removed in the future
-                if (agent->energy > 3 * MAX_ENERGY / 2) {
-                    agent->energy = 3 * MAX_ENERGY / 2;
-                }
-
-                grid[tx][ty].foodAmount = 0;
-
-                int newX, newY;
-                // Ensure we don't spawn it on an already full cell
-                do {
-                    newX = disX(gen);
-                    newY = disY(gen);
-                } while (grid[newX][newY].foodAmount > 0.0f);
-
-                addFood(newX, newY, MAX_FOOD);
-
-                // Update the food lattice
-                int cx = tx / FOOD_CELL_WIDTH;
-                int cy = ty / FOOD_CELL_HEIGHT;
-                int chunk_index = cy * food_lattice_x_cells + cx;
-
-                food_lattice[chunk_index].totalFood -= foodEaten; 
-                food_lattice[chunk_index].sumFoodX -= tx * foodEaten;
-                food_lattice[chunk_index].sumFoodY -= ty * foodEaten;
-
-                if (food_lattice[chunk_index].totalFood <= 0.001f) {
-                    food_lattice[chunk_index].totalFood = 0.0f;
-                    food_lattice[chunk_index].sumFoodX = 0.0f;
-                    food_lattice[chunk_index].sumFoodY = 0.0f;
-                }
-
-                return;
-            }
-        }
-    }
-}
-
-// Adds food to a cell
-void World::addFood(int cx, int cy, float growthAmount){
-    float current_food = grid[cx][cy].foodAmount;
-    float space_left = MAX_FOOD - current_food;
-    
-    if (space_left <= 0) return;
-
-    float actual_growth = min(growthAmount, space_left);
-
-    int chunk_x = cx / FOOD_CELL_WIDTH;
-    int chunk_y = cy / FOOD_CELL_HEIGHT;
-    int chunk_index = chunk_y * food_lattice_x_cells + chunk_x;
-
-    // If it was completely empty, register it in the chunk's active list
-    if (current_food <= 0.001f){
-        food_lattice[chunk_index].activeCells.push_back(sf::Vector2i(cx, cy));
-    }
-
-    // Update main grid and chunk scoreboard
-    grid[cx][cy].foodAmount += actual_growth;
-    food_lattice[chunk_index].totalFood += actual_growth;
-    food_lattice[chunk_index].sumFoodX += cx * actual_growth;
-    food_lattice[chunk_index].sumFoodY += cy * actual_growth;
-}
-
-
-// Resets all the buckets of the spatial lattice and updates their contents
-void World::update_buckets(){
-    for (auto& bucket : spatial_lattice){
-        bucket.clear();
-    }
-
-    for (auto& agent : agents){
-        if (!agent->isAlive) continue;
-
-        int bx = (int)(agent->x / LATTICE_CELL_WIDTH);
-        int by = (int)(agent->y / LATTICE_CELL_HEIGHT);
-        
-        bx = (bx % lattice_x_cells + lattice_x_cells) % lattice_x_cells;
-        by = (by % lattice_y_cells + lattice_y_cells) % lattice_y_cells;
-
-        spatial_lattice[by * lattice_x_cells + bx].push_back(agent.get());
-    }
-}
-
 
 // Updates the world each tick of the simulation
 ProfilingData World::update(float dt, int generationCount){
@@ -290,7 +34,8 @@ ProfilingData World::update(float dt, int generationCount){
     auto start = high_resolution_clock::now();
     auto start_buckets = high_resolution_clock::now();
 
-    update_buckets();
+    // Each iteration it rebuilds the spatial lattice
+    LatticeSystem::build(spatialLattice, swarm);
     
     auto end_buckets = high_resolution_clock::now();
 
@@ -301,89 +46,34 @@ ProfilingData World::update(float dt, int generationCount){
     double size_agents = 0.0;
 
     // First it checks the system state and lets agents think
-    for (auto& agent : agents){
-        if (!agent->isAlive) continue;
-        size_agents++;
+    auto s_obs = high_resolution_clock::now();
 
-        auto s_obs = high_resolution_clock::now();
+    // Gathers observations and updates the sensory data
+    SensorySystem::update(swarm, spatialLattice, foodLattice);
 
-        vector<Observation> agentsInFOV = getObservation(agent.get());
+    auto e_obs = high_resolution_clock::now();
+    total_obs_time += duration_cast<nanoseconds>(e_obs - s_obs).count();
+    
+    // Feed forward neural network for decision making
+    DecisionSystem::think(swarm);
 
-        vector<float> scents = {0.0f, 0.0f, 0.0f};
-
-        Agent* a = static_cast<Agent*>(agent.get());
-        scents = getBestFoodScent(a);
-
-        agent->updateSensoryData(agentsInFOV, scents);
-
-        auto e_obs = high_resolution_clock::now();
-        total_obs_time += duration_cast<nanoseconds>(e_obs - s_obs).count();
-        
-        agent->think();
-    }
     auto end_think_obs = high_resolution_clock::now();
     auto start_move = high_resolution_clock::now();
-    
-    vector<unique_ptr<Agent>> nursery;
 
-    // Then updates everything at the same time
-    for (auto& agent : agents){
-        if (!agent->isAlive) continue;
-        // May want to separate movement from feeding
-        agent->move(dt);
+    // Then updates everything at the same time - movement, and handles energy gain and consumption
+    PhysicsSystem::update(swarm, dt);
+    EnergySystem::update(swarm, foodLattice, dt);
 
-        // pacman style world
-        if (isnan(agent->x) || isinf(agent->x)) agent->x = 0.0f;
-        agent->x = fmod(agent->x, NUM_CELLE_X);
-        if(agent->x < 0) agent->x += NUM_CELLE_X;
-
-        if (isnan(agent->y) || isinf(agent->y)) agent->y = 0.0f;
-        agent->y = fmod(agent->y, NUM_CELLE_Y);
-        if(agent->y < 0) agent->y += NUM_CELLE_Y;
-
-        // Handles eating grass for prey
-        if (agent->speciesID == PREY_ID){
-            checkPreyFeeding(agent);
-        }
-        
-        // Handles reproduction 
-        if (agent->energy > MAX_ENERGY){
-            nursery.push_back(agent->reproduce());
-        }
-    }
-    
     auto end_move = high_resolution_clock::now();
     auto start_cleanup = high_resolution_clock::now();
 
-    // Add newly born agents
-    for (auto& baby : nursery){ 
-        agents.push_back(std::move(baby));
-    }
-    // Erases dead agents - first moving them to graveyard for scoring purposes
-    auto firstDead = std::partition(agents.begin(), agents.end(), 
-        [](const std::unique_ptr<Agent>& a) {
-            return a->isAlive; 
-        });
-
-    // Move the dead agents into the graveyard
-    for (auto it = firstDead; it != agents.end(); ++it) {
-        // Only save them if they actually did something useful
-        if ((*it)->getFitness() > MINIMUM_FITNESS_TO_BE_SAVED) { 
-            graveyard.push_back(std::move(*it));
-        }
-    }
-    agents.erase(firstDead, agents.end());
-
+    // Handles first deaths, then births to keep the array compact
+    LifeSystem::handleDeaths(swarm);
+    LifeSystem::handleBirths(swarm);
     
-    // Remove element from activeGrass if its food got eaten
-    for (auto& chunk : food_lattice){ 
-        chunk.activeCells.erase(
-            remove_if(chunk.activeCells.begin(), chunk.activeCells.end(), 
-            [&](const sf::Vector2i& pos) {
-                return grid[pos.x][pos.y].foodAmount <= 0.001f;}),
-                chunk.activeCells.end()
-            );
-    }
+    // Handles grass growth
+    FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
+
     auto end_cleanup = high_resolution_clock::now();
     auto end = high_resolution_clock::now();
     // Profiling output
@@ -397,66 +87,6 @@ ProfilingData World::update(float dt, int generationCount){
 
     return {t_buckets, t_obs, t_think, t_move, t_cleanup, t_total, check_t_total};
 }
-
-// Given an observer, returns a vector of pointers to all the agents it can see
-vector<Observation> World::getObservation(const Agent* observer){
-    vector<Observation> observations;
-
-    float observerHeading = observer->facingAngle;
-    
-    int bx = (int)(observer->x / LATTICE_CELL_WIDTH);
-    int by = (int)(observer->y / LATTICE_CELL_HEIGHT);
-    
-    bx = (bx % lattice_x_cells + lattice_x_cells) % lattice_x_cells;
-    by = (by % lattice_y_cells + lattice_y_cells) % lattice_y_cells;
-    
-    int max_x_distance = (int)ceil((float)observer->viewRadius / LATTICE_CELL_WIDTH);
-    int max_y_distance = (int)ceil((float)observer->viewRadius / LATTICE_CELL_HEIGHT);
-    
-    for (int i = - max_x_distance; i <= max_x_distance; i++){
-        for (int j = -max_y_distance; j <= max_y_distance; j++){
-            int temp_bx = ((bx + i) % lattice_x_cells + lattice_x_cells) % lattice_x_cells;
-            int temp_by = ((by + j) % lattice_y_cells + lattice_y_cells) % lattice_y_cells;
-
-            for (Agent* otherAgent : spatial_lattice[temp_by * lattice_x_cells + temp_bx]){
-        
-                if (otherAgent == observer || !otherAgent->isAlive) continue;
-        
-                ThoroidalData coords = getThoroidalCoordinates(
-                    observer->x, observer->y, otherAgent->x, otherAgent->y, NUM_CELLE_X, NUM_CELLE_Y
-                );
-        
-                float dist = coords.dist;
-                float distSq = coords.distSq;
-                float angleToTarget = coords.angleToTarget;
-                float dx = coords.dx;
-                float dy = coords.dy;
-        
-                // Senses an area around the agent
-                if (distSq < observer->sensingRange){
-                    observations.emplace_back(dx, dy, dist, distSq, otherAgent);
-                    continue;
-                }
-        
-                if (distSq > (observer->viewRadius*observer->viewRadius)) continue;
-        
-                float angleDiff = angleToTarget - observerHeading;
-                // Normalize angle difference to be between -PI and PI
-                if (isnan(angleDiff) || isinf(angleDiff)) angleDiff = 0.0f;
-        
-                angleDiff = fmod(angleDiff, 2*M_PI);
-                if (angleDiff <= -M_PI) angleDiff += 2 * M_PI;
-                if (angleDiff > M_PI) angleDiff -= 2 * M_PI;
-        
-                if (abs(angleDiff) < observer->fovAngle * M_PI / 360.0f){
-                    observations.emplace_back(dx, dy, dist, distSq, otherAgent);
-                }
-            }
-        }
-    }
-    return observations;
-}
-
 
 // Optionally draw chunk boundaries for debugging
 void World::drawFoodLattice(float scaleX, float scaleY){
@@ -480,8 +110,8 @@ void World::drawFoodLattice(float scaleX, float scaleY){
     float chunkPixelWidth = FOOD_CELL_WIDTH * scaleX;
     float chunkPixelHeight = FOOD_CELL_HEIGHT * scaleY;
 
-    for (int i = 0; i < food_lattice_x_cells; i++) {
-        for (int j = 0; j < food_lattice_y_cells; j++) {
+    for (int i = 0; i < foodLattice.num_cells_x; i++) {
+        for (int j = 0; j < foodLattice.num_cells_y; j++) {
             float posX = i * chunkPixelWidth;
             float posY = j * chunkPixelHeight;
 
@@ -516,20 +146,18 @@ void World::remapBackground(sf::Vector2u windowSize, float scaleX, float scaleY)
 
         gridTexture.clear(sf::Color::Black);
         
-        sf::RectangleShape cell;
-        cell.setOutlineColor(sf::Color(128,128,128));
-        
-        if (SHOW_GRID) cell.setOutlineThickness(1.0f);
+        if (SHOW_GRID) {
+            sf::RectangleShape cell;
+            cell.setFillColor(sf::Color::White);
+            cell.setOutlineColor(sf::Color(128, 128, 128)); // Colore grigio scuro per la griglia
+            cell.setOutlineThickness(1.0f);
+            cell.setSize(sf::Vector2f(scaleX, scaleY));
 
-        for (int i = 0; i < NUM_CELLE_X; i++) {
-            for (int j = 0; j < NUM_CELLE_Y; j++) {
-                cell.setPosition(i * scaleX, j * scaleY);
-                cell.setSize(sf::Vector2f(scaleX, scaleY));
-                
-                if (grid[i][j].type == Terrain::Standard) {
-                    cell.setFillColor(sf::Color::White);
+            for (int i = 0; i < NUM_CELLE_X; i++) {
+                for (int j = 0; j < NUM_CELLE_Y; j++) {
+                    cell.setPosition(i * scaleX, j * scaleY);
+                    gridTexture.draw(cell);
                 }
-                gridTexture.draw(cell);
             }
         }
         
@@ -541,26 +169,21 @@ void World::remapBackground(sf::Vector2u windowSize, float scaleX, float scaleY)
 }
 
 // Draws the layer of grass
-sf::VertexArray drawGrass(const vector<vector<Cell>>& grid, const vector<FoodChunk>& food_lattice, float scaleX, float scaleY){
+sf::VertexArray drawGrass(const FoodLatticeData& foodLattice, float scaleX, float scaleY){
     sf::VertexArray grassLayer(sf::Quads);
 
-    for (int chunkIndex = 0; chunkIndex < food_lattice.size(); chunkIndex++){
-        const FoodChunk& chunk = food_lattice[chunkIndex];
-        if (chunk.totalFood <= 0) continue;
+    for (int j = 0; j < foodLattice.num_cells_y; j++) {
+        for (int i = 0; i < foodLattice.num_cells_x; i++) {
+            int idx = j * foodLattice.num_cells_x + i;
+            float foodAmount = foodLattice.foodGrid[idx];
 
-        for (const auto& pos : chunk.activeCells){
-            int i = pos.x;
-            int j = pos.y;
-
-            if (grid[i][j].foodAmount > 0){
+            if (foodAmount > 0.001f) {
                 float x = scaleX * i;
                 float y = scaleY * j;
 
-                // Create a color based on how grown the grass is
-                sf::Uint8 alpha = static_cast<sf::Uint8>((grid[i][j].foodAmount / MAX_FOOD) * 255);
+                sf::Uint8 alpha = static_cast<sf::Uint8>((foodAmount / MAX_FOOD) * 255);
                 sf::Color grassColor(0, 200, 0, alpha); 
 
-                // Define the 4 corners of the grass cell
                 grassLayer.append(sf::Vertex(sf::Vector2f(x, y), grassColor));
                 grassLayer.append(sf::Vertex(sf::Vector2f(x + scaleX, y), grassColor));
                 grassLayer.append(sf::Vertex(sf::Vector2f(x + scaleX, y + scaleY), grassColor));
@@ -594,45 +217,46 @@ sf::ConvexShape createShape(float scaleX, float scaleY){
 
 
 // Sets the shape of the agent to the right color and direction
-void setAgentShapeParameters(sf::ConvexShape& boidShape, const unique_ptr<Agent> &agent, float scaleX, float scaleY){
-    if (agent->speciesID == PREDATOR_ID) {
+void setAgentShapeParameters(sf::ConvexShape& boidShape, const SwarmData &swarm, int i, float scaleX, float scaleY){
+    if (swarm.agentIdentifications.speciesID[i] == PREDATOR_ID) {
             boidShape.setFillColor(sf::Color::Red);
             boidShape.setOutlineColor(sf::Color(139, 0, 0));
         } 
-    else if (agent->speciesID == PREY_ID) {
+    else if (swarm.agentIdentifications.speciesID[i] == PREY_ID) {
         boidShape.setFillColor(sf::Color::Green);
         boidShape.setOutlineColor(sf::Color(0, 100, 0));
 
     }
 
-    float pixelX = agent->x * scaleX;
-    float pixelY = agent->y * scaleY; 
+    float pixelX = swarm.physics.x[i] * scaleX;
+    float pixelY = swarm.physics.y[i] * scaleY; 
 
     boidShape.setPosition(pixelX, pixelY);
     
     // Rotation based on facing angle
-    float angleDegrees = agent->facingAngle * 180.0f / M_PI;
+    float angleDegrees = swarm.physics.facingAngle[i] * 180.0f / M_PI;
         boidShape.setRotation(angleDegrees);
 }
+
 // Draws the cone of vision for each agent
-void drawFOV(sf::RenderWindow& window, const sf::Vector2u& windowSize, const unique_ptr<Agent>& agent, float scaleX, float scaleY){
-    float fovRadius = agent->viewRadius * scaleX;
-    float fovAngle = agent->fovAngle * (M_PI / 180.0f);
+void drawFOV(sf::RenderWindow& window, const sf::Vector2u& windowSize, const SwarmData& swarm, int i, float scaleX, float scaleY){
+    float fovRadius = swarm.perceptions.viewRadius[i] * scaleX;
+    float fovAngle = swarm.perceptions.fovAngle[i] * (M_PI / 180.0f);
     int triangleCount = 20; // Resolution of the arc
 
-    float heading = agent->facingAngle;
+    float heading = swarm.physics.facingAngle[i];
 
     // Size = Center + (Points on arc)
     sf::VertexArray fovShape(sf::TriangleFan, triangleCount + 1);
 
     // Center Vertex (Agent Position)
-    float px = agent->x * scaleX;
-    float py = agent->y * scaleY;
+    float px = swarm.physics.x[i] * scaleX;
+    float py = swarm.physics.y[i] * scaleY;
     fovShape[0].position = sf::Vector2f(px, py);
 
     // Set Color based on species (with transparency)
     sf::Color fovColor;
-    if (agent->speciesID == PREDATOR_ID) fovColor = sf::Color(255, 0, 0, 30); // Faint Red
+    if (swarm.agentIdentifications.speciesID[i] == PREDATOR_ID) fovColor = sf::Color(255, 0, 0, 30); // Faint Red
     else fovColor = sf::Color(0, 255, 0, 30); // Faint Green
 
     fovShape[0].color = fovColor;
@@ -653,7 +277,7 @@ void drawFOV(sf::RenderWindow& window, const sf::Vector2u& windowSize, const uni
     }
 
     // We use sqrt because rangeOfVision is considered as squared distance
-    float proximityRadius = std::sqrt(agent->sensingRange) * scaleX;
+    float proximityRadius = std::sqrt(swarm.perceptions.sensingRange[i]) * scaleX;
     sf::CircleShape proximityShape(proximityRadius);
     
     // Important: Set Origin to center so it draws around the agent, not from top-left
@@ -718,16 +342,16 @@ void World::draw(sf::RenderWindow& window){
     window.draw(backgroundSprite);
 
     // Draws the food for prey
-    sf::VertexArray grassLayer = drawGrass(grid, food_lattice, scaleX, scaleY);
+    sf::VertexArray grassLayer = drawGrass(foodLattice, scaleX, scaleY);
     window.draw(grassLayer);
 
     // Draw the agents
     sf::ConvexShape boidShape = createShape(scaleX, scaleY);
     
-    for (const auto& agent : agents) {
-        setAgentShapeParameters(boidShape, agent, scaleX, scaleY);
+    for (int i = 0; i < swarm.current_count; i++){
+        setAgentShapeParameters(boidShape, swarm, i, scaleX, scaleY);
 
-        if (SHOW_FOV) drawFOV(window, windowSize, agent, scaleX, scaleY);
+        if (SHOW_FOV) drawFOV(window, windowSize, swarm, i, scaleX, scaleY);
         
         window.draw(boidShape);
     }

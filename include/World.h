@@ -1,52 +1,24 @@
 #pragma once
 #include <SFML/Graphics.hpp>
-#include <vector>
-#include <memory>
-#include <random>
 #include "Core/Config.h"
-#include "Entities/Agent.h"
-#include "Entities/Predator.h"
-#include "Entities/Prey.h"
+
+#include "GPU/structures/Swarm.h"
+#include "GPU/structures/SpatialLatticeData.h"
+#include "GPU/structures/FoodLatticeData.h"
 
 using namespace std;
 
 class World{
-    private:
-    vector<vector<Cell>> grid;
-
-    // Erases and updates the spatial lattice
-    void update_buckets();
-    
-    int food_lattice_x_cells, food_lattice_y_cells;
-    vector<FoodChunk> food_lattice;
-    
-    vector<Observation> getObservation(const Agent* observer); 
-    
-    // Helpers to grow the grass
-    void addFood(int cx, int cy, float amount);
-    
-    // Helpers for agent interaction with grass
-    vector<float> getBestFoodScent(const Agent* agent); 
-    void checkPreyFeeding(unique_ptr<Agent>& agent);
-    
+    private:  
     // Texture
     sf::RenderTexture gridTexture; 
     bool gridTextureValid = false; 
     
-    // RNG for spawning entities and grass
-    mt19937 gen;
-    uniform_int_distribution<int> disX;
-    uniform_int_distribution<int> disY;
-    
     public:
-    // Uniform lattices for efficient enemy lookup and prey feeding
-    int lattice_x_cells, lattice_y_cells;
-    vector<vector<Agent*>> spatial_lattice;
-    
-    vector<unique_ptr<Agent>> agents;
-    vector<unique_ptr<Agent>> graveyard;
+    SwarmData swarm;
+    SpatialLatticeData spatialLattice;
+    FoodLatticeData foodLattice;
 
-    World();
     World(int numPrey, int numPredators);
 
     // Updattes the world each tick of the simulation

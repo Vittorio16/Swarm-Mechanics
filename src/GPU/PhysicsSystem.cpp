@@ -38,5 +38,14 @@ void PhysicsSystem::update(SwarmData& swarm, float dt){
         // Update position
         swarm.physics.x[i] += swarm.physics.vx[i] * dt;
         swarm.physics.y[i] += swarm.physics.vy[i] * dt;
+
+        // pacman style world
+        if (isnan(swarm.physics.x[i]) || isinf(swarm.physics.x[i])) swarm.physics.x[i] = 0.0f;
+        swarm.physics.x[i] = fmodf(swarm.physics.x[i], NUM_CELLE_X);
+        if(swarm.physics.x[i] < 0) swarm.physics.x[i] += NUM_CELLE_X;
+
+        if (isnan(swarm.physics.y[i]) || isinf(swarm.physics.y[i])) swarm.physics.y[i] = 0.0f;
+        swarm.physics.y[i] = fmodf(swarm.physics.y[i], NUM_CELLE_Y);
+        if(swarm.physics.y[i] < 0) swarm.physics.y[i] += NUM_CELLE_Y;
     }
 }

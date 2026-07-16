@@ -49,7 +49,7 @@ void DecisionSystem::think(SwarmData& swarm){
             }
             sum += swarm.brains.b0[b0_start + h];
             // Activation function
-            hiddenValues[i] = tanhf(sum);
+            hiddenValues[h] = tanhf(sum);
         }
         
         // Updates the neurons of the output layer
@@ -62,7 +62,7 @@ void DecisionSystem::think(SwarmData& swarm){
             }
             sum += swarm.brains.b1[b1_start + o];
             // Activation function
-            outputValues[i] = tanhf(sum);
+            outputValues[o] = tanhf(sum);
         }
 
         // Outputs are thrust and turn intents
