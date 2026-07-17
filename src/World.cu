@@ -2,13 +2,13 @@
 #include "World.h"
 #include "Core/Physics.h"
 
-#include "GPU/functions/BrainSystem.h"
-#include "GPU/functions/EnergySystem.h"
-#include "GPU/functions/LatticeSystem.h"
-#include "GPU/functions/FoodLatticeSystem.h"
-#include "GPU/functions/LifeSystem.h"
-#include "GPU/functions/PhysicSystem.h"
-#include "GPU/functions/SensorySystem.h"
+#include "functions/BrainSystem.h"
+#include "functions/EnergySystem.h"
+#include "functions/LatticeSystem.h"
+#include "functions/FoodLatticeSystem.h"
+#include "functions/LifeSystem.h"
+#include "functions/PhysicSystem.h"
+#include "functions/SensorySystem.h"
 
 using namespace std;
 

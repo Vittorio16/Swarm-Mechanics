@@ -2,10 +2,10 @@
 #include <SFML/Graphics.hpp>
 #include "Core/Config.h"
 
-#include "GPU/structures/Swarm.h"
-#include "GPU/structures/SpatialLatticeData.h"
-#include "GPU/structures/FoodLatticeData.h"
-#include "GPU/structures/GraveyardData.h"
+#include "structures/Swarm.h"
+#include "structures/SpatialLatticeData.h"
+#include "structures/FoodLatticeData.h"
+#include "structures/GraveyardData.h"
 
 using namespace std;
 

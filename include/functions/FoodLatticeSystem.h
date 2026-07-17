@@ -1,7 +1,7 @@
 #pragma once
 #include <random>
-#include "GPU/structures/FoodLatticeData.h"
-#include "GPU/structures/Swarm.h"
+#include "structures/FoodLatticeData.h"
+#include "structures/Swarm.h"
 
 namespace FoodLatticeSystem {
     extern thread_local std::mt19937 gen;

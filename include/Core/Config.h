@@ -1,5 +1,4 @@
 #pragma once
-#include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
 
@@ -200,15 +199,15 @@ const int B1_SIZE  = OUTPUT_LAYER_SIZE;
 // };
 
 // A chunk of the world grid, used to optimize food sensing
-struct FoodChunk {
-    float totalFood;
-    float sumFoodX;
-    float sumFoodY;
+// struct FoodChunk {
+//     float totalFood;
+//     float sumFoodX;
+//     float sumFoodY;
 
-    vector<sf::Vector2i> activeCells;
+//     vector<sf::Vector2i> activeCells;
 
-    FoodChunk() : totalFood(0.0f), sumFoodX(0.0f), sumFoodY(0.0f) {}
-};
+//     FoodChunk() : totalFood(0.0f), sumFoodX(0.0f), sumFoodY(0.0f) {}
+// };
 
 // Profiling data used for performance analysis of the simulation
 struct ProfilingData {

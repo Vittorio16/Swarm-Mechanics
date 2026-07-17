@@ -1,9 +1,10 @@
-#include "GPU/functions/LatticeSystem.h"
+#include <cuda_runtime.h>
+#include "functions/LatticeSystem.h"
+#include "Core/Config.h"
 
 void LatticeSystem::build(SpatialLatticeData& lattice, SwarmData& swarm){
     // Empties previous lattice
-    fill(lattice.cell_counts.begin(), lattice.cell_counts.end(), 0);
-
+    CUDA_CHECK(cudaMemset(lattice.cell_counts, 0, lattice.total_cells * sizeof(int)));
     // Fills the lattice with the current information
     for (int i = 0; i < swarm.current_count; i++) {
         if (!swarm.agentIdentifications.isAlive[i]) continue;

@@ -1,6 +1,6 @@
 #include <cmath>
 #include <random>
-#include "GPU/functions/BrainSystem.h"
+#include "functions/BrainSystem.h"
 #include "Core/GlobalHelpers.h"
 
 // Initializes the neural network weights and biases for each agent in the swarm randomly
@@ -79,7 +79,8 @@ void BrainSystem::think(SwarmData& swarm){
     }
 }
 
-void BrainSystem::mutateVector(vector<float>& weights_array, int offset, int size, float mutationRate, float mutationStrength) {
+// Mutates weights based on give mutation rate and strength
+void BrainSystem::mutateVector(float* weights_array, int offset, int size, float mutationRate, float mutationStrength) {
     for (int m = 0; m < size; m++) {
         if (randomFloat(0.0f, 1.0f) < mutationRate) {
             float change = randomFloat(-mutationStrength, mutationStrength);
@@ -90,6 +91,14 @@ void BrainSystem::mutateVector(vector<float>& weights_array, int offset, int siz
         }
     }
 };
+
+// Overloading for mutateVector to be used with vectors
+void BrainSystem::mutateVector(std::vector<float>& weights_vector, int offset, int size, float mutationRate, float mutationStrength) {
+    if (weights_vector.empty()) return;
+    
+    // Safely forward the call by passing the vector's underlying raw pointer
+    mutateVector(weights_vector.data(), offset, size, mutationRate, mutationStrength);
+}
 
 vector<float> BrainSystem::extractBrain(const SwarmData& swarm, int index){
     vector<float> brain(W01_SIZE + W12_SIZE + B0_SIZE + B1_SIZE);

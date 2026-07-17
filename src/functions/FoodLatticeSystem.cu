@@ -1,5 +1,5 @@
 #include <algorithm>
-#include "GPU/functions/FoodLatticeSystem.h"
+#include "functions/FoodLatticeSystem.h"
 
 namespace FoodLatticeSystem {
     thread_local std::mt19937 gen(std::random_device{}());

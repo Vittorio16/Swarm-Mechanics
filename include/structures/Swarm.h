@@ -1,5 +1,7 @@
 #pragma once
 #include <cuda_runtime.h>
+#include <thrust/device_ptr.h>
+#include <thrust/fill.h>
 #include "Core/Config.h"
 
 struct SwarmData {
@@ -175,12 +177,14 @@ struct SwarmData {
             CUDA_CHECK(cudaMemset(closestEnemyIndex, 0, capacity * sizeof(int)));
             CUDA_CHECK(cudaMemset(closestEnemyX, 0, capacity * sizeof(float)));
             CUDA_CHECK(cudaMemset(closestEnemyY, 0, capacity * sizeof(float)));
-            CUDA_CHECK(cudaMemset(closestEnemyDist, 0, capacity * sizeof(float)));
+            thrust::device_ptr<float> enemy_ptr(closestEnemyDist);
+            thrust::fill(enemy_ptr, enemy_ptr + capacity, -1);
             CUDA_CHECK(cudaMemset(enemyClosingSpeed, 0, capacity * sizeof(float)));
             CUDA_CHECK(cudaMemset(enemyTangentialSpeed, 0, capacity * sizeof(float)));
             CUDA_CHECK(cudaMemset(foodSenseX, 0, capacity * sizeof(float)));
             CUDA_CHECK(cudaMemset(foodSenseY, 0, capacity * sizeof(float)));
-            CUDA_CHECK(cudaMemset(foodDistance, 0, capacity * sizeof(float)));
+            thrust::device_ptr<float> food_ptr(foodDistance);
+            thrust::fill(food_ptr, food_ptr + capacity, -1);
             CUDA_CHECK(cudaMemset(foodClosingVelocity, 0, capacity * sizeof(float)));
             CUDA_CHECK(cudaMemset(foodTangentialVelocity, 0, capacity * sizeof(float)));
             CUDA_CHECK(cudaMemset(energyReserve, 0, capacity * sizeof(float)));

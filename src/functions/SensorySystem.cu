@@ -1,5 +1,5 @@
 #include <cmath>
-#include "GPU/functions/SensorySystem.h"
+#include "functions/SensorySystem.h"
 #include "Core/Physics.h"
 
 // Gets an observation of the closest enemy, of food and parses it into the sensors
@@ -16,7 +16,7 @@ void SensorySystem::update(SwarmData& swarm, const SpatialLatticeData& lattice, 
         float minDistSq = INFINITY;
         int bestEnemyIndex = -1;
         float bestDist = INFINITY;
-        float bestAngleToTarget = 0.0f;
+        // float bestAngleToTarget = 0.0f;
         float bestDx = 0.0f;
         float bestDy = 0.0f;
 

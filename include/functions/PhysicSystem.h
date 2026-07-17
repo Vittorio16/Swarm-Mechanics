@@ -1,5 +1,5 @@
 #pragma once
-#include "GPU/structures/Swarm.h"
+#include "structures/Swarm.h"
 
 namespace PhysicsSystem {
     void update(SwarmData& swarm, float dt);

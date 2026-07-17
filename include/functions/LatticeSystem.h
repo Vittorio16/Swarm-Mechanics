@@ -1,6 +1,6 @@
 #pragma once
-#include "GPU/structures/SpatialLatticeData.h"
-#include "GPU/structures/Swarm.h"
+#include "structures/SpatialLatticeData.h"
+#include "structures/Swarm.h"
 
 namespace LatticeSystem {
     void build(SpatialLatticeData& lattice, SwarmData& swarm);

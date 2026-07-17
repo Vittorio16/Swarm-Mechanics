@@ -5,8 +5,8 @@
 #include <fstream>
 #include "SimulationManager.h"
 #include "Core/GlobalHelpers.h"
-#include "GPU/functions/BrainSystem.h"
-#include "GPU/functions/LifeSystem.h"
+#include "functions/BrainSystem.h"
+#include "functions/LifeSystem.h"
 
 // Constructor
 SimulationManager::SimulationManager(int cores) : numCores(cores) {

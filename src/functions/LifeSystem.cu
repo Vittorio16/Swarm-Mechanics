@@ -1,6 +1,7 @@
 #include "Core/GlobalHelpers.h"
-#include "GPU/functions/LifeSystem.h"
-#include "GPU/functions/BrainSystem.h"
+#include "functions/LifeSystem.h"
+#include "functions/BrainSystem.h"
+#include <cuda_runtime.h>
 
 static uint64_t globalAgentIDCounter = 1;
 namespace LifeSystem {
@@ -131,18 +132,17 @@ void LifeSystem::handleDeaths(SwarmData& swarm, GraveyardData& graveyard){
             swarm.neuralOutputs.previousTurnIntent[i] = swarm.neuralOutputs.previousTurnIntent[last_idx];
 
             // Brains
-            copy_n(&swarm.brains.w01[last_idx * W01_SIZE], W01_SIZE, &swarm.brains.w01[i * W01_SIZE]);
-            copy_n(&swarm.brains.w12[last_idx * W12_SIZE], W12_SIZE, &swarm.brains.w12[i * W12_SIZE]);
-            copy_n(&swarm.brains.b0[last_idx * B0_SIZE],   B0_SIZE,  &swarm.brains.b0[i * B0_SIZE]);
-            copy_n(&swarm.brains.b1[last_idx * B1_SIZE],   B1_SIZE,  &swarm.brains.b1[i * B1_SIZE]);
-
+            for (int j = 0; j < W01_SIZE; j++) swarm.brains.w01[i * W01_SIZE + j] = swarm.brains.w01[last_idx * W01_SIZE + j];
+            for (int j = 0; j < W12_SIZE; j++) swarm.brains.w12[i * W12_SIZE + j] = swarm.brains.w12[last_idx * W12_SIZE + j];
+            for (int j = 0; j < B0_SIZE; j++) swarm.brains.b0[i * B0_SIZE + j] = swarm.brains.b0[last_idx * B0_SIZE + j];
+            for (int j = 0; j < B1_SIZE; j++) swarm.brains.b1[i * B1_SIZE + j] = swarm.brains.b1[last_idx * B1_SIZE + j];
         } else{
             i++;
         }
     }
 }
 
-void LifeSystem::handleBirths(SwarmData& swarm, int mutationRate, int mutationStrength){
+void LifeSystem::handleBirths(SwarmData& swarm, float mutationRate, float mutationStrength){
     int initial_count = swarm.current_count;
 
     for (int i = 0; i < initial_count; i++){
@@ -210,10 +210,10 @@ void LifeSystem::handleBirths(SwarmData& swarm, int mutationRate, int mutationSt
             const int B1_SIZE  = OUTPUT_LAYER_SIZE;
 
             // Copies parent's brain
-            copy_n(&swarm.brains.w01[i * W01_SIZE], W01_SIZE, &swarm.brains.w01[child_idx * W01_SIZE]);
-            copy_n(&swarm.brains.w12[i * W12_SIZE], W12_SIZE, &swarm.brains.w12[child_idx * W12_SIZE]);
-            copy_n(&swarm.brains.b0[i * B0_SIZE],   B0_SIZE,  &swarm.brains.b0[child_idx * B0_SIZE]);
-            copy_n(&swarm.brains.b1[i * B1_SIZE],   B1_SIZE,  &swarm.brains.b1[child_idx * B1_SIZE]);
+            for (int j = 0; j < W01_SIZE; j++) swarm.brains.w01[child_idx * W01_SIZE + j] = swarm.brains.w01[i * W01_SIZE + j];
+            for (int j = 0; j < W12_SIZE; j++) swarm.brains.w12[child_idx * W12_SIZE + j] = swarm.brains.w12[i * W12_SIZE + j];
+            for (int j = 0; j < B0_SIZE; j++) swarm.brains.b0[child_idx * B0_SIZE + j] = swarm.brains.b0[i * B0_SIZE + j];
+            for (int j = 0; j < B1_SIZE; j++) swarm.brains.b1[child_idx * B1_SIZE + j] = swarm.brains.b1[i * B1_SIZE + j];
 
             // Mutates the brain
             BrainSystem::mutateVector(swarm.brains.w01, child_idx * W01_SIZE, W01_SIZE, mutationRate, mutationStrength);

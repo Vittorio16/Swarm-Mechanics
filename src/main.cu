@@ -34,7 +34,7 @@ void runProfiling(){
         }
 
         // Loop di profiling reale
-        for (int i = 0; i < iterations; i++) {
+        for (int j = 0; j < iterations; j++) {
             ProfilingData data = world.update(FIXED_TIME_STEP, 0);
             
             sum_buckets += data.t_buckets;

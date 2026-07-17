@@ -1,5 +1,5 @@
-#include "GPU/functions/EnergySystem.h"
-#include "GPU/functions/FoodLatticeSystem.h"
+#include "functions/EnergySystem.h"
+#include "functions/FoodLatticeSystem.h"
 
 // Handles energy consumption and feeding
 void EnergySystem::update(SwarmData& swarm, FoodLatticeData& foodLattice, float dt){
