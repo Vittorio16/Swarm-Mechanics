@@ -27,46 +27,35 @@ World::World(int num_prey, int num_predators) :
 
 // Updates the world each tick of the simulation
 ProfilingData World::update(float dt, int generationCount){
-    // Profiling of needed time
     using namespace std::chrono;
-    // Place each agent in the correct bucket in the spatial lattice
-    auto start = high_resolution_clock::now();
-    auto start_buckets = high_resolution_clock::now();
-
-    // Each iteration it rebuilds the spatial lattice
-    LatticeSystem::build(spatialLattice, swarm);
     
+    auto start_total = high_resolution_clock::now();
+
+    // --- 1. SPATIAL LATTICE (Buckets) ---
+    auto start_buckets = high_resolution_clock::now();
+    LatticeSystem::build(spatialLattice, swarm);
     auto end_buckets = high_resolution_clock::now();
 
+    // --- 2. OBSERVATION (Sensors) ---
     auto start_obs = high_resolution_clock::now();
-    auto start_think = high_resolution_clock::now();
-
-    double total_obs_time = 0.0;
-    double size_agents = 0.0;
-
-    // First it checks the system state and lets agents think
-    auto s_obs = high_resolution_clock::now();
-
-    // Gathers observations and updates the sensory data
     SensorySystem::update(swarm, spatialLattice, foodLattice);
+    auto end_obs = high_resolution_clock::now();
 
-    auto e_obs = high_resolution_clock::now();
-    total_obs_time += duration_cast<nanoseconds>(e_obs - s_obs).count();
-    
-    // Feed forward neural network for decision making
+    // --- 3. THINK (Neural Network) ---
+    auto start_think = high_resolution_clock::now();
     BrainSystem::think(swarm);
+    auto end_think = high_resolution_clock::now();
 
-    auto end_think_obs = high_resolution_clock::now();
+    // --- 4. MOVE (Physics & Energy) ---
     auto start_move = high_resolution_clock::now();
-
-    // Then updates everything at the same time - movement, and handles energy gain and consumption
     PhysicsSystem::update(swarm, dt);
     EnergySystem::update(swarm, foodLattice, dt);
-
     auto end_move = high_resolution_clock::now();
-    auto start_cleanup = high_resolution_clock::now();
 
-    // Adjust mutation parameters based on current generation count
+    // --- 5. CLEANUP (Life Cycle and Grass Growth) ---
+    auto start_cleanup = high_resolution_clock::now();
+    
+    // Mutation parameters dependent on current generation count
     float dynamicRate = std::max(MINIMUM_MUTATION_RATE, STARTING_MUTATION_RATE - (generationCount * MUTATION_RATE_DECAY));
     float dynamicStrength = std::max(MINIMUM_MUTATION_STRENGTH, STARTING_MUTATION_STRENGTH - (generationCount * MUTATION_STRENGTH_DECAY));
 
@@ -76,16 +65,18 @@ ProfilingData World::update(float dt, int generationCount){
     
     // Handles grass growth
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
-
     auto end_cleanup = high_resolution_clock::now();
-    auto end = high_resolution_clock::now();
-    // Profiling output
+    
+    auto end_total = high_resolution_clock::now();
+
+    // --- PROFILING OUTPUT ---
     double t_buckets = duration_cast<microseconds>(end_buckets - start_buckets).count();
-    double t_obs = total_obs_time / 1000.0; 
-    double t_think = duration_cast<microseconds>(end_think_obs - start_think).count() - t_obs;
-    double t_move = duration_cast<microseconds>(end_move - start_move).count();
+    double t_obs     = duration_cast<microseconds>(end_obs - start_obs).count(); 
+    double t_think   = duration_cast<microseconds>(end_think - start_think).count();
+    double t_move    = duration_cast<microseconds>(end_move - start_move).count();
     double t_cleanup = duration_cast<microseconds>(end_cleanup - start_cleanup).count();
-    double t_total = duration_cast<microseconds>(end - start).count();
+    double t_total   = duration_cast<microseconds>(end_total - start_total).count();
+    
     double check_t_total = t_buckets + t_obs + t_think + t_move + t_cleanup;
 
     return {t_buckets, t_obs, t_think, t_move, t_cleanup, t_total, check_t_total};

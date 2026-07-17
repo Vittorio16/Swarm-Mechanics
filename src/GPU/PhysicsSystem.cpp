@@ -1,3 +1,4 @@
+#include <cmath>
 #include "GPU/functions/PhysicSystem.h"
 
 // Moves the agents based on their current velocity and updates their facing angle based on neural outputs

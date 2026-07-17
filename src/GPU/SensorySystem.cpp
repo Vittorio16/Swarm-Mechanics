@@ -1,3 +1,4 @@
+#include <cmath>
 #include "GPU/functions/SensorySystem.h"
 #include "Core/Physics.h"
 
