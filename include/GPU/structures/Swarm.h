@@ -1,153 +1,288 @@
 #pragma once
-#include <vector>
+#include <cuda_runtime.h>
 #include "Core/Config.h"
 
-using namespace std;
-
-struct SwarmData{
+struct SwarmData {
     // Population Management
     int max_capacity;
     int current_count;
 
     // Agent Identification
     struct AgentIDData {
-        vector<int> ID;
-        vector<int> speciesID;
-        vector<bool> isAlive;
+        uint64_t* ID;
+        int* speciesID;
+        bool* isAlive;
 
-        AgentIDData(int capacity) : 
-            ID(capacity, 0), 
-            speciesID(capacity, 0), 
-            isAlive(capacity, false) {}
+        void allocate(int capacity){
+            CUDA_CHECK(cudaMallocManaged(&ID, capacity * sizeof(uint64_t)));
+            CUDA_CHECK(cudaMallocManaged(&speciesID, capacity * sizeof(int)));
+            CUDA_CHECK(cudaMallocManaged(&isAlive, capacity * sizeof(bool)));
+
+            CUDA_CHECK(cudaMemset(ID, 0, capacity * sizeof(uint64_t)));
+            CUDA_CHECK(cudaMemset(speciesID, 0, capacity * sizeof(int)));
+            CUDA_CHECK(cudaMemset(isAlive, 0, capacity * sizeof(bool)));
+        }
+
+        void free(){
+            CUDA_CHECK(cudaFree(ID));
+            CUDA_CHECK(cudaFree(speciesID));
+            CUDA_CHECK(cudaFree(isAlive));
+        }
     } agentIdentifications;
 
     // Fitness Metrics
     struct FitnessData {
-        vector<float> timeLived;
-        vector<float> energyGained;
+        float* timeLived;
+        float* energyGained;
 
-        FitnessData(int capacity): 
-            timeLived(capacity, 0.0f), 
-            energyGained(capacity, 0.0f) {}
+        void allocate(int capacity){
+            CUDA_CHECK(cudaMallocManaged(&timeLived, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&energyGained, capacity * sizeof(float)));
+
+            CUDA_CHECK(cudaMemset(timeLived, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(energyGained, 0, capacity * sizeof(float)));
+        }
+
+        void free(){
+            CUDA_CHECK(cudaFree(timeLived));
+            CUDA_CHECK(cudaFree(energyGained));
+        }
     } fitnessMetrics;
 
     // Energy Metrics
     struct EnergyData {
-        vector<float> energy;
-        vector<float> digestionTime;
-        vector<float> remainingDigestion;
-        // Used to cap population
-        vector<int> childCount;
-        vector<float> reproductionCooldown;
+        float* energy;
+        float* digestionTime;
+        float* remainingDigestion;
+        int* childCount;
+        float* reproductionCooldown;
 
-        EnergyData(int capacity): 
-            energy(capacity, 0.0f), 
-            digestionTime(capacity, 0.0f), 
-            remainingDigestion(capacity, 0.0f),
-            childCount(capacity, 0),
-            reproductionCooldown(capacity, 0.0f) {}
+        void allocate(int capacity){
+            CUDA_CHECK(cudaMallocManaged(&energy, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&digestionTime, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&remainingDigestion, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&childCount, capacity * sizeof(int)));
+            CUDA_CHECK(cudaMallocManaged(&reproductionCooldown, capacity * sizeof(float)));
+
+            CUDA_CHECK(cudaMemset(energy, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(digestionTime, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(remainingDigestion, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(childCount, 0, capacity * sizeof(int)));
+            CUDA_CHECK(cudaMemset(reproductionCooldown, 0, capacity * sizeof(float)));
+        }
+
+        void free(){
+            CUDA_CHECK(cudaFree(energy));
+            CUDA_CHECK(cudaFree(digestionTime));
+            CUDA_CHECK(cudaFree(remainingDigestion));
+            CUDA_CHECK(cudaFree(childCount));
+            CUDA_CHECK(cudaFree(reproductionCooldown));
+        }
     } energyMetrics;
 
     // Physics
     struct PhysicsData {
-        vector<float> friction;
-        vector<float> force;
-        vector<float> maxSpeed;
-        // Dybnamic physic variables
-        vector<float> x, y;
-        vector<float> vx, vy, speed;
-        vector<float> facingAngle;
+        float *friction, *force, *maxSpeed;
+        float *x, *y, *vx, *vy, *speed, *facingAngle;
 
-        PhysicsData(int capacity): 
-            friction(capacity, 0.0f), 
-            force(capacity, 0.0f), 
-            maxSpeed(capacity, 0.0f),
-            x(capacity, 0.0f),
-            y(capacity, 0.0f),
-            vx(capacity, 0.0f),
-            vy(capacity, 0.0f),
-            speed(capacity, 0.0f),
-            facingAngle(capacity, 0.0f) {}
+        void allocate(int capacity) {
+            CUDA_CHECK(cudaMallocManaged(&friction, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&force, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&maxSpeed, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&x, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&y, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&vx, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&vy, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&speed, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&facingAngle, capacity * sizeof(float)));
+
+            CUDA_CHECK(cudaMemset(friction, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(force, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(maxSpeed, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(x, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(y, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(vx, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(vy, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(speed, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(facingAngle, 0, capacity * sizeof(float)));
+        }
+
+        void free() {
+            CUDA_CHECK(cudaFree(friction));
+            CUDA_CHECK(cudaFree(force));
+            CUDA_CHECK(cudaFree(maxSpeed));
+            CUDA_CHECK(cudaFree(x));
+            CUDA_CHECK(cudaFree(y));
+            CUDA_CHECK(cudaFree(vx));
+            CUDA_CHECK(cudaFree(vy));
+            CUDA_CHECK(cudaFree(speed));
+            CUDA_CHECK(cudaFree(facingAngle));
+        }
     } physics;
 
     // Perception Metrics
     struct PerceptionData {
-        vector<float> sensingRange;     // Senses enemies within this range
-        vector<float> viewRadius;
-        vector<float> fovAngle;
-        vector<float> grassViewRadius;
+        float* sensingRange;     
+        float* viewRadius;
+        float* fovAngle;
+        float* grassViewRadius;
 
-        PerceptionData(int capacity): 
-            sensingRange(capacity, 0.0f), 
-            viewRadius(capacity, 0.0f), 
-            fovAngle(capacity, 0.0f), 
-            grassViewRadius(capacity, 0.0f) {}
+        void allocate(int capacity){
+            CUDA_CHECK(cudaMallocManaged(&sensingRange, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&viewRadius, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&fovAngle, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&grassViewRadius, capacity * sizeof(float)));
+
+            CUDA_CHECK(cudaMemset(sensingRange, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(viewRadius, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(fovAngle, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(grassViewRadius, 0, capacity * sizeof(float)));
+        }
+
+        void free(){
+            CUDA_CHECK(cudaFree(sensingRange));
+            CUDA_CHECK(cudaFree(viewRadius));
+            CUDA_CHECK(cudaFree(fovAngle));
+            CUDA_CHECK(cudaFree(grassViewRadius));
+        }
     } perceptions;
 
     // Sensory Data
     struct SensoryData {
-        vector<int> lockedEnemyIndex, closestEnemyIndex;
-        vector<float> closestEnemyX, closestEnemyY, closestEnemyDist;
-        vector<float> enemyClosingSpeed, enemyTangentialSpeed;
-        vector<float> foodSenseX, foodSenseY, foodDistance;
-        vector<float> foodClosingVelocity, foodTangentialVelocity;
-        vector<float> energyReserve;
+        int *lockedEnemyIndex, *closestEnemyIndex;
+        float *closestEnemyX, *closestEnemyY, *closestEnemyDist;
+        float *enemyClosingSpeed, *enemyTangentialSpeed;
+        float *foodSenseX, *foodSenseY, *foodDistance;
+        float *foodClosingVelocity, *foodTangentialVelocity;
+        float *energyReserve;
 
-        SensoryData(int capacity): 
-            lockedEnemyIndex(capacity, 0),
-            closestEnemyIndex(capacity, 0),
-            closestEnemyX(capacity, 0.0f), 
-            closestEnemyY(capacity, 0.0f), 
-            closestEnemyDist(capacity, -1.0f),
-            enemyClosingSpeed(capacity, 0.0f), 
-            enemyTangentialSpeed(capacity, 0.0f),
-            foodSenseX(capacity, 0.0f), 
-            foodSenseY(capacity, 0.0f), 
-            foodDistance(capacity, -1.0f),
-            foodClosingVelocity(capacity, 0.0f), 
-            foodTangentialVelocity(capacity, 0.0f),
-            energyReserve(capacity, 0.0f) {}
+        void allocate(int capacity){
+            CUDA_CHECK(cudaMallocManaged(&lockedEnemyIndex, capacity * sizeof(int)));
+            CUDA_CHECK(cudaMallocManaged(&closestEnemyIndex, capacity * sizeof(int)));
+            CUDA_CHECK(cudaMallocManaged(&closestEnemyX, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&closestEnemyY, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&closestEnemyDist, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&enemyClosingSpeed, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&enemyTangentialSpeed, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&foodSenseX, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&foodSenseY, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&foodDistance, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&foodClosingVelocity, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&foodTangentialVelocity, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&energyReserve, capacity * sizeof(float)));
+
+            CUDA_CHECK(cudaMemset(lockedEnemyIndex, 0, capacity * sizeof(int)));
+            CUDA_CHECK(cudaMemset(closestEnemyIndex, 0, capacity * sizeof(int)));
+            CUDA_CHECK(cudaMemset(closestEnemyX, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(closestEnemyY, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(closestEnemyDist, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(enemyClosingSpeed, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(enemyTangentialSpeed, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(foodSenseX, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(foodSenseY, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(foodDistance, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(foodClosingVelocity, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(foodTangentialVelocity, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(energyReserve, 0, capacity * sizeof(float)));
+        }
+
+        void free(){
+            CUDA_CHECK(cudaFree(lockedEnemyIndex));
+            CUDA_CHECK(cudaFree(closestEnemyIndex));
+            CUDA_CHECK(cudaFree(closestEnemyX));
+            CUDA_CHECK(cudaFree(closestEnemyY));
+            CUDA_CHECK(cudaFree(closestEnemyDist));
+            CUDA_CHECK(cudaFree(enemyClosingSpeed));
+            CUDA_CHECK(cudaFree(enemyTangentialSpeed));
+            CUDA_CHECK(cudaFree(foodSenseX));
+            CUDA_CHECK(cudaFree(foodSenseY));
+            CUDA_CHECK(cudaFree(foodDistance));
+            CUDA_CHECK(cudaFree(foodClosingVelocity));
+            CUDA_CHECK(cudaFree(foodTangentialVelocity));
+            CUDA_CHECK(cudaFree(energyReserve));
+        }
     } sensors;
-
 
     // Neural Network Outputs
     struct NeuralOutputData {
-        vector<float> thrustIntent;
-        vector<float> turnIntent;
-        vector<float> previousThrustIntent;
-        vector<float> previousTurnIntent;
+        float* thrustIntent;
+        float* turnIntent;
+        float* previousThrustIntent;
+        float* previousTurnIntent;
 
-        NeuralOutputData(int capacity): 
-            thrustIntent(capacity, 0.0f), 
-            turnIntent(capacity, 0.0f),
-            previousThrustIntent(capacity, 0.0f),
-            previousTurnIntent(capacity, 0.0f) {}
+        void allocate(int capacity){
+            CUDA_CHECK(cudaMallocManaged(&thrustIntent, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&turnIntent, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&previousThrustIntent, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&previousTurnIntent, capacity * sizeof(float)));
+
+            CUDA_CHECK(cudaMemset(thrustIntent, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(turnIntent, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(previousThrustIntent, 0, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMemset(previousTurnIntent, 0, capacity * sizeof(float)));
+        }
+
+        void free(){
+            CUDA_CHECK(cudaFree(thrustIntent));
+            CUDA_CHECK(cudaFree(turnIntent));
+            CUDA_CHECK(cudaFree(previousThrustIntent));
+            CUDA_CHECK(cudaFree(previousTurnIntent));
+        }
     } neuralOutputs;
 
     // Neural Network Brains
     struct BrainData{
-        vector<float> w01;
-        vector<float> w12;
-        vector<float> b0;
-        vector<float> b1;
+        float* w01;
+        float* w12;
+        float* b0;
+        float* b1;
 
-        BrainData(int capacity): 
-            w01(capacity * (INPUT_LAYER_SIZE * HIDDEN_LAYER_SIZE), 0.0f), 
-            w12(capacity * (HIDDEN_LAYER_SIZE * OUTPUT_LAYER_SIZE), 0.0f), 
-            b0(capacity * HIDDEN_LAYER_SIZE, 0.0f), 
-            b1(capacity * OUTPUT_LAYER_SIZE, 0.0f) {}
+        void allocate(int capacity){
+            int w01_elements = capacity * (INPUT_LAYER_SIZE * HIDDEN_LAYER_SIZE);
+            int w12_elements = capacity * (HIDDEN_LAYER_SIZE * OUTPUT_LAYER_SIZE);
+            int b0_elements = capacity * HIDDEN_LAYER_SIZE;
+            int b1_elements = capacity * OUTPUT_LAYER_SIZE;
+
+            CUDA_CHECK(cudaMallocManaged(&w01, w01_elements * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&w12, w12_elements * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&b0, b0_elements * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&b1, b1_elements * sizeof(float)));
+
+            CUDA_CHECK(cudaMemset(w01, 0, w01_elements * sizeof(float)));
+            CUDA_CHECK(cudaMemset(w12, 0, w12_elements * sizeof(float)));
+            CUDA_CHECK(cudaMemset(b0, 0, b0_elements * sizeof(float)));
+            CUDA_CHECK(cudaMemset(b1, 0, b1_elements * sizeof(float)));
+        }
+
+        void free(){
+            CUDA_CHECK(cudaFree(w01));
+            CUDA_CHECK(cudaFree(w12));
+            CUDA_CHECK(cudaFree(b0));
+            CUDA_CHECK(cudaFree(b1));
+        }
     } brains;
 
-    // Constructor
-    SwarmData(int capacity): 
-        max_capacity(capacity), 
-        current_count(0),
-        agentIdentifications(capacity),
-        fitnessMetrics(capacity),
-        energyMetrics(capacity),
-        physics(capacity),
-        perceptions(capacity),
-        sensors(capacity),
-        neuralOutputs(capacity),
-        brains(capacity) {}
+    // Constructor orchestrates allocations
+    SwarmData(int capacity) : max_capacity(capacity), current_count(0) {
+        agentIdentifications.allocate(capacity);
+        fitnessMetrics.allocate(capacity);
+        energyMetrics.allocate(capacity);
+        physics.allocate(capacity);
+        perceptions.allocate(capacity);
+        sensors.allocate(capacity);
+        neuralOutputs.allocate(capacity);
+        brains.allocate(capacity);
+    }
+
+    // Destructor cleanly releases memory
+    ~SwarmData() {
+        agentIdentifications.free();
+        fitnessMetrics.free();
+        energyMetrics.free();
+        physics.free();
+        perceptions.free();
+        sensors.free();
+        neuralOutputs.free();
+        brains.free();
+    }
 };

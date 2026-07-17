@@ -1,5 +1,6 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include <iostream>
 #include <vector>
 
 using namespace std;
@@ -148,7 +149,7 @@ const float PREDATOR_ENERGY_GAIN = MAX_ENERGY / 2;
 
 
 
-/* ------------------- Prey Settings ------------------ */
+/* ------------ Prey Settings ------------------ */
 
 // The radius within which a prey can eat grass
 constexpr float PREY_EAT_RADIUS_SQ = 4.0f;
@@ -219,3 +220,16 @@ struct ProfilingData {
     double t_total;
     double check_t_total;
 };
+
+// Helper macro to catch CUDA errors during allocation
+#define CUDA_CHECK(call) \
+    do { \
+        cudaError_t err = call; \
+        if (err != cudaSuccess) { \
+            std::cerr << "CUDA Error: " << cudaGetErrorString(err) \
+                      << " at " << __FILE__ << ":" << __LINE__ << std::endl; \
+            exit(EXIT_FAILURE); \
+        } \
+    } while (0)
+
+    
