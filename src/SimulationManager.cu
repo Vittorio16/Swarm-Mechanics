@@ -12,7 +12,7 @@
 SimulationManager::SimulationManager(int cores) : numCores(cores) {
     // Initialize N worlds
     for (int i = 0; i < numCores; i++) {
-        worlds.push_back(make_unique<World>(NUM_PREDATOR, NUM_PREY));
+        worlds.push_back(make_unique<World>(NUM_PREY, NUM_PREDATOR));
 
         // Launch persistent threads
         workers.emplace_back([this] {
@@ -256,7 +256,7 @@ void SimulationManager::resetSimulation() {
     // Re-create worlds
     worlds.clear(); 
     for (int i = 0; i < numCores; i++) {
-        worlds.push_back(make_unique<World>(NUM_PREDATOR, NUM_PREY));
+        worlds.push_back(make_unique<World>(NUM_PREY, NUM_PREDATOR));
     }
 
     // Adjust mutation parameters based on current generation count

@@ -15,8 +15,8 @@ void runProfiling(){
     csvFile << "NumPrey,NumPredators,Buckets,Observation,Think,Move,Cleanup,Total,Check_total\n";
 
     // Define the different numbers of agents to test
-    vector<int> predator_count = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384};
-    vector<int> prey_count = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    vector<int> prey_count = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192};
+    vector<int> predator_count = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192};
 
     // Iterations for averaging the profiling results
     int iterations = 200;
@@ -72,24 +72,40 @@ void runProfiling(){
     csvFile.close();
     std::cout << "Profiling completato. Dati salvati in profiling_results.csv" << std::endl;
 }
-
 int main() {
     if (PROFILING_ENABLED) {
         runProfiling();
         return 0;
     }
 
-    int numCores = std::thread::hardware_concurrency();
+    // int numCores = std::thread::hardware_concurrency();
+    int numCores = 2;
     if (numCores == 0) numCores = FALLBACK_CORE_NUMBER; // Fallback
 
-    cout << "Running on " << numCores - 1 << " logical cores." << endl;
+    cout << "Running on " << /*numCores - 1*/ 1 << " logical cores." << endl;
+
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Swarm Evolution - LOADING...");
     
-    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Swarm Evolution");
-    bool renderingEnabled = true;
+    // Draws the window before starting to setup memory
+    window.clear(sf::Color(30, 30, 30));
+    
+    sf::Font font;
+    // if (font.loadFromFile("Roboto-Regular.ttf")) {
+    //     sf::Text loadingText("Allocating CUDA Memory for " + std::to_string(numCores - 1) + " Worlds...\n\nThis is a heavy operation and takes 10-20 seconds.\nPlease do not close...", font, 40);
+    //     loadingText.setPosition(100.0f, 100.0f);
+    //     loadingText.setFillColor(sf::Color::White);
+    //     window.draw(loadingText);
+    // }
+    window.display(); 
 
-    sf::Clock clock;
-
+    // Memory allocation in CUDA
+    cout << "Allocating Unified Memory... Please wait, do not press CTRL+C." << endl;
     SimulationManager simManager(numCores - 1);
+    cout << "Allocation Complete! Starting simulation." << endl;
+
+    window.setTitle("Swarm Evolution");
+    bool renderingEnabled = true;
+    sf::Clock clock;
 
     window.setFramerateLimit(MAX_FPS);
 
@@ -112,16 +128,14 @@ int main() {
             if (event.type == sf::Event::Closed) window.close();
             
             if (event.type == sf::Event::Resized) {
-                // Update the view to the new window size
                 sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
                 window.setView(sf::View(visibleArea));
-
                 simManager.resizeTexture(event.size.width, event.size.height);
             }
+            
             // TOGGLE MODES
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::R) {
                 renderingEnabled = !renderingEnabled;
-                
                 if (renderingEnabled) {
                     window.setTitle("Sim (Real-Time)");
                     window.setFramerateLimit(MAX_FPS); 
@@ -132,20 +146,13 @@ int main() {
             }
         }
 
-        // Even if we don't draw, the simulation continues.
         float dt;
-
         if (renderingEnabled) {
-            // Rendering mode
             dt = clock.restart().asSeconds();
-            if (dt > MINIMUM_REAL_TIME_STEP) dt = MINIMUM_REAL_TIME_STEP; // Cap to prevent huge jumps
+            if (dt > MINIMUM_REAL_TIME_STEP) dt = MINIMUM_REAL_TIME_STEP;
         } else {
-            // Training Mode
-            if (DEBUGGING_ENABLED) {
-                dt = 0;
-            } else {
-                dt = FIXED_TIME_STEP;
-            }
+            if (DEBUGGING_ENABLED) dt = 0;
+            else dt = FIXED_TIME_STEP;
             clock.restart(); 
         }
 
