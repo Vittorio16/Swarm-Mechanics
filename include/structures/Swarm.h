@@ -1,28 +1,41 @@
 #pragma once
 #include <cuda_runtime.h>
+#include <curand_kernel.h>
 #include <thrust/device_ptr.h>
 #include <thrust/fill.h>
 #include "Core/Config.h"
 
 struct SwarmData {
+    // RNG generation for GPU
+    struct RandData {
+        curandState* state;
+        void allocate(int capacity) {
+            CUDA_CHECK(cudaMallocManaged(&state, capacity * sizeof(curandState)));
+        }
+        void free() {
+            CUDA_CHECK(cudaFree(state));
+        }
+    } rng;
+
     // Population Management
     int max_capacity;
-    int current_count;
+    int* current_count;
 
     // Agent Identification
     struct AgentIDData {
         uint64_t* ID;
         int* speciesID;
-        bool* isAlive;
+        // This needs to be int* otherwise it will not be aligned to 4, and thus not compatible with atomicExch
+        int* isAlive;
 
         void allocate(int capacity){
             CUDA_CHECK(cudaMallocManaged(&ID, capacity * sizeof(uint64_t)));
             CUDA_CHECK(cudaMallocManaged(&speciesID, capacity * sizeof(int)));
-            CUDA_CHECK(cudaMallocManaged(&isAlive, capacity * sizeof(bool)));
+            CUDA_CHECK(cudaMallocManaged(&isAlive, capacity * sizeof(int)));
 
             CUDA_CHECK(cudaMemset(ID, 0, capacity * sizeof(uint64_t)));
             CUDA_CHECK(cudaMemset(speciesID, 0, capacity * sizeof(int)));
-            CUDA_CHECK(cudaMemset(isAlive, 0, capacity * sizeof(bool)));
+            CUDA_CHECK(cudaMemset(isAlive, 0, capacity * sizeof(int)));
         }
 
         void free(){
@@ -267,7 +280,11 @@ struct SwarmData {
     } brains;
 
     // Constructor orchestrates allocations
-    SwarmData(int capacity) : max_capacity(capacity), current_count(0) {
+    SwarmData(int capacity) : max_capacity(capacity) {
+        CUDA_CHECK(cudaMallocManaged(&current_count, sizeof(int)));
+        *current_count = 0;
+
+        rng.allocate(capacity);
         agentIdentifications.allocate(capacity);
         fitnessMetrics.allocate(capacity);
         energyMetrics.allocate(capacity);
@@ -278,8 +295,11 @@ struct SwarmData {
         brains.allocate(capacity);
     }
 
-    // Destructor cleanly releases memory
-    ~SwarmData() {
+    // Destructor cleanly releases memory - cannot actually use destructor, since CPU
+    // would call it while GPU is still copying the structure
+    void freeAll() {
+        CUDA_CHECK(cudaFree(current_count));
+        rng.free();
         agentIdentifications.free();
         fitnessMetrics.free();
         energyMetrics.free();

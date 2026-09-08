@@ -25,6 +25,14 @@ World::World(int num_prey, int num_predators) :
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
 }
 
+// Destructor
+World::~World() {
+    swarm.freeAll();
+    spatialLattice.free();
+    foodLattice.free();
+    graveyard.free();
+}
+
 // Updates the world each tick of the simulation
 ProfilingData World::update(float dt, int generationCount){
     using namespace std::chrono;
@@ -342,7 +350,7 @@ void World::draw(sf::RenderWindow& window){
     // Draw the agents
     sf::ConvexShape boidShape = createShape(scaleX, scaleY);
     
-    for (int i = 0; i < swarm.current_count; i++){
+    for (int i = 0; i < *swarm.current_count; i++){
         setAgentShapeParameters(boidShape, swarm, i, scaleX, scaleY);
 
         if (SHOW_FOV) drawFOV(window, windowSize, swarm, i, scaleX, scaleY);

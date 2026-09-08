@@ -38,8 +38,4 @@ struct SpatialLatticeData{
     SpatialLatticeData(int cx, int cy){
         allocate(cx, cy);
     }
-
-    ~SpatialLatticeData(){
-        free();
-    }
 };

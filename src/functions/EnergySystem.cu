@@ -1,9 +1,9 @@
 #include "functions/EnergySystem.h"
 #include "functions/FoodLatticeSystem.h"
 
-__global__ void energySystemUpdateKernel(SwarmData& swarm, FoodLatticeData& foodLattice, float dt){
+__global__ void energySystemUpdateKernel(SwarmData swarm, FoodLatticeData foodLattice, float dt){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= swarm.current_count || !swarm.agentIdentifications.isAlive[i]) return;
+    if (i >= *swarm.current_count || !swarm.agentIdentifications.isAlive[i]) return;
 
     if (swarm.energyMetrics.remainingDigestion[i] > 0.0f){
         swarm.energyMetrics.remainingDigestion[i] -= dt;
@@ -68,7 +68,7 @@ __global__ void energySystemUpdateKernel(SwarmData& swarm, FoodLatticeData& food
                     // Avoids race condition of multiple prey eating the same grass
                     float foodEaten = atomicExch(&foodLattice.foodGrid[cell_index], 0.0f);
                     if (foodEaten > 0.001f){
-                        atomicAdd(&foodLattice.foodToSpawn, 1);
+                        atomicAdd(foodLattice.foodToSpawn, 1);
 
                         swarm.energyMetrics.remainingDigestion[i] = swarm.energyMetrics.digestionTime[i];
                         swarm.fitnessMetrics.energyGained[i] += foodEaten;
@@ -114,9 +114,10 @@ __global__ void energySystemUpdateKernel(SwarmData& swarm, FoodLatticeData& food
 
 // Handles energy consumption and feeding
 void EnergySystem::update(SwarmData& swarm, FoodLatticeData& foodLattice, float dt){
-    if (swarm.current_count == 0) return;
+    if (*swarm.current_count == 0) return;
 
     int block_size = 256;
-    int grid_size = (swarm.current_count + block_size - 1) / block_size;
+    int grid_size = (*swarm.current_count + block_size - 1) / block_size;
     energySystemUpdateKernel<<<grid_size, block_size>>>(swarm, foodLattice, dt);
+    cudaDeviceSynchronize();
 }

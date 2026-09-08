@@ -121,7 +121,7 @@ void SimulationManager::evolve() {
         GraveyardData& graveyard = world->graveyard;
 
         // Living agents extraction
-        for (int i = 0; i < swarm.current_count; i++){
+        for (int i = 0; i < *swarm.current_count; i++){
             if (!swarm.agentIdentifications.isAlive[i]) continue;
             float fitness = LifeSystem::getFitness(swarm, i);
 
@@ -134,7 +134,7 @@ void SimulationManager::evolve() {
         }
 
         // Dead agents' extraction from the graveyard
-        for (int i = 0; i < graveyard.current_count; i++){
+        for (int i = 0; i < *graveyard.current_count; i++){
             vector<float> brain;
             brain.reserve(W01_SIZE + W12_SIZE + B0_SIZE + B1_SIZE);
             
@@ -267,7 +267,7 @@ void SimulationManager::resetSimulation() {
     for (auto& world : worlds) {
         SwarmData& swarm = world->swarm;
 
-        for (int i = 0; i < swarm.current_count; i++){
+        for (int i = 0; i < *swarm.current_count; i++){
             float roll = randomFloat(0.0f, 1.0f);
             int species = swarm.agentIdentifications.speciesID[i];
             // Prey

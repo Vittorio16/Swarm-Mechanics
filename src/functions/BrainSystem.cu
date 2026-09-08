@@ -4,18 +4,33 @@
 #include "Core/GlobalHelpers.h"
 
 // Initializes the neural network weights and biases for each agent in the swarm randomly
-void BrainSystem::initRandom(SwarmData& swarm){
-    for (int i = 0; i < swarm.current_count; i++){
-        for (int j = 0; j < W01_SIZE; j++) swarm.brains.w01[i * W01_SIZE + j] = randomFloat(-1.0f, 1.0f);
-        for (int j = 0; j < W12_SIZE; j++) swarm.brains.w12[i * W12_SIZE + j] = randomFloat(-1.0f, 1.0f);
-        for (int j = 0; j < B0_SIZE; j++) swarm.brains.b0[i * B0_SIZE + j] = randomFloat(-1.0f, 1.0f);
-        for (int j = 0; j < B1_SIZE; j++) swarm.brains.b1[i * B1_SIZE + j] = randomFloat(-1.0f, 1.0f);
-    }
+__global__ void initRandomKernel(SwarmData swarm){
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= *swarm.current_count) return;
+
+    curandState localState = swarm.rng.state[i];
+
+    for (int j = 0; j < W01_SIZE; j++) swarm.brains.w01[i * W01_SIZE + j] = curand_uniform(&localState) * 2.0f - 1.0f;
+    for (int j = 0; j < W12_SIZE; j++) swarm.brains.w12[i * W12_SIZE + j] = curand_uniform(&localState) * 2.0f - 1.0f;
+    for (int j = 0; j < B0_SIZE; j++) swarm.brains.b0[i * B0_SIZE + j] = curand_uniform(&localState) * 2.0f - 1.0f;
+    for (int j = 0; j < B1_SIZE; j++) swarm.brains.b1[i * B1_SIZE + j] = curand_uniform(&localState) * 2.0f - 1.0f;
+
+    swarm.rng.state[i] = localState;
 }
 
-__global__ void brainThinkKernel(SwarmData& swarm){
+void BrainSystem::initRandom(SwarmData& swarm){
+    if (*swarm.current_count == 0) return;
+
+    int block_size = 256;
+    int grid_size = (*swarm.current_count + block_size - 1) / block_size;
+    
+    initRandomKernel<<<grid_size, block_size>>>(swarm);
+    cudaDeviceSynchronize();
+}
+
+__global__ void brainThinkKernel(SwarmData swarm){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= swarm.current_count) return;
+    if (i >= *swarm.current_count) return;
 
     // Prepare the inputs for the neural network
     float inputs[INPUT_LAYER_SIZE];
@@ -82,12 +97,12 @@ __global__ void brainThinkKernel(SwarmData& swarm){
 }
 // Given sensory inputs, decides on the agent's actions using a feed forward neural network
 void BrainSystem::think(SwarmData& swarm){
-    if (swarm.current_count == 0) return;
-
-    int block_size = 256;
-    int grid_size = (swarm.current_count + block_size - 1) / block_size;
+    if (*swarm.current_count == 0) return;
     
-    physicsUpdateKernel<<<grid_size, block_size>>>(swarm, dt);
+    int block_size = 256;
+    int grid_size = (*swarm.current_count + block_size - 1) / block_size;
+    
+    brainThinkKernel<<<grid_size, block_size>>>(swarm);
     cudaDeviceSynchronize();
 }
 
@@ -102,7 +117,7 @@ void BrainSystem::mutateVector(float* weights_array, int offset, int size, float
             weights_array[idx] = fmaxf(-1.0f, std::fminf(1.0f, weights_array[idx]));
         }
     }
-};
+}
 
 // Overloading for mutateVector to be used with vectors
 void BrainSystem::mutateVector(std::vector<float>& weights_vector, int offset, int size, float mutationRate, float mutationStrength) {

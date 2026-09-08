@@ -1,9 +1,9 @@
 #include <cmath>
 #include "functions/PhysicSystem.h"
 
-__global__ void physicsUpdateKernel(SwarmData& swarm, float dt) {
+__global__ void physicsUpdateKernel(SwarmData swarm, float dt) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= swarm.current_count) return;
+    if (i >= *swarm.current_count) return;
 
     swarm.fitnessMetrics.timeLived[i] += dt;
 
@@ -51,10 +51,10 @@ __global__ void physicsUpdateKernel(SwarmData& swarm, float dt) {
 
 // Moves the agents based on their current velocity and updates their facing angle based on neural outputs
 void PhysicsSystem::update(SwarmData& swarm, float dt){
-    if (swarm.current_count == 0) return;
+    if (*swarm.current_count == 0) return;
 
     int block_size = 256;
-    int grid_size = (swarm.current_count + block_size - 1) / block_size;
+    int grid_size = (*swarm.current_count + block_size - 1) / block_size;
     
     physicsUpdateKernel<<<grid_size, block_size>>>(swarm, dt);
     cudaDeviceSynchronize();

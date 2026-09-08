@@ -8,7 +8,7 @@ namespace FoodLatticeSystem {
 }
 
 void FoodLatticeSystem::grow(FoodLatticeData& foodLattice, float growthAmount){
-    for (int i = 0; i < foodLattice.foodToSpawn; i++){
+    for (int i = 0; i < *foodLattice.foodToSpawn; i++){
         int cx;
         int cy;
         bool foundEmpty = false;
@@ -47,5 +47,5 @@ void FoodLatticeSystem::grow(FoodLatticeData& foodLattice, float growthAmount){
         foodLattice.sumFoodX[chunk_index] += cx * actual_growth;
         foodLattice.sumFoodY[chunk_index] += cy * actual_growth;
     }
-    foodLattice.foodToSpawn = 0;
+    *foodLattice.foodToSpawn = 0;
 }

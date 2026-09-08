@@ -2,10 +2,10 @@
 #include "functions/LatticeSystem.h"
 #include "Core/Config.h"
 
-__global__ void latticeBuildKernel(SpatialLatticeData& lattice, SwarmData& swarm){
+__global__ void latticeBuildKernel(SpatialLatticeData lattice, SwarmData swarm){
     // Fills the lattice with the current information
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= swarm.current_count) return;
+    if (i >= *swarm.current_count) return;
 
     int bx = (int)(swarm.physics.x[i] / LATTICE_CELL_WIDTH);
     int by = (int)(swarm.physics.y[i] / LATTICE_CELL_HEIGHT);
@@ -28,10 +28,10 @@ void LatticeSystem::build(SpatialLatticeData& lattice, SwarmData& swarm){
     // Empties previous lattice
     CUDA_CHECK(cudaMemset(lattice.cell_counts, 0, lattice.total_cells * sizeof(int)));
 
-    if (swarm.current_count == 0) return;
+    if (*swarm.current_count == 0) return;
 
     int block_size = 256;
-    int grid_size = (swarm.current_count + block_size - 1) / block_size;
+    int grid_size = (*swarm.current_count + block_size - 1) / block_size;
 
     latticeBuildKernel<<<grid_size, block_size>>>(lattice, swarm);
     cudaDeviceSynchronize();

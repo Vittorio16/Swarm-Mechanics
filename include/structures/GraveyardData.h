@@ -5,7 +5,7 @@ using namespace std;
 
 struct GraveyardData {
     int max_capacity;
-    int current_count;
+    int* current_count;
 
     int* speciesID;
     float* fitness;
@@ -17,8 +17,8 @@ struct GraveyardData {
 
     void allocate(int capacity){
         max_capacity = capacity; 
-        current_count = 0;    
 
+        CUDA_CHECK(cudaMallocManaged(&current_count, sizeof(int)));
         CUDA_CHECK(cudaMallocManaged(&speciesID, capacity * sizeof(int)));
         CUDA_CHECK(cudaMallocManaged(&fitness, capacity * sizeof(float)));
         CUDA_CHECK(cudaMallocManaged(&w01, capacity * W01_SIZE * sizeof(float)));
@@ -26,6 +26,7 @@ struct GraveyardData {
         CUDA_CHECK(cudaMallocManaged(&b0, capacity * B0_SIZE * sizeof(float)));
         CUDA_CHECK(cudaMallocManaged(&b1, capacity * B1_SIZE * sizeof(float)));
 
+        *current_count = 0;    
         CUDA_CHECK(cudaMemset(speciesID, 0, capacity * sizeof(int)));
         CUDA_CHECK(cudaMemset(fitness, 0, capacity * sizeof(float)));
         CUDA_CHECK(cudaMemset(w01, 0, capacity * W01_SIZE * sizeof(float)));
@@ -35,6 +36,7 @@ struct GraveyardData {
     }
 
     void free(){
+        CUDA_CHECK(cudaFree(current_count));
         CUDA_CHECK(cudaFree(speciesID));
         CUDA_CHECK(cudaFree(fitness));
         CUDA_CHECK(cudaFree(w01));
@@ -45,10 +47,6 @@ struct GraveyardData {
     
     GraveyardData(int capacity){
         allocate(capacity);
-    }
-
-    ~GraveyardData(){
-        free();
     }
 
     void clear() {

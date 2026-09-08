@@ -2,10 +2,10 @@
 #include "functions/SensorySystem.h"
 #include "Core/Physics.h"
 
-__global__ void enemySenseKernel(SwarmData& swarm, const SpatialLatticeData& lattice){
+__global__ void enemySenseKernel(SwarmData swarm, const SpatialLatticeData lattice){
     // Gets an observation of the closest enemy for each agent in the swarm
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= swarm.current_count) return;
+    if (i >= *swarm.current_count) return;
 
     float observerHeading = swarm.physics.facingAngle[i];
     int mySpecies = swarm.agentIdentifications.speciesID[i];
@@ -137,9 +137,9 @@ __global__ void enemySenseKernel(SwarmData& swarm, const SpatialLatticeData& lat
 }
 
 
-__global__ void foodSenseKernel(SwarmData& swarm, const FoodLatticeData& foodLattice){
+__global__ void foodSenseKernel(SwarmData swarm, const FoodLatticeData foodLattice){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= swarm.current_count) return;
+    if (i >= *swarm.current_count) return;
 
     // Gets the food scent for each agent
     // First finds the best food chunk
@@ -291,10 +291,10 @@ __global__ void foodSenseKernel(SwarmData& swarm, const FoodLatticeData& foodLat
 
 // Gets an observation of the closest enemy, of food and parses it into the sensors
 void SensorySystem::update(SwarmData& swarm, const SpatialLatticeData& lattice, const FoodLatticeData& foodLattice){
-    if (swarm.current_count == 0) return;
+    if (*swarm.current_count == 0) return;
 
     int block_size = 256;
-    int grid_size = (swarm.current_count + block_size - 1) / block_size;
+    int grid_size = (*swarm.current_count + block_size - 1) / block_size;
     
     enemySenseKernel<<<grid_size, block_size>>>(swarm, lattice);
     foodSenseKernel<<<grid_size, block_size>>>(swarm, foodLattice);
