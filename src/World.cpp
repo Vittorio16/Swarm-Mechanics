@@ -317,7 +317,7 @@ ProfilingData World::update(float dt, int generationCount){
         agent->updateSensoryData(agentsInFOV, scents);
 
         auto e_obs = high_resolution_clock::now();
-        total_obs_time += duration_cast<nanoseconds>(e_obs - s_obs).count();
+        total_obs_time += std::chrono::duration<double, std::micro>(e_obs - s_obs).count();
         
         agent->think();
     }
@@ -386,13 +386,21 @@ ProfilingData World::update(float dt, int generationCount){
     }
     auto end_cleanup = high_resolution_clock::now();
     auto end = high_resolution_clock::now();
-    // Profiling output
-    double t_buckets = duration_cast<microseconds>(end_buckets - start_buckets).count();
-    double t_obs = total_obs_time / 1000.0; 
-    double t_think = duration_cast<microseconds>(end_think_obs - start_think).count() - t_obs;
-    double t_move = duration_cast<microseconds>(end_move - start_move).count();
-    double t_cleanup = duration_cast<microseconds>(end_cleanup - start_cleanup).count();
-    double t_total = duration_cast<microseconds>(end - start).count();
+
+    // --- PROFILING OUTPUT ---
+    double t_buckets = std::chrono::duration<double, std::micro>(end_buckets - start_buckets).count();
+    
+    // total_obs_time is already accumulated in microseconds
+    double t_obs = total_obs_time; 
+    
+    // Calculate total time of the combined think/observe loop, then isolate think time
+    double t_think_obs_combined = std::chrono::duration<double, std::micro>(end_think_obs - start_think).count();
+    double t_think = t_think_obs_combined - t_obs;
+    
+    double t_move = std::chrono::duration<double, std::micro>(end_move - start_move).count();
+    double t_cleanup = std::chrono::duration<double, std::micro>(end_cleanup - start_cleanup).count();
+    double t_total = std::chrono::duration<double, std::micro>(end - start).count();
+    
     double check_t_total = t_buckets + t_obs + t_think + t_move + t_cleanup;
 
     return {t_buckets, t_obs, t_think, t_move, t_cleanup, t_total, check_t_total};
