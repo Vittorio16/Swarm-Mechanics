@@ -78,12 +78,12 @@ ProfilingData World::update(float dt, int generationCount){
     auto end_total = high_resolution_clock::now();
 
     // --- PROFILING OUTPUT ---
-    double t_buckets = duration_cast<microseconds>(end_buckets - start_buckets).count();
-    double t_obs     = duration_cast<microseconds>(end_obs - start_obs).count(); 
-    double t_think   = duration_cast<microseconds>(end_think - start_think).count();
-    double t_move    = duration_cast<microseconds>(end_move - start_move).count();
-    double t_cleanup = duration_cast<microseconds>(end_cleanup - start_cleanup).count();
-    double t_total   = duration_cast<microseconds>(end_total - start_total).count();
+    double t_buckets = std::chrono::duration<double, std::micro>(end_buckets - start_buckets).count();
+    double t_obs     = std::chrono::duration<double, std::micro>(end_obs - start_obs).count(); 
+    double t_think   = std::chrono::duration<double, std::micro>(end_think - start_think).count();
+    double t_move    = std::chrono::duration<double, std::micro>(end_move - start_move).count();
+    double t_cleanup = std::chrono::duration<double, std::micro>(end_cleanup - start_cleanup).count();
+    double t_total   = std::chrono::duration<double, std::micro>(end_total - start_total).count();
     
     double check_t_total = t_buckets + t_obs + t_think + t_move + t_cleanup;
 

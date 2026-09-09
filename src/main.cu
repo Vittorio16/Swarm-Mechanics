@@ -11,12 +11,13 @@ using namespace std;
 void runProfiling(){
     cout << "Avvio Profiling..." << std::endl;
     
-    ofstream csvFile("../profiling/profiling_results.csv");
+    ofstream csvFile("../profiling/data/profiling_results.csv");
     csvFile << "NumPrey,NumPredators,Buckets,Observation,Think,Move,Cleanup,Total,Check_total\n";
 
     // Define the different numbers of agents to test
     vector<int> prey_count = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    vector<int> predator_count = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072};
+    vector<int> predator_count = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    // vector<int> predator_count = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072};
 
     // Iterations for averaging the profiling results
     int iterations = 200;
