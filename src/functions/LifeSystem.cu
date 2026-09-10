@@ -76,15 +76,27 @@ void LifeSystem::initSwarm(SwarmData& swarm, int num_prey, int num_predators){
     BrainSystem::initRandom(swarm);
 }
 
-void LifeSystem::handleDeaths(SwarmData& swarm, GraveyardData& graveyard){
-    for (int i = 0; i < *swarm.current_count; ){
-        if (!swarm.agentIdentifications.isAlive[i]){
-            float fitness = LifeSystem::getFitness(swarm, i);
+// Count survivors and write dead agents to the graveyard
+__global__ void evaluateAndCountAliveKernel(SwarmData swarm, GraveyardData graveyard, int active_agents) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= active_agents) return;
 
-            if (fitness >= MINIMUM_FITNESS_TO_BE_SAVED) {
-                if (*graveyard.current_count >= graveyard.max_capacity) continue;
+    if (swarm.agentIdentifications.isAlive[i]) {
+        atomicAdd(swarm.compaction.alive_count, 1);
+    } else {
+        // Calculate Fitness for dead agent
+        float fitness;
+        if (swarm.agentIdentifications.speciesID[i] == PREY_ID) {
+            fitness = swarm.fitnessMetrics.timeLived[i] + (swarm.fitnessMetrics.energyGained[i] * PREY_ENERGY_FITNESS_MULTIPLIER);
+            if (swarm.energyMetrics.energy[i] > 0) fitness *= PREY_HUNTED_PENALTY;
+        } else {
+            fitness = swarm.fitnessMetrics.energyGained[i];
+        }
 
-                int slot = *graveyard.current_count;
+        // Write to Graveyard
+        if (fitness >= MINIMUM_FITNESS_TO_BE_SAVED) {
+            int slot = atomicAdd(graveyard.current_count, 1);
+            if (slot < graveyard.max_capacity) {
                 graveyard.speciesID[slot] = swarm.agentIdentifications.speciesID[i];
                 graveyard.fitness[slot] = fitness;
                 
@@ -92,84 +104,121 @@ void LifeSystem::handleDeaths(SwarmData& swarm, GraveyardData& graveyard){
                 for (int j = 0; j < W12_SIZE; j++) graveyard.w12[slot * W12_SIZE + j] = swarm.brains.w12[i * W12_SIZE + j];
                 for (int j = 0; j < B0_SIZE; j++) graveyard.b0[slot * B0_SIZE + j] = swarm.brains.b0[i * B0_SIZE + j];
                 for (int j = 0; j < B1_SIZE; j++) graveyard.b1[slot * B1_SIZE + j] = swarm.brains.b1[i * B1_SIZE + j];
-                
-                (*graveyard.current_count)++;
+            } else {
+                atomicSub(graveyard.current_count, 1); // Graveyard full
             }
-
-            int last_idx = *swarm.current_count - 1;
-            (*swarm.current_count) -= 1;
-
-            if (i == last_idx) continue;
-            // RNG
-            swarm.rng.state[i] = swarm.rng.state[last_idx];
-
-            // Identifications
-            swarm.agentIdentifications.ID[i] = swarm.agentIdentifications.ID[last_idx];
-            swarm.agentIdentifications.speciesID[i] = swarm.agentIdentifications.speciesID[last_idx];
-            swarm.agentIdentifications.isAlive[i] = swarm.agentIdentifications.isAlive[last_idx];
-
-            // Fitness
-            swarm.fitnessMetrics.timeLived[i] = swarm.fitnessMetrics.timeLived[last_idx];
-            swarm.fitnessMetrics.energyGained[i] = swarm.fitnessMetrics.energyGained[last_idx];
-
-            // Energy
-            swarm.energyMetrics.energy[i] = swarm.energyMetrics.energy[last_idx];
-            swarm.energyMetrics.digestionTime[i] = swarm.energyMetrics.digestionTime[last_idx];
-            swarm.energyMetrics.remainingDigestion[i] = swarm.energyMetrics.remainingDigestion[last_idx];
-            swarm.energyMetrics.childCount[i] = swarm.energyMetrics.childCount[last_idx];
-            swarm.energyMetrics.reproductionCooldown[i] = swarm.energyMetrics.reproductionCooldown[last_idx];
-
-            // Physics
-            swarm.physics.friction[i] = swarm.physics.friction[last_idx];
-            swarm.physics.force[i] = swarm.physics.force[last_idx];
-            swarm.physics.maxSpeed[i] = swarm.physics.maxSpeed[last_idx];
-            swarm.physics.x[i] = swarm.physics.x[last_idx];
-            swarm.physics.y[i] = swarm.physics.y[last_idx];
-            swarm.physics.vx[i] = swarm.physics.vx[last_idx];
-            swarm.physics.vy[i] = swarm.physics.vy[last_idx];
-            swarm.physics.speed[i] = swarm.physics.speed[last_idx];
-            swarm.physics.facingAngle[i] = swarm.physics.facingAngle[last_idx];
-
-            // Perception
-            swarm.perceptions.sensingRange[i] = swarm.perceptions.sensingRange[last_idx];
-            swarm.perceptions.viewRadius[i] = swarm.perceptions.viewRadius[last_idx];
-            swarm.perceptions.fovAngle[i] = swarm.perceptions.fovAngle[last_idx];
-            swarm.perceptions.grassViewRadius[i] = swarm.perceptions.grassViewRadius[last_idx];
-
-            // Sensors
-            swarm.sensors.lockedEnemyIndex[i] = swarm.sensors.lockedEnemyIndex[last_idx];
-            swarm.sensors.closestEnemyIndex[i] = swarm.sensors.closestEnemyIndex[last_idx];
-            swarm.sensors.closestEnemyX[i] = swarm.sensors.closestEnemyX[last_idx];
-            swarm.sensors.closestEnemyY[i] = swarm.sensors.closestEnemyY[last_idx];
-            swarm.sensors.closestEnemyDist[i] = swarm.sensors.closestEnemyDist[last_idx];
-            swarm.sensors.enemyClosingSpeed[i] = swarm.sensors.enemyClosingSpeed[last_idx];
-            swarm.sensors.enemyTangentialSpeed[i] = swarm.sensors.enemyTangentialSpeed[last_idx];
-            swarm.sensors.foodSenseX[i] = swarm.sensors.foodSenseX[last_idx];
-            swarm.sensors.foodSenseY[i] = swarm.sensors.foodSenseY[last_idx];
-            swarm.sensors.foodDistance[i] = swarm.sensors.foodDistance[last_idx];
-            swarm.sensors.foodClosingVelocity[i] = swarm.sensors.foodClosingVelocity[last_idx];
-            swarm.sensors.foodTangentialVelocity[i] = swarm.sensors.foodTangentialVelocity[last_idx];
-            swarm.sensors.energyReserve[i] = swarm.sensors.energyReserve[last_idx];
-
-            // Neural Outputs
-            swarm.neuralOutputs.thrustIntent[i] = swarm.neuralOutputs.thrustIntent[last_idx];
-            swarm.neuralOutputs.turnIntent[i] = swarm.neuralOutputs.turnIntent[last_idx];
-            swarm.neuralOutputs.previousThrustIntent[i] = swarm.neuralOutputs.previousThrustIntent[last_idx];
-            swarm.neuralOutputs.previousTurnIntent[i] = swarm.neuralOutputs.previousTurnIntent[last_idx];
-
-            // Brains
-            for (int j = 0; j < W01_SIZE; j++) swarm.brains.w01[i * W01_SIZE + j] = swarm.brains.w01[last_idx * W01_SIZE + j];
-            for (int j = 0; j < W12_SIZE; j++) swarm.brains.w12[i * W12_SIZE + j] = swarm.brains.w12[last_idx * W12_SIZE + j];
-            for (int j = 0; j < B0_SIZE; j++) swarm.brains.b0[i * B0_SIZE + j] = swarm.brains.b0[last_idx * B0_SIZE + j];
-            for (int j = 0; j < B1_SIZE; j++) swarm.brains.b1[i * B1_SIZE + j] = swarm.brains.b1[last_idx * B1_SIZE + j];
-        } else{
-            i++;
         }
     }
 }
 
-__global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mutationStrength){
-    int initial_count = *swarm.current_count;
+// Map the Holes and Movers based on the boundary 
+__global__ void mapCompactionKernel(SwarmData swarm, int active_agents) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= active_agents) return;
+
+    int boundary = *swarm.compaction.alive_count;
+    // This always bocks because if there are n alive agents they will fit in the first n slots
+    if (i < boundary && !swarm.agentIdentifications.isAlive[i]) {
+        int idx = atomicAdd(swarm.compaction.hole_count, 1);
+        swarm.compaction.holes_array[idx] = i;
+    }
+    if (i >= boundary && swarm.agentIdentifications.isAlive[i]) {
+        int idx = atomicAdd(swarm.compaction.mover_count, 1);
+        swarm.compaction.movers_array[idx] = i;
+    }
+}
+
+// Pair holes and movers up and relocate the data
+__global__ void moveCompactionKernel(SwarmData swarm, int active_agents) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Only launch as many threads as there are holes
+    if (i >= *swarm.compaction.hole_count) return;
+
+    int dest = swarm.compaction.holes_array[i];
+    int src = swarm.compaction.movers_array[i];
+
+    // Transfer all SoA data from src to dest
+    swarm.rng.state[dest] = swarm.rng.state[src];
+    
+    swarm.agentIdentifications.ID[dest] = swarm.agentIdentifications.ID[src];
+    swarm.agentIdentifications.speciesID[dest] = swarm.agentIdentifications.speciesID[src];
+    swarm.agentIdentifications.isAlive[dest] = swarm.agentIdentifications.isAlive[src];
+    
+    swarm.fitnessMetrics.timeLived[dest] = swarm.fitnessMetrics.timeLived[src];
+    swarm.fitnessMetrics.energyGained[dest] = swarm.fitnessMetrics.energyGained[src];
+    
+    swarm.energyMetrics.energy[dest] = swarm.energyMetrics.energy[src];
+    swarm.energyMetrics.digestionTime[dest] = swarm.energyMetrics.digestionTime[src];
+    swarm.energyMetrics.remainingDigestion[dest] = swarm.energyMetrics.remainingDigestion[src];
+    swarm.energyMetrics.childCount[dest] = swarm.energyMetrics.childCount[src];
+    swarm.energyMetrics.reproductionCooldown[dest] = swarm.energyMetrics.reproductionCooldown[src];
+    
+    swarm.physics.friction[dest] = swarm.physics.friction[src];
+    swarm.physics.force[dest] = swarm.physics.force[src];
+    swarm.physics.maxSpeed[dest] = swarm.physics.maxSpeed[src];
+    swarm.physics.x[dest] = swarm.physics.x[src];
+    swarm.physics.y[dest] = swarm.physics.y[src];
+    swarm.physics.vx[dest] = swarm.physics.vx[src];
+    swarm.physics.vy[dest] = swarm.physics.vy[src];
+    swarm.physics.speed[dest] = swarm.physics.speed[src];
+    swarm.physics.facingAngle[dest] = swarm.physics.facingAngle[src];
+    
+    swarm.perceptions.sensingRange[dest] = swarm.perceptions.sensingRange[src];
+    swarm.perceptions.viewRadius[dest] = swarm.perceptions.viewRadius[src];
+    swarm.perceptions.fovAngle[dest] = swarm.perceptions.fovAngle[src];
+    swarm.perceptions.grassViewRadius[dest] = swarm.perceptions.grassViewRadius[src];
+    
+    swarm.sensors.lockedEnemyIndex[dest] = swarm.sensors.lockedEnemyIndex[src];
+    swarm.sensors.closestEnemyIndex[dest] = swarm.sensors.closestEnemyIndex[src];
+    swarm.sensors.closestEnemyX[dest] = swarm.sensors.closestEnemyX[src];
+    swarm.sensors.closestEnemyY[dest] = swarm.sensors.closestEnemyY[src];
+    swarm.sensors.closestEnemyDist[dest] = swarm.sensors.closestEnemyDist[src];
+    swarm.sensors.enemyClosingSpeed[dest] = swarm.sensors.enemyClosingSpeed[src];
+    swarm.sensors.enemyTangentialSpeed[dest] = swarm.sensors.enemyTangentialSpeed[src];
+    swarm.sensors.foodSenseX[dest] = swarm.sensors.foodSenseX[src];
+    swarm.sensors.foodSenseY[dest] = swarm.sensors.foodSenseY[src];
+    swarm.sensors.foodDistance[dest] = swarm.sensors.foodDistance[src];
+    swarm.sensors.foodClosingVelocity[dest] = swarm.sensors.foodClosingVelocity[src];
+    swarm.sensors.foodTangentialVelocity[dest] = swarm.sensors.foodTangentialVelocity[src];
+    swarm.sensors.energyReserve[dest] = swarm.sensors.energyReserve[src];
+    
+    swarm.neuralOutputs.thrustIntent[dest] = swarm.neuralOutputs.thrustIntent[src];
+    swarm.neuralOutputs.turnIntent[dest] = swarm.neuralOutputs.turnIntent[src];
+    swarm.neuralOutputs.previousThrustIntent[dest] = swarm.neuralOutputs.previousThrustIntent[src];
+    swarm.neuralOutputs.previousTurnIntent[dest] = swarm.neuralOutputs.previousTurnIntent[src];
+    
+    for (int j = 0; j < W01_SIZE; j++) swarm.brains.w01[dest * W01_SIZE + j] = swarm.brains.w01[src * W01_SIZE + j];
+    for (int j = 0; j < W12_SIZE; j++) swarm.brains.w12[dest * W12_SIZE + j] = swarm.brains.w12[src * W12_SIZE + j];
+    for (int j = 0; j < B0_SIZE; j++) swarm.brains.b0[dest * B0_SIZE + j] = swarm.brains.b0[src * B0_SIZE + j];
+    for (int j = 0; j < B1_SIZE; j++) swarm.brains.b1[dest * B1_SIZE + j] = swarm.brains.b1[src * B1_SIZE + j];
+}
+
+// Finalize count and reset metrics for the next tick
+__global__ void finalizeCompactionKernel(SwarmData swarm) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        *swarm.current_count = *swarm.compaction.alive_count;
+        *swarm.compaction.alive_count = 0;
+        *swarm.compaction.hole_count = 0;
+        *swarm.compaction.mover_count = 0;
+    }
+}
+
+void LifeSystem::handleDeaths(SwarmData& swarm, GraveyardData& graveyard, int active_agents){
+    if (active_agents == 0) return;
+    int grid_size = (active_agents + BLOCK_SIZE - 1) / BLOCK_SIZE;
+
+    evaluateAndCountAliveKernel<<<grid_size, BLOCK_SIZE>>>(swarm, graveyard, active_agents);
+    mapCompactionKernel<<<grid_size, BLOCK_SIZE>>>(swarm, active_agents);
+    
+    // worst-case grid_size so we don't have to sync the CPU to read hole_count
+    moveCompactionKernel<<<grid_size, BLOCK_SIZE>>>(swarm, active_agents);
+    
+    finalizeCompactionKernel<<<1, 1>>>(swarm);
+}
+
+__global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mutationStrength, int active_agents){
+    int initial_count = active_agents;
     
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= initial_count) return;
@@ -262,12 +311,12 @@ __global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mu
 }
 
 // Hanles the birth of new agents
-void LifeSystem::handleBirths(SwarmData& swarm, float mutationRate, float mutationStrength){
-    if (swarm.current_count == 0) return;
+void LifeSystem::handleBirths(SwarmData& swarm, float mutationRate, float mutationStrength, int active_agents){
+    if (active_agents == 0) return;
 
-    int grid_size = (*swarm.current_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    int grid_size = (active_agents + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    handleBirthsKernel<<<grid_size, BLOCK_SIZE>>>(swarm, mutationRate, mutationStrength);
+    handleBirthsKernel<<<grid_size, BLOCK_SIZE>>>(swarm, mutationRate, mutationStrength, active_agents);
 }
 
 

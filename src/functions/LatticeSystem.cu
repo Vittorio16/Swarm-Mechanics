@@ -2,10 +2,10 @@
 #include "functions/LatticeSystem.h"
 #include "Core/Config.h"
 
-__global__ void latticeBuildKernel(SpatialLatticeData lattice, SwarmData swarm){
+__global__ void latticeBuildKernel(SpatialLatticeData lattice, SwarmData swarm, int active_agents) {
     // Fills the lattice with the current information
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= *swarm.current_count) return;
+    if (i >= active_agents) return;
 
     int bx = (int)(swarm.physics.x[i] / LATTICE_CELL_WIDTH);
     int by = (int)(swarm.physics.y[i] / LATTICE_CELL_HEIGHT);
@@ -24,13 +24,11 @@ __global__ void latticeBuildKernel(SpatialLatticeData lattice, SwarmData swarm){
     }
 }
 
-void LatticeSystem::build(SpatialLatticeData& lattice, SwarmData& swarm){
+void LatticeSystem::build(SpatialLatticeData& lattice, SwarmData& swarm, int active_agents) {
     // Empties previous lattice
     CUDA_CHECK(cudaMemset(lattice.cell_counts, 0, lattice.total_cells * sizeof(int)));
 
-    if (*swarm.current_count == 0) return;
+    int grid_size = (active_agents + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    int grid_size = (*swarm.current_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
-
-    latticeBuildKernel<<<grid_size, BLOCK_SIZE>>>(lattice, swarm);
+    latticeBuildKernel<<<grid_size, BLOCK_SIZE>>>(lattice, swarm, active_agents);
 }

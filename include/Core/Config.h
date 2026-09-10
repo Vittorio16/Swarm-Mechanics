@@ -8,7 +8,7 @@ using namespace std;
 /* ------------------- Main settings ------------------ */
 
 // GPU settings
-int BLOCK_SIZE = 256;
+constexpr int BLOCK_SIZE = 256;
 
 // Used when failed to detect hardware concurrency
 constexpr int FALLBACK_CORE_NUMBER = 4;
@@ -67,12 +67,12 @@ const float RANDOM_INJECTION_RATE = 0.20f; // minus the hof injection rate
 /* ------------------- World Settings ------------------ */
 
 // Starting agents
-constexpr int MAX_SWARM_CAPACITY = 300000;
+constexpr int MAX_SWARM_CAPACITY = 100000;
 constexpr int NUM_PREDATOR = 50;
 constexpr int NUM_PREY = 400;
 // Graveyard settings
 
-constexpr int MAX_GRAVEYARD_CAPACITY = 10 * MAX_SWARM_CAPACITY;
+constexpr int MAX_GRAVEYARD_CAPACITY = 1.5 * MAX_SWARM_CAPACITY;
 
 // World dimensions
 constexpr int NUM_CELLE_X = 960;

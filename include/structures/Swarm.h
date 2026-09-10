@@ -279,6 +279,35 @@ struct SwarmData {
         }
     } brains;
 
+    // Compaction data for graveyard management
+    struct CompactionData {
+        int* alive_count;
+        int* hole_count;
+        int* mover_count;
+        int* holes_array;
+        int* movers_array;
+
+        void allocate(int capacity){
+            CUDA_CHECK(cudaMallocManaged(&alive_count, sizeof(int)));
+            CUDA_CHECK(cudaMallocManaged(&hole_count, sizeof(int)));
+            CUDA_CHECK(cudaMallocManaged(&mover_count, sizeof(int)));
+            CUDA_CHECK(cudaMallocManaged(&holes_array, capacity * sizeof(int)));
+            CUDA_CHECK(cudaMallocManaged(&movers_array, capacity * sizeof(int)));
+            
+            *alive_count = 0;
+            *hole_count = 0;
+            *mover_count = 0;
+        }
+
+        void free(){
+            CUDA_CHECK(cudaFree(alive_count));
+            CUDA_CHECK(cudaFree(hole_count));
+            CUDA_CHECK(cudaFree(mover_count));
+            CUDA_CHECK(cudaFree(holes_array));
+            CUDA_CHECK(cudaFree(movers_array));
+        }
+    } compaction;
+
     // Constructor orchestrates allocations
     SwarmData(int capacity) : max_capacity(capacity) {
         CUDA_CHECK(cudaMallocManaged(&current_count, sizeof(int)));
@@ -293,6 +322,7 @@ struct SwarmData {
         sensors.allocate(capacity);
         neuralOutputs.allocate(capacity);
         brains.allocate(capacity);
+        compaction.allocate(capacity);
     }
 
     // Destructor cleanly releases memory - cannot actually use destructor, since CPU
@@ -308,5 +338,6 @@ struct SwarmData {
         sensors.free();
         neuralOutputs.free();
         brains.free();
+        compaction.free();
     }
 };

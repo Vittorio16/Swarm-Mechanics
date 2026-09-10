@@ -27,9 +27,9 @@ void BrainSystem::initRandom(SwarmData& swarm){
     cudaDeviceSynchronize();
 }
 
-__global__ void brainThinkKernel(SwarmData swarm){
+__global__ void brainThinkKernel(SwarmData swarm, int current_count){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= *swarm.current_count) return;
+    if (i >= current_count) return;
 
     // Prepare the inputs for the neural network
     float inputs[INPUT_LAYER_SIZE];
@@ -95,12 +95,12 @@ __global__ void brainThinkKernel(SwarmData swarm){
     swarm.neuralOutputs.previousTurnIntent[i] = swarm.neuralOutputs.turnIntent[i];
 }
 // Given sensory inputs, decides on the agent's actions using a feed forward neural network
-void BrainSystem::think(SwarmData& swarm){
-    if (*swarm.current_count == 0) return;
+void BrainSystem::think(SwarmData& swarm, int current_count){
+    if (current_count == 0) return;
     
-    int grid_size = (*swarm.current_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    int grid_size = (current_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
     
-    brainThinkKernel<<<grid_size, BLOCK_SIZE>>>(swarm);
+    brainThinkKernel<<<grid_size, BLOCK_SIZE>>>(swarm, current_count);
 }
 
 // Mutates weights based on give mutation rate and strength

@@ -2,10 +2,10 @@
 #include "functions/SensorySystem.h"
 #include "Core/Physics.h"
 
-__global__ void enemySenseKernel(SwarmData swarm, const SpatialLatticeData lattice){
+__global__ void enemySenseKernel(SwarmData swarm, const SpatialLatticeData lattice, int active_agents){
     // Gets an observation of the closest enemy for each agent in the swarm
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= *swarm.current_count) return;
+    if (i >= active_agents) return;
 
     float observerHeading = swarm.physics.facingAngle[i];
     int mySpecies = swarm.agentIdentifications.speciesID[i];
@@ -137,9 +137,9 @@ __global__ void enemySenseKernel(SwarmData swarm, const SpatialLatticeData latti
 }
 
 
-__global__ void foodSenseKernel(SwarmData swarm, const FoodLatticeData foodLattice){
+__global__ void foodSenseKernel(SwarmData swarm, const FoodLatticeData foodLattice, int active_agents){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= *swarm.current_count) return;
+    if (i >= active_agents) return;
 
     // Gets the food scent for each agent
     // First finds the best food chunk
@@ -290,11 +290,11 @@ __global__ void foodSenseKernel(SwarmData swarm, const FoodLatticeData foodLatti
 }
 
 // Gets an observation of the closest enemy, of food and parses it into the sensors
-void SensorySystem::update(SwarmData& swarm, const SpatialLatticeData& lattice, const FoodLatticeData& foodLattice){
-    if (*swarm.current_count == 0) return;
+void SensorySystem::update(SwarmData& swarm, const SpatialLatticeData& lattice, const FoodLatticeData& foodLattice, int active_agents){
+    if (active_agents == 0) return;
 
-    int grid_size = (*swarm.current_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    int grid_size = (active_agents + BLOCK_SIZE - 1) / BLOCK_SIZE;
     
-    enemySenseKernel<<<grid_size, BLOCK_SIZE>>>(swarm, lattice);
-    foodSenseKernel<<<grid_size, BLOCK_SIZE>>>(swarm, foodLattice);
+    enemySenseKernel<<<grid_size, BLOCK_SIZE>>>(swarm, lattice, active_agents);
+    foodSenseKernel<<<grid_size, BLOCK_SIZE>>>(swarm, foodLattice, active_agents);
 }

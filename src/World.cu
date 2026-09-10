@@ -39,26 +39,30 @@ ProfilingData World::update(float dt, int generationCount){
     using namespace std::chrono;
     
     auto start_total = high_resolution_clock::now();
+    
+    // Snapshot of the current swarm count for this tick, so that it doesn't have to be passed around between CPU and GPU
+    int active_agents = *swarm.current_count;
+    if (active_agents == 0) return {0, 0, 0, 0, 0, 0, 0}; 
 
     // --- 1. SPATIAL LATTICE (Buckets) ---
     auto start_buckets = high_resolution_clock::now();
-    LatticeSystem::build(spatialLattice, swarm);
+    LatticeSystem::build(spatialLattice, swarm, active_agents);
     auto end_buckets = high_resolution_clock::now();
 
     // --- 2. OBSERVATION (Sensors) ---
     auto start_obs = high_resolution_clock::now();
-    SensorySystem::update(swarm, spatialLattice, foodLattice);
+    SensorySystem::update(swarm, spatialLattice, foodLattice, active_agents);
     auto end_obs = high_resolution_clock::now();
 
     // --- 3. THINK (Neural Network) ---
     auto start_think = high_resolution_clock::now();
-    BrainSystem::think(swarm);
+    BrainSystem::think(swarm, active_agents);
     auto end_think = high_resolution_clock::now();
 
     // --- 4. MOVE (Physics & Energy) ---
     auto start_move = high_resolution_clock::now();
-    PhysicsSystem::update(swarm, dt);
-    EnergySystem::update(swarm, foodLattice, dt);
+    PhysicsSystem::update(swarm, dt, active_agents);
+    EnergySystem::update(swarm, foodLattice, dt, active_agents);
     auto end_move = high_resolution_clock::now();
 
     // --- 5. CLEANUP (Life Cycle and Grass Growth) ---
@@ -71,15 +75,12 @@ ProfilingData World::update(float dt, int generationCount){
     // Handles grass growth
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
 
-    // Handles agents' births
-    LifeSystem::handleBirths(swarm, dynamicRate, dynamicStrength);
-
-    // Synchronize before CPU function
-    cudaDeviceSynchronize();
-    
     // Handles first deaths, then births to keep the array compact
-    LifeSystem::handleDeaths(swarm, graveyard);
-    
+    LifeSystem::handleDeaths(swarm, graveyard, active_agents);
+    LifeSystem::handleBirths(swarm, dynamicRate, dynamicStrength, active_agents);
+
+    // Synchronize CPU before next iteration 
+    cudaDeviceSynchronize();
     auto end_cleanup = high_resolution_clock::now();
     
     auto end_total = high_resolution_clock::now();

@@ -3,5 +3,5 @@
 #include "structures/Swarm.h"
 
 namespace LatticeSystem {
-    void build(SpatialLatticeData& lattice, SwarmData& swarm);
+    void build(SpatialLatticeData& lattice, SwarmData& swarm, int active_agents);
 }

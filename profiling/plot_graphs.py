@@ -14,10 +14,10 @@ COLUMNS = {"Buckets","Observation","Think","Move","Cleanup","Total"}
 # The format is: {"Label for Legend": "filename.csv"}
 # This example compares all versions for the "Prey Only" scenario
 FILES_TO_PLOT = {
-    "Original CPU": "data/profiling_results_cpu_prede_e_predatori.csv",
-    "CPU (No Vectors)": "data/profiling_results_removed_vectors_prede_e_predatori.csv",
-    "CPU (SoA)": "data/profiling_results_gpuready_cpu_prede_e_predatori.csv",
-    "GPU (V1)": "data/profiling_results_gpuV1_prede_e_predatori.csv"
+    "Original CPU": "data/profiling_results_cpu_prede_predatori.csv",
+    "CPU (SoA)": "data/profiling_results_gpuready_cpu_prede_predatori.csv",
+    "CPU (SoA, no Vectors)": "data/profiling_results_cpu_soa_prede_predatori.csv",
+    "GPU (V1)": "data/profiling_results_gpuV1_prede_predatori.csv"
 }
 
 # ==========================================

@@ -8,7 +8,7 @@ namespace LifeSystem {
     extern thread_local std::uniform_int_distribution<int> disY;
 
     void initSwarm(SwarmData& swarm, int num_prey, int num_predators);
-    void handleDeaths(SwarmData& swarm, GraveyardData& graveyard);
-    void handleBirths(SwarmData& swarm, float mutationRate, float mutationStrength);
+    void handleDeaths(SwarmData& swarm, GraveyardData& graveyard, int active_agents);
+    void handleBirths(SwarmData& swarm, float mutationRate, float mutationStrength, int active_agents);
     float getFitness(SwarmData& swarm, int index);
 }

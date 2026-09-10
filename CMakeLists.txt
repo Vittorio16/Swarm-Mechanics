@@ -34,6 +34,10 @@ file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.cu")
 
 
 add_executable(SwarmSim ${SOURCES})
+
+# Allocates different streams for each thread
+target_compile_definitions(SwarmSim PRIVATE CUDA_API_PER_THREAD_DEFAULT_STREAM)
+
 target_link_libraries(SwarmSim PRIVATE 
     sfml-graphics 
     sfml-window 

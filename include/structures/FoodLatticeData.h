@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Config.h"
+#include <curand_kernel.h>
 
 using namespace std;
 
