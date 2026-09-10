@@ -293,10 +293,8 @@ __global__ void foodSenseKernel(SwarmData swarm, const FoodLatticeData foodLatti
 void SensorySystem::update(SwarmData& swarm, const SpatialLatticeData& lattice, const FoodLatticeData& foodLattice){
     if (*swarm.current_count == 0) return;
 
-    int block_size = 256;
-    int grid_size = (*swarm.current_count + block_size - 1) / block_size;
+    int grid_size = (*swarm.current_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
     
-    enemySenseKernel<<<grid_size, block_size>>>(swarm, lattice);
-    foodSenseKernel<<<grid_size, block_size>>>(swarm, foodLattice);
-    cudaDeviceSynchronize();
+    enemySenseKernel<<<grid_size, BLOCK_SIZE>>>(swarm, lattice);
+    foodSenseKernel<<<grid_size, BLOCK_SIZE>>>(swarm, foodLattice);
 }

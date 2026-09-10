@@ -3,7 +3,7 @@
 #include "functions/BrainSystem.h"
 #include <cuda_runtime.h>
 
-__managed__ uint64_t globalAgentIDCounter = 1;
+__managed__ uint64_t globalAgentIDCounter = 0;
 
 namespace LifeSystem {
     thread_local std::mt19937 gen(std::random_device{}());
@@ -18,51 +18,60 @@ __global__ void setupCurandKernel(curandState* state, unsigned long seed, int ma
     curand_init(seed, i, 0, &state[i]);
 }
 
+__global__ void createAgentsKernel(SwarmData swarm, int num_prey, int num_predators){
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= *swarm.current_count) return;
+
+    int species = (i < num_prey) ? PREY_ID : PREDATOR_ID;
+
+    curandState localState = swarm.rng.state[i];
+
+    // This is guaranteed to be unique
+    swarm.agentIdentifications.ID[i] = globalAgentIDCounter + i;
+
+    swarm.agentIdentifications.speciesID[i] = species;
+    swarm.agentIdentifications.isAlive[i] = 1;
+
+    swarm.physics.x[i] = curand_uniform(&localState) * (float)NUM_CELLE_X;
+    swarm.physics.y[i] = curand_uniform(&localState) * (float)NUM_CELLE_Y;
+    swarm.physics.facingAngle[i] = (curand_uniform(&localState) * 2.0f - 1.0f) * M_PI;
+    swarm.physics.vx[i] = 0.0f;
+    swarm.physics.vy[i] = 0.0f;
+    swarm.physics.speed[i] = 0.0f;
+    swarm.physics.friction[i] = FRICTION_COEFFICIENT;
+
+    swarm.energyMetrics.energy[i] = STARTING_ENERGY;
+    swarm.energyMetrics.digestionTime[i] = (species == PREY_ID) ? PREY_DIGESTION_TIME : PREDATOR_DIGESTION_TIME;
+    swarm.energyMetrics.remainingDigestion[i] = 0.0f;
+    swarm.energyMetrics.reproductionCooldown[i] = 0.0f;
+    swarm.energyMetrics.childCount[i] = 0;
+
+    swarm.physics.maxSpeed[i] = (species == PREY_ID) ? PREY_MAX_SPEED : PREDATOR_MAX_SPEED;
+    swarm.physics.force[i] = (species == PREY_ID) ? PREY_FORCE : PREDATOR_FORCE;
+
+    swarm.perceptions.viewRadius[i] = (species == PREY_ID) ? PREY_VIEW_RADIUS : PREDATOR_VIEW_RADIUS;
+    swarm.perceptions.fovAngle[i] = (species == PREY_ID) ? PREY_FOV_ANGLE : PREDATOR_FOV_ANGLE;
+    swarm.perceptions.sensingRange[i] = SENSING_RANGE;
+    swarm.perceptions.grassViewRadius[i] = GRASS_SENSING_RADIUS;
+
+    swarm.fitnessMetrics.timeLived[i] = 0.0f;
+    swarm.fitnessMetrics.energyGained[i] = 0.0f;
+
+    swarm.rng.state[i] = localState;
+}
+
 void LifeSystem::initSwarm(SwarmData& swarm, int num_prey, int num_predators){
-    int block_size = 256;
-    int grid_size = (MAX_SWARM_CAPACITY + block_size - 1) / block_size;
-    
-    setupCurandKernel<<<grid_size, block_size>>>(swarm.rng.state, std::random_device{}(), MAX_SWARM_CAPACITY);
-    cudaDeviceSynchronize();
+    int grid_size = (MAX_SWARM_CAPACITY + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    setupCurandKernel<<<grid_size, BLOCK_SIZE>>>(swarm.rng.state, std::random_device{}(), MAX_SWARM_CAPACITY);
 
     *swarm.current_count = num_prey + num_predators;
-    int current_idx = 0;
 
-    auto initAgent = [&](int i, int species) {
-        swarm.agentIdentifications.ID[i] = globalAgentIDCounter;
-        globalAgentIDCounter++;
-        swarm.agentIdentifications.speciesID[i] = species;
-        swarm.agentIdentifications.isAlive[i] = 1;
+    int i_grid_size = (*swarm.current_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    createAgentsKernel<<<i_grid_size, BLOCK_SIZE>>>(swarm, num_prey, num_predators);
+    cudaDeviceSynchronize();
 
-        swarm.physics.x[i] = randomFloat(0.0f, NUM_CELLE_X);
-        swarm.physics.y[i] = randomFloat(0.0f, NUM_CELLE_Y);
-        swarm.physics.facingAngle[i] = randomFloat(-M_PI, M_PI);
-        swarm.physics.vx[i] = 0.0f;
-        swarm.physics.vy[i] = 0.0f;
-        swarm.physics.speed[i] = 0.0f;
-        swarm.physics.friction[i] = FRICTION_COEFFICIENT;
-
-        swarm.energyMetrics.energy[i] = STARTING_ENERGY;
-        swarm.energyMetrics.digestionTime[i] = (species == PREY_ID) ? PREY_DIGESTION_TIME : PREDATOR_DIGESTION_TIME;
-        swarm.energyMetrics.remainingDigestion[i] = 0.0f;
-        swarm.energyMetrics.reproductionCooldown[i] = 0.0f;
-        swarm.energyMetrics.childCount[i] = 0;
-
-        swarm.physics.maxSpeed[i] = (species == PREY_ID) ? PREY_MAX_SPEED : PREDATOR_MAX_SPEED;
-        swarm.physics.force[i] = (species == PREY_ID) ? PREY_FORCE : PREDATOR_FORCE;
-
-        swarm.perceptions.viewRadius[i] = (species == PREY_ID) ? PREY_VIEW_RADIUS : PREDATOR_VIEW_RADIUS;
-        swarm.perceptions.fovAngle[i] = (species == PREY_ID) ? PREY_FOV_ANGLE : PREDATOR_FOV_ANGLE;
-        swarm.perceptions.sensingRange[i] = SENSING_RANGE;
-        swarm.perceptions.grassViewRadius[i] = GRASS_SENSING_RADIUS;
-
-        swarm.fitnessMetrics.timeLived[i] = 0.0f;
-        swarm.fitnessMetrics.energyGained[i] = 0.0f;
-    };
-
-    for (int i = 0; i < num_prey; i++)      initAgent(current_idx++, PREY_ID);
-    for (int i = 0; i < num_predators; i++) initAgent(current_idx++, PREDATOR_ID);
-
+    globalAgentIDCounter += *swarm.current_count;
+    
     // Initializes random brains for the whole swarm
     BrainSystem::initRandom(swarm);
 }
@@ -256,11 +265,9 @@ __global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mu
 void LifeSystem::handleBirths(SwarmData& swarm, float mutationRate, float mutationStrength){
     if (swarm.current_count == 0) return;
 
-    int block_size = 256;
-    int grid_size = (*swarm.current_count + block_size - 1) / block_size;
+    int grid_size = (*swarm.current_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    handleBirthsKernel<<<grid_size, block_size>>>(swarm, mutationRate, mutationStrength);
-    cudaDeviceSynchronize();
+    handleBirthsKernel<<<grid_size, BLOCK_SIZE>>>(swarm, mutationRate, mutationStrength);
 }
 
 

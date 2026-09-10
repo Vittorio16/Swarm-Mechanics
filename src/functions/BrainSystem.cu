@@ -21,10 +21,9 @@ __global__ void initRandomKernel(SwarmData swarm){
 void BrainSystem::initRandom(SwarmData& swarm){
     if (*swarm.current_count == 0) return;
 
-    int block_size = 256;
-    int grid_size = (*swarm.current_count + block_size - 1) / block_size;
+    int grid_size = (*swarm.current_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
     
-    initRandomKernel<<<grid_size, block_size>>>(swarm);
+    initRandomKernel<<<grid_size, BLOCK_SIZE>>>(swarm);
     cudaDeviceSynchronize();
 }
 
@@ -99,11 +98,9 @@ __global__ void brainThinkKernel(SwarmData swarm){
 void BrainSystem::think(SwarmData& swarm){
     if (*swarm.current_count == 0) return;
     
-    int block_size = 256;
-    int grid_size = (*swarm.current_count + block_size - 1) / block_size;
+    int grid_size = (*swarm.current_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
     
-    brainThinkKernel<<<grid_size, block_size>>>(swarm);
-    cudaDeviceSynchronize();
+    brainThinkKernel<<<grid_size, BLOCK_SIZE>>>(swarm);
 }
 
 // Mutates weights based on give mutation rate and strength

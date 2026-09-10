@@ -30,9 +30,7 @@ void LatticeSystem::build(SpatialLatticeData& lattice, SwarmData& swarm){
 
     if (*swarm.current_count == 0) return;
 
-    int block_size = 256;
-    int grid_size = (*swarm.current_count + block_size - 1) / block_size;
+    int grid_size = (*swarm.current_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    latticeBuildKernel<<<grid_size, block_size>>>(lattice, swarm);
-    cudaDeviceSynchronize();
+    latticeBuildKernel<<<grid_size, BLOCK_SIZE>>>(lattice, swarm);
 }

@@ -53,9 +53,7 @@ __global__ void physicsUpdateKernel(SwarmData swarm, float dt) {
 void PhysicsSystem::update(SwarmData& swarm, float dt){
     if (*swarm.current_count == 0) return;
 
-    int block_size = 256;
-    int grid_size = (*swarm.current_count + block_size - 1) / block_size;
+    int grid_size = (*swarm.current_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
     
-    physicsUpdateKernel<<<grid_size, block_size>>>(swarm, dt);
-    cudaDeviceSynchronize();
+    physicsUpdateKernel<<<grid_size, BLOCK_SIZE>>>(swarm, dt);
 }

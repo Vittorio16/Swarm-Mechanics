@@ -7,6 +7,9 @@ using namespace std;
 
 /* ------------------- Main settings ------------------ */
 
+// GPU settings
+int BLOCK_SIZE = 256;
+
 // Used when failed to detect hardware concurrency
 constexpr int FALLBACK_CORE_NUMBER = 4;
 

@@ -22,6 +22,7 @@ World::World(int num_prey, int num_predators) :
     graveyard(MAX_GRAVEYARD_CAPACITY) {
 
     LifeSystem::initSwarm(swarm, num_prey, num_predators);
+    FoodLatticeSystem::initRNG(foodLattice);
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
 }
 
@@ -67,12 +68,18 @@ ProfilingData World::update(float dt, int generationCount){
     float dynamicRate = std::max(MINIMUM_MUTATION_RATE, STARTING_MUTATION_RATE - (generationCount * MUTATION_RATE_DECAY));
     float dynamicStrength = std::max(MINIMUM_MUTATION_STRENGTH, STARTING_MUTATION_STRENGTH - (generationCount * MUTATION_STRENGTH_DECAY));
 
-    // Handles first deaths, then births to keep the array compact
-    LifeSystem::handleDeaths(swarm, graveyard);
-    LifeSystem::handleBirths(swarm, dynamicRate, dynamicStrength);
-    
     // Handles grass growth
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
+
+    // Handles agents' births
+    LifeSystem::handleBirths(swarm, dynamicRate, dynamicStrength);
+
+    // Synchronize before CPU function
+    cudaDeviceSynchronize();
+    
+    // Handles first deaths, then births to keep the array compact
+    LifeSystem::handleDeaths(swarm, graveyard);
+    
     auto end_cleanup = high_resolution_clock::now();
     
     auto end_total = high_resolution_clock::now();

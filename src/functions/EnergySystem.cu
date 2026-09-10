@@ -116,8 +116,6 @@ __global__ void energySystemUpdateKernel(SwarmData swarm, FoodLatticeData foodLa
 void EnergySystem::update(SwarmData& swarm, FoodLatticeData& foodLattice, float dt){
     if (*swarm.current_count == 0) return;
 
-    int block_size = 256;
-    int grid_size = (*swarm.current_count + block_size - 1) / block_size;
-    energySystemUpdateKernel<<<grid_size, block_size>>>(swarm, foodLattice, dt);
-    cudaDeviceSynchronize();
+    int grid_size = (*swarm.current_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    energySystemUpdateKernel<<<grid_size, BLOCK_SIZE>>>(swarm, foodLattice, dt);
 }
