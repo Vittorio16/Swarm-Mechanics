@@ -64,7 +64,7 @@ const float RANDOM_INJECTION_RATE = 0.20f; // minus the hof injection rate
 /* ------------------- World Settings ------------------ */
 
 // Starting agents
-constexpr int MAX_SWARM_CAPACITY = 30000;
+constexpr int MAX_SWARM_CAPACITY = 500000;
 constexpr int NUM_PREDATOR = 50;
 constexpr int NUM_PREY = 400;
 // Graveyard settings
@@ -76,7 +76,7 @@ constexpr int NUM_CELLE_X = 960;
 constexpr int NUM_CELLE_Y = 540;
 
 // Enemy observation lattice parameters
-constexpr int MAX_AGENTS_PER_CELL = 128;
+constexpr int MAX_AGENTS_PER_CELL = 512;
 constexpr int LATTICE_CELL_WIDTH = 30;
 constexpr int LATTICE_CELL_HEIGHT = 30;
 
