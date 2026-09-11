@@ -22,6 +22,13 @@ World::World(int num_prey, int num_predators, int w_id) :
     foodLattice(NUM_CELLE_X / FOOD_CELL_WIDTH, NUM_CELLE_Y / FOOD_CELL_HEIGHT, NUM_CELLE_X, NUM_CELLE_Y),
     graveyard(MAX_GRAVEYARD_CAPACITY) {
 
+    cudaEventCreate(&start_total);
+    cudaEventCreate(&end_buckets);
+    cudaEventCreate(&end_obs);
+    cudaEventCreate(&end_think);
+    cudaEventCreate(&end_move);
+    cudaEventCreate(&end_cleanup);
+
     LifeSystem::initSwarm(swarm, num_prey, num_predators);
     FoodLatticeSystem::initRNG(foodLattice);
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
@@ -29,76 +36,86 @@ World::World(int num_prey, int num_predators, int w_id) :
 
 // Destructor
 World::~World() {
-    cudaDeviceSynchronize()
+    cudaDeviceSynchronize();
 
     swarm.freeAll();
     spatialLattice.free();
     foodLattice.free();
     graveyard.free();
+
+    cudaEventDestroy(start_total);
+    cudaEventDestroy(end_buckets);
+    cudaEventDestroy(end_obs);
+    cudaEventDestroy(end_think);
+    cudaEventDestroy(end_move);
+    cudaEventDestroy(end_cleanup);
 }
 
 // Updates the world each tick of the simulation
 ProfilingData World::update(float dt, int generationCount){
-    using namespace std::chrono;
-    
-    auto start_total = high_resolution_clock::now();
-    
     // Snapshot of the current swarm count for this tick, so that it doesn't have to be passed around between CPU and GPU
     int active_agents = *swarm.current_count;
     if (active_agents == 0) return {0, 0, 0, 0, 0, 0, 0}; 
 
+    if (PROFILING_ENABLED) cudaEventRecord(start_total);
+
     // --- 1. SPATIAL LATTICE (Buckets) ---
-    auto start_buckets = high_resolution_clock::now();
     LatticeSystem::build(spatialLattice, swarm, active_agents);
-    auto end_buckets = high_resolution_clock::now();
+    if (PROFILING_ENABLED) cudaEventRecord(end_buckets);
 
     // --- 2. OBSERVATION (Sensors) ---
-    auto start_obs = high_resolution_clock::now();
     SensorySystem::update(swarm, spatialLattice, foodLattice, active_agents);
-    auto end_obs = high_resolution_clock::now();
+    if (PROFILING_ENABLED) cudaEventRecord(end_obs);
 
     // --- 3. THINK (Neural Network) ---
-    auto start_think = high_resolution_clock::now();
     BrainSystem::think(swarm, active_agents);
-    auto end_think = high_resolution_clock::now();
+    if (PROFILING_ENABLED) cudaEventRecord(end_think);
 
     // --- 4. MOVE (Physics & Energy) ---
-    auto start_move = high_resolution_clock::now();
     PhysicsSystem::update(swarm, dt, active_agents);
     EnergySystem::update(swarm, foodLattice, dt, active_agents);
-    auto end_move = high_resolution_clock::now();
+    if (PROFILING_ENABLED) cudaEventRecord(end_move);
 
     // --- 5. CLEANUP (Life Cycle and Grass Growth) ---
-    auto start_cleanup = high_resolution_clock::now();
-    
-    // Mutation parameters dependent on current generation count
     float dynamicRate = std::max(MINIMUM_MUTATION_RATE, STARTING_MUTATION_RATE - (generationCount * MUTATION_RATE_DECAY));
     float dynamicStrength = std::max(MINIMUM_MUTATION_STRENGTH, STARTING_MUTATION_STRENGTH - (generationCount * MUTATION_STRENGTH_DECAY));
-
-    // Handles grass growth
+    
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
-
-    // Handles first deaths, then births to keep the array compact
-    LifeSystem::handleDeaths(swarm, graveyard, active_agents);
     LifeSystem::handleBirths(swarm, dynamicRate, dynamicStrength, active_agents);
-
-    // Synchronize CPU before next iteration 
-    cudaDeviceSynchronize();
-    auto end_cleanup = high_resolution_clock::now();
     
-    auto end_total = high_resolution_clock::now();
-
-    // --- PROFILING OUTPUT ---
-    double t_buckets = std::chrono::duration<double, std::micro>(end_buckets - start_buckets).count();
-    double t_obs     = std::chrono::duration<double, std::micro>(end_obs - start_obs).count(); 
-    double t_think   = std::chrono::duration<double, std::micro>(end_think - start_think).count();
-    double t_move    = std::chrono::duration<double, std::micro>(end_move - start_move).count();
-    double t_cleanup = std::chrono::duration<double, std::micro>(end_cleanup - start_cleanup).count();
-    double t_total   = std::chrono::duration<double, std::micro>(end_total - start_total).count();
+    // (Using the new fully-parallelized handleDeaths)
+    LifeSystem::handleDeaths(swarm, graveyard, active_agents); 
     
-    double check_t_total = t_buckets + t_obs + t_think + t_move + t_cleanup;
+    if (PROFILING_ENABLED) cudaEventRecord(end_cleanup);
+    
+    if (PROFILING_ENABLED) {
+        // Halt the CPU here to wait for all the events to be successfully stamped
+        cudaEventSynchronize(end_cleanup);
 
-    return {t_buckets, t_obs, t_think, t_move, t_cleanup, t_total, check_t_total};
+        float ms_buckets, ms_obs, ms_think, ms_move, ms_cleanup, ms_total;
+        
+        cudaEventElapsedTime(&ms_buckets, start_total, end_buckets);
+        cudaEventElapsedTime(&ms_obs, end_buckets, end_obs);
+        cudaEventElapsedTime(&ms_think, end_obs, end_think);
+        cudaEventElapsedTime(&ms_move, end_think, end_move);
+        cudaEventElapsedTime(&ms_cleanup, end_move, end_cleanup);
+        cudaEventElapsedTime(&ms_total, start_total, end_cleanup);
+
+        // Convert to Microseconds to match CSV format
+        return {
+            (double)(ms_buckets * 1000.0), 
+            (double)(ms_obs * 1000.0), 
+            (double)(ms_think * 1000.0), 
+            (double)(ms_move * 1000.0), 
+            (double)(ms_cleanup * 1000.0), 
+            (double)(ms_total * 1000.0), 
+            (double)((ms_buckets + ms_obs + ms_think + ms_move + ms_cleanup) * 1000.0)
+        };
+    } else {
+        // Synchronize CPU with GPU
+        cudaDeviceSynchronize();
+        return {0, 0, 0, 0, 0, 0, 0};
+    }
 }
 
 // Optionally draw chunk boundaries for debugging

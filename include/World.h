@@ -11,9 +11,13 @@ using namespace std;
 
 class World{
     private:  
+    int world_id;
     // Texture
     sf::RenderTexture gridTexture; 
     bool gridTextureValid = false; 
+    
+    // CUDA events for profiling
+    cudaEvent_t start_total, end_buckets, end_obs, end_think, end_move, end_cleanup;
     
     public:
     SwarmData swarm;

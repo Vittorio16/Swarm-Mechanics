@@ -171,7 +171,7 @@ struct SwarmData {
 
     // Sensory Data
     struct SensoryData {
-        uint64_t* lockedEnemyIndex
+        uint64_t* lockedEnemyIndex;
         int *closestEnemyIndex;
         float *closestEnemyX, *closestEnemyY, *closestEnemyDist;
         float *enemyClosingSpeed, *enemyTangentialSpeed;

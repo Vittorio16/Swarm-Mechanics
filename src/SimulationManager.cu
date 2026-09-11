@@ -64,47 +64,47 @@ void SimulationManager::update(float dt, bool renderEnabled) {
     //     this->generationTimer += dt;
     // } 
     // else {
-        tasksRemaining = worlds.size();
-        vector<future<void>> futures;
+    tasksRemaining = worlds.size();
+    vector<future<void>> futures;
 
-        // Dynamically determine batch size
-        float timeRemaining = currentDuration - this->generationTimer;
-        int ticksRemaining = (int)ceil(timeRemaining / dt);
+    // Dynamically determine batch size
+    float timeRemaining = currentDuration - this->generationTimer;
+    int ticksRemaining = (int)ceil(timeRemaining / dt);
 
-        int batchSize = std::min(MAXIMUM_BATCH_SIZE, ticksRemaining);
+    int batchSize = std::min(MAXIMUM_BATCH_SIZE, ticksRemaining);
+    
+    // Enssure correct batch size when generation is ending
+    if (batchSize <= 0) batchSize = 1;
+
+    for (auto& world : worlds) {
+        World* w = world.get(); 
         
-        // Enssure correct batch size when generation is ending
-        if (batchSize <= 0) batchSize = 1;
-
-        for (auto& world : worlds) {
-            World* w = world.get(); 
-            
-            {
-                unique_lock<mutex> lock(queueMutex);
-                tasks.emplace([w, dt, batchSize, this] {
-                    for (int i = 0; i < batchSize; i++) {
-                        w->update(dt, this->generationCount);
-                    }
-                });
-            }
+        {
+            unique_lock<mutex> lock(queueMutex);
+            tasks.emplace([w, dt, batchSize, this] {
+                for (int i = 0; i < batchSize; i++) {
+                    w->update(dt, this->generationCount);
+                }
+            });
         }
-
-        // Wake up all threads
-        condition.notify_all();
-        
-        // Wait for all threads to finish their batch
-        unique_lock<mutex> lock(syncMutex);
-        syncCondition.wait(lock, [this] { return tasksRemaining == 0; });
-
-        generationTimer += dt * batchSize;
     }
+
+    // Wake up all threads
+    condition.notify_all();
+    
+    // Wait for all threads to finish their batch
+    unique_lock<mutex> lock(syncMutex);
+    syncCondition.wait(lock, [this] { return tasksRemaining == 0; });
+
+    generationTimer += dt * batchSize;
+    // }
 
     // Check for evolution
     if (generationTimer >= currentDuration) {
         generationTimer = 0.0f;
         generationCount++;
         evolve();
-    // }
+    }
 }
 
 // Evolves agents by polling best ones 

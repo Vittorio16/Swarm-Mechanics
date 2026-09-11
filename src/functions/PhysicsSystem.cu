@@ -1,5 +1,6 @@
 #include <cmath>
 #include "functions/PhysicSystem.h"
+#include <math_constants.h>
 
 __global__ void physicsUpdateKernel(SwarmData swarm, float dt, int active_agents) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;

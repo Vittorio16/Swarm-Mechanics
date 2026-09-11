@@ -1,5 +1,6 @@
 #include "functions/EnergySystem.h"
 #include "functions/FoodLatticeSystem.h"
+#include "Core/Physics.h"
 
 __global__ void energySystemUpdateKernel(SwarmData swarm, FoodLatticeData foodLattice, float dt, int active_agents){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -94,15 +95,28 @@ __global__ void energySystemUpdateKernel(SwarmData swarm, FoodLatticeData foodLa
         if (swarm.sensors.closestEnemyIndex[i] != -1 && swarm.agentIdentifications.isAlive[swarm.sensors.closestEnemyIndex[i]]){
             // Check if the closest enemy is within kill range
             int t = swarm.sensors.closestEnemyIndex[i];
-            ThoroidalData c = getThoroidalCoordinates(x[i], y[i], x[t], y[t], NUM_CELLE_X, NUM_CELLE_Y);
+            if (t != -1 && swarm.agentIdentifications.isAlive[t]) {
+                // Calculate wrapped distance 
+                float dx = swarm.physics.x[t] - swarm.physics.x[i];
+                float dy = swarm.physics.y[t] - swarm.physics.y[i];
+                
+                // Thoroidal Wrapping
+                if (dx > NUM_CELLE_X * 0.5f) dx -= NUM_CELLE_X;
+                else if (dx < -NUM_CELLE_X * 0.5f) dx += NUM_CELLE_X;
+                
+                if (dy > NUM_CELLE_Y * 0.5f) dy -= NUM_CELLE_Y;
+                else if (dy < -NUM_CELLE_Y * 0.5f) dy += NUM_CELLE_Y;
+                
+                float distSq = dx*dx + dy*dy;
 
-            if (c < KILL_RANGE_SQ){
-                // Avoids race condition of multiple predators eating the same prey
-                int wasAlive = atomicExch((int*)&swarm.agentIdentifications.isAlive[swarm.sensors.closestEnemyIndex[i]], 0);
-                if (wasAlive == 1){
-                    swarm.energyMetrics.energy[i] += PREDATOR_ENERGY_GAIN;
-                    swarm.fitnessMetrics.energyGained[i] += PREDATOR_ENERGY_GAIN;
-                    swarm.energyMetrics.remainingDigestion[i] = swarm.energyMetrics.digestionTime[i];
+                if (distSq < KILL_RANGE_SQ) {
+                    // Avoids race condition of multiple predators eating the same prey
+                    int wasAlive = atomicExch((int*)&swarm.agentIdentifications.isAlive[t], 0);
+                    if (wasAlive == 1) {
+                        swarm.energyMetrics.energy[i] += PREDATOR_ENERGY_GAIN;
+                        swarm.fitnessMetrics.energyGained[i] += PREDATOR_ENERGY_GAIN;
+                        swarm.energyMetrics.remainingDigestion[i] = swarm.energyMetrics.digestionTime[i];
+                    }
                 }
             }
         }

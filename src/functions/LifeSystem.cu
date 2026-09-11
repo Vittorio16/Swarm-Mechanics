@@ -1,5 +1,5 @@
 #include "Core/GlobalHelpers.h"
-#include "Core/Physiscs.h"
+#include "Core/Physics.h"
 #include "functions/LifeSystem.h"
 #include "functions/BrainSystem.h"
 #include <cuda_runtime.h>
@@ -219,8 +219,7 @@ void LifeSystem::handleDeaths(SwarmData& swarm, GraveyardData& graveyard, int ac
     finalizeCompactionKernel<<<1, 1>>>(swarm);
 }
 
-__global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mutationStrength, int active_agents){
-    int initial_count = active_agents;
+__global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mutationStrength){
     
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= *swarm.compaction.birth_limit || !swarm.agentIdentifications.isAlive[i]) return;
@@ -320,7 +319,7 @@ void LifeSystem::handleBirths(SwarmData& swarm, float mutationRate, float mutati
 
     int grid_size = (active_agents + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    handleBirthsKernel<<<grid_size, BLOCK_SIZE>>>(swarm, mutationRate, mutationStrength, active_agents);
+    handleBirthsKernel<<<grid_size, BLOCK_SIZE>>>(swarm, mutationRate, mutationStrength);
 }
 
 
