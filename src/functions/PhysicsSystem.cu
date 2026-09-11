@@ -2,9 +2,9 @@
 #include "functions/PhysicSystem.h"
 #include <math_constants.h>
 
-__global__ void physicsUpdateKernel(SwarmData swarm, float dt, int active_agents) {
+__global__ void physicsUpdateKernel(SwarmData swarm, float dt) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= active_agents) return;
+    if (i >= *swarm.current_count) return;
 
     swarm.fitnessMetrics.timeLived[i] += dt;
 
@@ -51,10 +51,8 @@ __global__ void physicsUpdateKernel(SwarmData swarm, float dt, int active_agents
 }
 
 // Moves the agents based on their current velocity and updates their facing angle based on neural outputs
-void PhysicsSystem::update(SwarmData& swarm, float dt, int active_agents) {
-    if (active_agents == 0) return;
-
-    int grid_size = (active_agents + BLOCK_SIZE - 1) / BLOCK_SIZE;
+void PhysicsSystem::update(SwarmData& swarm, float dt) {
+    int grid_size = (swarm.max_capacity + BLOCK_SIZE - 1) / BLOCK_SIZE;
     
-    physicsUpdateKernel<<<grid_size, BLOCK_SIZE>>>(swarm, dt, active_agents);
+    physicsUpdateKernel<<<grid_size, BLOCK_SIZE>>>(swarm, dt);
 }

@@ -2,9 +2,9 @@
 #include "functions/FoodLatticeSystem.h"
 #include "Core/Physics.h"
 
-__global__ void energySystemUpdateKernel(SwarmData swarm, FoodLatticeData foodLattice, float dt, int active_agents){
+__global__ void energySystemUpdateKernel(SwarmData swarm, FoodLatticeData foodLattice, float dt){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= active_agents || !swarm.agentIdentifications.isAlive[i]) return;
+    if (i >= *swarm.current_count || !swarm.agentIdentifications.isAlive[i]) return;
 
     if (swarm.energyMetrics.remainingDigestion[i] > 0.0f){
         swarm.energyMetrics.remainingDigestion[i] -= dt;
@@ -128,9 +128,7 @@ __global__ void energySystemUpdateKernel(SwarmData swarm, FoodLatticeData foodLa
 }
 
 // Handles energy consumption and feeding
-void EnergySystem::update(SwarmData& swarm, FoodLatticeData& foodLattice, float dt, int active_agents){
-    if (active_agents == 0) return;
-
-    int grid_size = (active_agents + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    energySystemUpdateKernel<<<grid_size, BLOCK_SIZE>>>(swarm, foodLattice, dt, active_agents);
+void EnergySystem::update(SwarmData& swarm, FoodLatticeData& foodLattice, float dt){
+    int grid_size = (swarm.max_capacity + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    energySystemUpdateKernel<<<grid_size, BLOCK_SIZE>>>(swarm, foodLattice, dt);
 }

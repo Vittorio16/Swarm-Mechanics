@@ -58,46 +58,49 @@ SimulationManager::~SimulationManager() {
 void SimulationManager::update(float dt, bool renderEnabled) {
     float currentDuration = min(MAXIMUM_GENERATION_DURATION, STARTING_GENERATION_DURATION + generationCount * GENERATION_SCALING_FACTOR);
 
-    // if (renderEnabled) {
-    //     // Only update the first world if rendering is enabled to maintain performance
-    //     worlds[0]->update(dt, this->generationCount);
-    //     this->generationTimer += dt;
-    // } 
-    // else {
-    tasksRemaining = worlds.size();
-    vector<future<void>> futures;
+    if (renderEnabled) {
+        // Only update the first world if rendering is enabled to maintain performance
+        worlds[0]->update(dt, this->generationCount);
+        this->generationTimer += dt;
 
-    // Dynamically determine batch size
-    float timeRemaining = currentDuration - this->generationTimer;
-    int ticksRemaining = (int)ceil(timeRemaining / dt);
+        cudaStreamSynchronize(cudaStreamPerThread);
+    } 
+    else {
+        tasksRemaining = worlds.size();
+        vector<future<void>> futures;
 
-    int batchSize = std::min(MAXIMUM_BATCH_SIZE, ticksRemaining);
-    
-    // Enssure correct batch size when generation is ending
-    if (batchSize <= 0) batchSize = 1;
+        // Dynamically determine batch size
+        float timeRemaining = currentDuration - this->generationTimer;
+        int ticksRemaining = (int)ceil(timeRemaining / dt);
 
-    for (auto& world : worlds) {
-        World* w = world.get(); 
+        int batchSize = std::min(MAXIMUM_BATCH_SIZE, ticksRemaining);
         
-        {
-            unique_lock<mutex> lock(queueMutex);
-            tasks.emplace([w, dt, batchSize, this] {
-                for (int i = 0; i < batchSize; i++) {
-                    w->update(dt, this->generationCount);
-                }
-            });
+        // Enssure correct batch size when generation is ending
+        if (batchSize <= 0) batchSize = 1;
+
+        for (auto& world : worlds) {
+            World* w = world.get(); 
+            
+            {
+                unique_lock<mutex> lock(queueMutex);
+                tasks.emplace([w, dt, batchSize, this] {
+                    for (int i = 0; i < batchSize; i++) {
+                        w->update(dt, this->generationCount);
+                    }
+                });
+                cudaStreamSynchronize(cudaStreamPerThread);
+            }
         }
+
+        // Wake up all threads
+        condition.notify_all();
+        
+        // Wait for all threads to finish their batch
+        unique_lock<mutex> lock(syncMutex);
+        syncCondition.wait(lock, [this] { return tasksRemaining == 0; });
+
+        generationTimer += dt * batchSize;
     }
-
-    // Wake up all threads
-    condition.notify_all();
-    
-    // Wait for all threads to finish their batch
-    unique_lock<mutex> lock(syncMutex);
-    syncCondition.wait(lock, [this] { return tasksRemaining == 0; });
-
-    generationTimer += dt * batchSize;
-    // }
 
     // Check for evolution
     if (generationTimer >= currentDuration) {

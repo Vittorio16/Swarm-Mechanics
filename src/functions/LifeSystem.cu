@@ -76,9 +76,9 @@ void LifeSystem::initSwarm(SwarmData& swarm, int num_prey, int num_predators){
 }
 
 // Count survivors and write dead agents to the graveyard
-__global__ void evaluateAndCountAliveKernel(SwarmData swarm, GraveyardData graveyard, int active_agents) {
+__global__ void evaluateAndCountAliveKernel(SwarmData swarm, GraveyardData graveyard) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= active_agents) return;
+    if (i >= *swarm.current_count) return;
 
     if (swarm.agentIdentifications.isAlive[i]) {
         atomicAdd(swarm.compaction.alive_count, 1);
@@ -111,9 +111,9 @@ __global__ void evaluateAndCountAliveKernel(SwarmData swarm, GraveyardData grave
 }
 
 // Map the Holes and Movers based on the boundary 
-__global__ void mapCompactionKernel(SwarmData swarm, int active_agents) {
+__global__ void mapCompactionKernel(SwarmData swarm) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= active_agents) return;
+    if (i >= *swarm.current_count) return;
 
     int boundary = *swarm.compaction.alive_count;
     // This always bocks because if there are n alive agents they will fit in the first n slots
@@ -128,7 +128,7 @@ __global__ void mapCompactionKernel(SwarmData swarm, int active_agents) {
 }
 
 // Pair holes and movers up and relocate the data
-__global__ void moveCompactionKernel(SwarmData swarm, int active_agents) {
+__global__ void moveCompactionKernel(SwarmData swarm) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     
     // Only launch as many threads as there are holes
@@ -206,15 +206,14 @@ __global__ void finalizeCompactionKernel(SwarmData swarm) {
     }
 }
 
-void LifeSystem::handleDeaths(SwarmData& swarm, GraveyardData& graveyard, int active_agents){
-    if (active_agents == 0) return;
-    int grid_size = (active_agents + BLOCK_SIZE - 1) / BLOCK_SIZE;
+void LifeSystem::handleDeaths(SwarmData& swarm, GraveyardData& graveyard){
+    int grid_size = (swarm.max_capacity + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    evaluateAndCountAliveKernel<<<grid_size, BLOCK_SIZE>>>(swarm, graveyard, active_agents);
-    mapCompactionKernel<<<grid_size, BLOCK_SIZE>>>(swarm, active_agents);
+    evaluateAndCountAliveKernel<<<grid_size, BLOCK_SIZE>>>(swarm, graveyard);
+    mapCompactionKernel<<<grid_size, BLOCK_SIZE>>>(swarm);
     
     // worst-case grid_size so we don't have to sync the CPU to read hole_count
-    moveCompactionKernel<<<grid_size, BLOCK_SIZE>>>(swarm, active_agents);
+    moveCompactionKernel<<<grid_size, BLOCK_SIZE>>>(swarm);
     
     finalizeCompactionKernel<<<1, 1>>>(swarm);
 }
@@ -314,10 +313,8 @@ __global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mu
 }
 
 // Hanles the birth of new agents
-void LifeSystem::handleBirths(SwarmData& swarm, float mutationRate, float mutationStrength, int active_agents){
-    if (active_agents == 0) return;
-
-    int grid_size = (active_agents + BLOCK_SIZE - 1) / BLOCK_SIZE;
+void LifeSystem::handleBirths(SwarmData& swarm, float mutationRate, float mutationStrength){
+    int grid_size = (swarm.max_capacity + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
     handleBirthsKernel<<<grid_size, BLOCK_SIZE>>>(swarm, mutationRate, mutationStrength);
 }

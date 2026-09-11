@@ -54,26 +54,23 @@ World::~World() {
 // Updates the world each tick of the simulation
 ProfilingData World::update(float dt, int generationCount){
     // Snapshot of the current swarm count for this tick, so that it doesn't have to be passed around between CPU and GPU
-    int active_agents = *swarm.current_count;
-    if (active_agents == 0) return {0, 0, 0, 0, 0, 0, 0}; 
-
     if (PROFILING_ENABLED) cudaEventRecord(start_total);
 
     // --- 1. SPATIAL LATTICE (Buckets) ---
-    LatticeSystem::build(spatialLattice, swarm, active_agents);
+    LatticeSystem::build(spatialLattice, swarm);
     if (PROFILING_ENABLED) cudaEventRecord(end_buckets);
 
     // --- 2. OBSERVATION (Sensors) ---
-    SensorySystem::update(swarm, spatialLattice, foodLattice, active_agents);
+    SensorySystem::update(swarm, spatialLattice, foodLattice);
     if (PROFILING_ENABLED) cudaEventRecord(end_obs);
 
     // --- 3. THINK (Neural Network) ---
-    BrainSystem::think(swarm, active_agents);
+    BrainSystem::think(swarm);
     if (PROFILING_ENABLED) cudaEventRecord(end_think);
 
     // --- 4. MOVE (Physics & Energy) ---
-    PhysicsSystem::update(swarm, dt, active_agents);
-    EnergySystem::update(swarm, foodLattice, dt, active_agents);
+    PhysicsSystem::update(swarm, dt);
+    EnergySystem::update(swarm, foodLattice, dt);
     if (PROFILING_ENABLED) cudaEventRecord(end_move);
 
     // --- 5. CLEANUP (Life Cycle and Grass Growth) ---
@@ -81,10 +78,10 @@ ProfilingData World::update(float dt, int generationCount){
     float dynamicStrength = std::max(MINIMUM_MUTATION_STRENGTH, STARTING_MUTATION_STRENGTH - (generationCount * MUTATION_STRENGTH_DECAY));
     
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
-    LifeSystem::handleBirths(swarm, dynamicRate, dynamicStrength, active_agents);
+    LifeSystem::handleBirths(swarm, dynamicRate, dynamicStrength);
     
     // (Using the new fully-parallelized handleDeaths)
-    LifeSystem::handleDeaths(swarm, graveyard, active_agents); 
+    LifeSystem::handleDeaths(swarm, graveyard); 
     
     if (PROFILING_ENABLED) cudaEventRecord(end_cleanup);
     
@@ -112,8 +109,6 @@ ProfilingData World::update(float dt, int generationCount){
             (double)((ms_buckets + ms_obs + ms_think + ms_move + ms_cleanup) * 1000.0)
         };
     } else {
-        // Synchronize CPU with GPU
-        cudaDeviceSynchronize();
         return {0, 0, 0, 0, 0, 0, 0};
     }
 }

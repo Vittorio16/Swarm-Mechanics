@@ -5,7 +5,7 @@ using namespace std;
 
 namespace BrainSystem {
     void initRandom(SwarmData& swarm);
-    void think(SwarmData& swarm, int active_agents);
+    void think(SwarmData& swarm);
     void mutateVector(float* weights_array, int offset, int size, float mutationRate, float mutationStrength);
     void mutateVector(vector<float>& weights_array, int offset, int size, float mutationRate, float mutationStrength);
     vector<float> extractBrain(const SwarmData& swarm, int index);

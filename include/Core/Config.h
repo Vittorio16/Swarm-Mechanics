@@ -25,7 +25,7 @@ constexpr bool REPLAY_MODE_ENABLED = false;
 // Enable to stop time when pressing R
 constexpr bool DEBUGGING_ENABLED = false;
 // Enable to run profiling tests on the simulation, which will output a CSV file with performance data
-constexpr bool PROFILING_ENABLED = true;
+constexpr bool PROFILING_ENABLED = false;
 
 
 /* ------------------- Simulation Settings ------------------ */
@@ -67,7 +67,7 @@ const float RANDOM_INJECTION_RATE = 0.20f; // minus the hof injection rate
 /* ------------------- World Settings ------------------ */
 
 // Starting agents
-constexpr int MAX_SWARM_CAPACITY = 100000;
+constexpr int MAX_SWARM_CAPACITY = 500000;
 constexpr int NUM_PREDATOR = 50;
 constexpr int NUM_PREY = 400;
 // Graveyard settings
@@ -79,7 +79,7 @@ constexpr int NUM_CELLE_X = 960;
 constexpr int NUM_CELLE_Y = 540;
 
 // Enemy observation lattice parameters
-constexpr int MAX_AGENTS_PER_CELL = 512;
+constexpr int MAX_AGENTS_PER_CELL = 1024;
 constexpr int LATTICE_CELL_WIDTH = 30;
 constexpr int LATTICE_CELL_HEIGHT = 30;
 
