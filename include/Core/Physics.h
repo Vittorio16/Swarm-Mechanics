@@ -2,7 +2,7 @@
 #include <vector>
 #include <cmath>
 #include <cuda_runtime.h>
-
+#include <math_constants.h>
 using namespace std;
 
 struct ThoroidalData {
@@ -33,9 +33,9 @@ inline __host__ __device__ ThoroidalData getThoroidalCoordinates(float obsX, flo
         dy += worldHeight;
     }
 
-    float dist = hypot(dx, dy);
+    float dist = hypotf(dx, dy);
     float distSq = dx*dx + dy*dy;
-    float angleToTarget = atan2(dy, dx);
+    float angleToTarget = atan2f(dy, dx);
     
     return {dist, distSq, angleToTarget, dx, dy};
 }

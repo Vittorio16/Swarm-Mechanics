@@ -50,6 +50,6 @@ struct GraveyardData {
     }
 
     void clear() {
-        current_count = 0;
+        *current_count = 0;
     }
 };

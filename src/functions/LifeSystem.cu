@@ -1,9 +1,8 @@
 #include "Core/GlobalHelpers.h"
+#include "Core/Physiscs.h"
 #include "functions/LifeSystem.h"
 #include "functions/BrainSystem.h"
 #include <cuda_runtime.h>
-
-__managed__ uint64_t globalAgentIDCounter = 0;
 
 namespace LifeSystem {
     thread_local std::mt19937 gen(std::random_device{}());
@@ -26,15 +25,16 @@ __global__ void createAgentsKernel(SwarmData swarm, int num_prey, int num_predat
 
     curandState localState = swarm.rng.state[i];
 
-    // This is guaranteed to be unique
-    swarm.agentIdentifications.ID[i] = globalAgentIDCounter + i;
+    // Shift the world_id 48 bits to the left, leaving 48 bits for the local counter
+    uint64_t world_prefix = static_cast<uint64_t>(swarm.world_id) << 48;
+    swarm.agentIdentifications.ID[i] = world_prefix | static_cast<uint64_t>(i);
 
     swarm.agentIdentifications.speciesID[i] = species;
     swarm.agentIdentifications.isAlive[i] = 1;
 
     swarm.physics.x[i] = curand_uniform(&localState) * (float)NUM_CELLE_X;
     swarm.physics.y[i] = curand_uniform(&localState) * (float)NUM_CELLE_Y;
-    swarm.physics.facingAngle[i] = (curand_uniform(&localState) * 2.0f - 1.0f) * M_PI;
+    swarm.physics.facingAngle[i] = (curand_uniform(&localState) * 2.0f - 1.0f) * CUDART_PI_F;
     swarm.physics.vx[i] = 0.0f;
     swarm.physics.vy[i] = 0.0f;
     swarm.physics.speed[i] = 0.0f;
@@ -68,9 +68,8 @@ void LifeSystem::initSwarm(SwarmData& swarm, int num_prey, int num_predators){
 
     int i_grid_size = (*swarm.current_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
     createAgentsKernel<<<i_grid_size, BLOCK_SIZE>>>(swarm, num_prey, num_predators);
-    cudaDeviceSynchronize();
 
-    globalAgentIDCounter += *swarm.current_count;
+    *swarm.agentIdentifications.localAgentIDCounter = *swarm.current_count;
     
     // Initializes random brains for the whole swarm
     BrainSystem::initRandom(swarm);
@@ -197,7 +196,10 @@ __global__ void moveCompactionKernel(SwarmData swarm, int active_agents) {
 // Finalize count and reset metrics for the next tick
 __global__ void finalizeCompactionKernel(SwarmData swarm) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
-        *swarm.current_count = *swarm.compaction.alive_count;
+        int alive = *swarm.compaction.alive_count;
+
+        *swarm.current_count = alive;
+        *swarm.compaction.birth_limit = alive;
         *swarm.compaction.alive_count = 0;
         *swarm.compaction.hole_count = 0;
         *swarm.compaction.mover_count = 0;
@@ -221,7 +223,7 @@ __global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mu
     int initial_count = active_agents;
     
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= initial_count) return;
+    if (i >= *swarm.compaction.birth_limit || !swarm.agentIdentifications.isAlive[i]) return;
 
     if (swarm.energyMetrics.energy[i] > MAX_ENERGY && swarm.energyMetrics.reproductionCooldown[i] <= 0.001f){
         if (*swarm.current_count >= swarm.max_capacity) return;
@@ -239,8 +241,10 @@ __global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mu
         swarm.energyMetrics.childCount[i]++;
 
         // New agent identification
-        unsigned long long int newID = atomicAdd(reinterpret_cast<unsigned long long int*>(&globalAgentIDCounter), 1ULL);
-        swarm.agentIdentifications.ID[child_idx] = static_cast<uint64_t>(newID);
+        uint64_t world_prefix = static_cast<uint64_t>(swarm.world_id) << 48;
+        unsigned long long int newLocalID = atomicAdd(reinterpret_cast<unsigned long long int*>(swarm.agentIdentifications.localAgentIDCounter), 1ULL);
+
+        swarm.agentIdentifications.ID[child_idx] = world_prefix | static_cast<uint64_t>(newLocalID);
         swarm.agentIdentifications.speciesID[child_idx] = swarm.agentIdentifications.speciesID[i];
         swarm.agentIdentifications.isAlive[child_idx] = true;
 
@@ -260,7 +264,7 @@ __global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mu
         swarm.physics.vx[child_idx] = 0.0f;
         swarm.physics.vy[child_idx] = 0.0f;
         swarm.physics.speed[child_idx] = 0.0f;
-        swarm.physics.facingAngle[child_idx] = (curand_uniform(&localState) * 2.0f - 1.0f) * M_PI;
+        swarm.physics.facingAngle[child_idx] = (curand_uniform(&localState) * 2.0f - 1.0f) * CUDART_PI_F;
 
         // Inherits parent's characteristics
         swarm.physics.friction[child_idx] = swarm.physics.friction[i];

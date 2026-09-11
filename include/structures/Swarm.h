@@ -6,6 +6,8 @@
 #include "Core/Config.h"
 
 struct SwarmData {
+    int world_id;
+    
     // RNG generation for GPU
     struct RandData {
         curandState* state;
@@ -27,21 +29,26 @@ struct SwarmData {
         int* speciesID;
         // This needs to be int* otherwise it will not be aligned to 4, and thus not compatible with atomicExch
         int* isAlive;
+        // Isolated counter, per world
+        uint64_t* localAgentIDCounter;
 
         void allocate(int capacity){
             CUDA_CHECK(cudaMallocManaged(&ID, capacity * sizeof(uint64_t)));
             CUDA_CHECK(cudaMallocManaged(&speciesID, capacity * sizeof(int)));
             CUDA_CHECK(cudaMallocManaged(&isAlive, capacity * sizeof(int)));
+            CUDA_CHECK(cudaMallocManaged(&localAgentIDCounter, sizeof(uint64_t)));
 
             CUDA_CHECK(cudaMemset(ID, 0, capacity * sizeof(uint64_t)));
             CUDA_CHECK(cudaMemset(speciesID, 0, capacity * sizeof(int)));
             CUDA_CHECK(cudaMemset(isAlive, 0, capacity * sizeof(int)));
+            *localAgentIDCounter = 0;
         }
 
         void free(){
             CUDA_CHECK(cudaFree(ID));
             CUDA_CHECK(cudaFree(speciesID));
             CUDA_CHECK(cudaFree(isAlive));
+            CUDA_CHECK(cudaFree(localAgentIDCounter));
         }
     } agentIdentifications;
 
@@ -164,7 +171,8 @@ struct SwarmData {
 
     // Sensory Data
     struct SensoryData {
-        int *lockedEnemyIndex, *closestEnemyIndex;
+        uint64_t* lockedEnemyIndex
+        int *closestEnemyIndex;
         float *closestEnemyX, *closestEnemyY, *closestEnemyDist;
         float *enemyClosingSpeed, *enemyTangentialSpeed;
         float *foodSenseX, *foodSenseY, *foodDistance;
@@ -172,7 +180,7 @@ struct SwarmData {
         float *energyReserve;
 
         void allocate(int capacity){
-            CUDA_CHECK(cudaMallocManaged(&lockedEnemyIndex, capacity * sizeof(int)));
+            CUDA_CHECK(cudaMallocManaged(&lockedEnemyIndex, capacity * sizeof(uint64_t)));
             CUDA_CHECK(cudaMallocManaged(&closestEnemyIndex, capacity * sizeof(int)));
             CUDA_CHECK(cudaMallocManaged(&closestEnemyX, capacity * sizeof(float)));
             CUDA_CHECK(cudaMallocManaged(&closestEnemyY, capacity * sizeof(float)));
@@ -186,7 +194,7 @@ struct SwarmData {
             CUDA_CHECK(cudaMallocManaged(&foodTangentialVelocity, capacity * sizeof(float)));
             CUDA_CHECK(cudaMallocManaged(&energyReserve, capacity * sizeof(float)));
 
-            CUDA_CHECK(cudaMemset(lockedEnemyIndex, 0, capacity * sizeof(int)));
+            CUDA_CHECK(cudaMemset(lockedEnemyIndex, 0, capacity * sizeof(uint64_t)));
             CUDA_CHECK(cudaMemset(closestEnemyIndex, 0, capacity * sizeof(int)));
             CUDA_CHECK(cudaMemset(closestEnemyX, 0, capacity * sizeof(float)));
             CUDA_CHECK(cudaMemset(closestEnemyY, 0, capacity * sizeof(float)));
@@ -281,6 +289,7 @@ struct SwarmData {
 
     // Compaction data for graveyard management
     struct CompactionData {
+        int* birth_limit;
         int* alive_count;
         int* hole_count;
         int* mover_count;
@@ -288,18 +297,21 @@ struct SwarmData {
         int* movers_array;
 
         void allocate(int capacity){
+            CUDA_CHECK(cudaMallocManaged(&birth_limit, sizeof(int)));
             CUDA_CHECK(cudaMallocManaged(&alive_count, sizeof(int)));
             CUDA_CHECK(cudaMallocManaged(&hole_count, sizeof(int)));
             CUDA_CHECK(cudaMallocManaged(&mover_count, sizeof(int)));
             CUDA_CHECK(cudaMallocManaged(&holes_array, capacity * sizeof(int)));
             CUDA_CHECK(cudaMallocManaged(&movers_array, capacity * sizeof(int)));
             
+            *birth_limit = capacity;
             *alive_count = 0;
             *hole_count = 0;
             *mover_count = 0;
         }
 
         void free(){
+            CUDA_CHECK(cudaFree(birth_limit));
             CUDA_CHECK(cudaFree(alive_count));
             CUDA_CHECK(cudaFree(hole_count));
             CUDA_CHECK(cudaFree(mover_count));
@@ -309,7 +321,7 @@ struct SwarmData {
     } compaction;
 
     // Constructor orchestrates allocations
-    SwarmData(int capacity) : max_capacity(capacity) {
+    SwarmData(int capacity, int w_id) : max_capacity(capacity), world_id(w_id) {
         CUDA_CHECK(cudaMallocManaged(&current_count, sizeof(int)));
         *current_count = 0;
 

@@ -12,7 +12,7 @@
 SimulationManager::SimulationManager(int cores) : numCores(cores) {
     // Initialize N worlds
     for (int i = 0; i < numCores; i++) {
-        worlds.push_back(make_unique<World>(NUM_PREY, NUM_PREDATOR));
+        worlds.push_back(make_unique<World>(NUM_PREY, NUM_PREDATOR, i));
 
         // Launch persistent threads
         workers.emplace_back([this] {
@@ -58,12 +58,12 @@ SimulationManager::~SimulationManager() {
 void SimulationManager::update(float dt, bool renderEnabled) {
     float currentDuration = min(MAXIMUM_GENERATION_DURATION, STARTING_GENERATION_DURATION + generationCount * GENERATION_SCALING_FACTOR);
 
-    if (renderEnabled) {
-        // Only update the first world if rendering is enabled to maintain performance
-        worlds[0]->update(dt, this->generationCount);
-        this->generationTimer += dt;
-    } 
-    else {
+    // if (renderEnabled) {
+    //     // Only update the first world if rendering is enabled to maintain performance
+    //     worlds[0]->update(dt, this->generationCount);
+    //     this->generationTimer += dt;
+    // } 
+    // else {
         tasksRemaining = worlds.size();
         vector<future<void>> futures;
 
@@ -104,7 +104,7 @@ void SimulationManager::update(float dt, bool renderEnabled) {
         generationTimer = 0.0f;
         generationCount++;
         evolve();
-    }
+    // }
 }
 
 // Evolves agents by polling best ones 

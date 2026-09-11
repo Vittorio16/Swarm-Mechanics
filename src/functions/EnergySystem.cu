@@ -82,9 +82,9 @@ __global__ void energySystemUpdateKernel(SwarmData swarm, FoodLatticeData foodLa
                         atomicAdd(&foodLattice.totalFood[chunk_index],  -foodEaten); 
                         atomicAdd(&foodLattice.sumFoodX[chunk_index], -(tx * foodEaten));
                         atomicAdd(&foodLattice.sumFoodY[chunk_index], -(ty * foodEaten));
-                    }
 
-                    goto FINISH_EATING;
+                        goto FINISH_EATING;
+                    }
                 }
             }
         }
@@ -93,9 +93,10 @@ __global__ void energySystemUpdateKernel(SwarmData swarm, FoodLatticeData foodLa
         // Predators gain energy by eating prey
         if (swarm.sensors.closestEnemyIndex[i] != -1 && swarm.agentIdentifications.isAlive[swarm.sensors.closestEnemyIndex[i]]){
             // Check if the closest enemy is within kill range
-            float actualDist = swarm.sensors.closestEnemyDist[i] * swarm.perceptions.viewRadius[i];
+            int t = swarm.sensors.closestEnemyIndex[i];
+            ThoroidalData c = getThoroidalCoordinates(x[i], y[i], x[t], y[t], NUM_CELLE_X, NUM_CELLE_Y);
 
-            if (actualDist * actualDist < KILL_RANGE_SQ){
+            if (c < KILL_RANGE_SQ){
                 // Avoids race condition of multiple predators eating the same prey
                 int wasAlive = atomicExch((int*)&swarm.agentIdentifications.isAlive[swarm.sensors.closestEnemyIndex[i]], 0);
                 if (wasAlive == 1){

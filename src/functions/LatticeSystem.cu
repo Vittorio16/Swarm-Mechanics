@@ -20,7 +20,8 @@ __global__ void latticeBuildKernel(SpatialLatticeData lattice, SwarmData swarm, 
         int slot_index = (cell_index * MAX_AGENTS_PER_CELL) + current_count;
         lattice.cell_agent_indices[slot_index] = i;
     } else {
-        // TODO: THROW AN ERROR
+        // Clamps the value
+        atomicMin(&lattice.cell_counts[cell_index], MAX_AGENTS_PER_CELL);
     }
 }
 

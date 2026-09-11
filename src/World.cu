@@ -15,8 +15,9 @@ using namespace std;
 #include <iostream>
 
 // Constructor
-World::World(int num_prey, int num_predators) : 
-    swarm(MAX_SWARM_CAPACITY),
+World::World(int num_prey, int num_predators, int w_id) : 
+    world_id(w_id),
+    swarm(MAX_SWARM_CAPACITY, w_id),
     spatialLattice(NUM_CELLE_X / LATTICE_CELL_WIDTH, NUM_CELLE_Y / LATTICE_CELL_HEIGHT),
     foodLattice(NUM_CELLE_X / FOOD_CELL_WIDTH, NUM_CELLE_Y / FOOD_CELL_HEIGHT, NUM_CELLE_X, NUM_CELLE_Y),
     graveyard(MAX_GRAVEYARD_CAPACITY) {
@@ -28,6 +29,8 @@ World::World(int num_prey, int num_predators) :
 
 // Destructor
 World::~World() {
+    cudaDeviceSynchronize()
+
     swarm.freeAll();
     spatialLattice.free();
     foodLattice.free();

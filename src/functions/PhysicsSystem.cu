@@ -9,9 +9,9 @@ __global__ void physicsUpdateKernel(SwarmData swarm, float dt, int active_agents
 
     // Update heading and acceleration based on brain output
     swarm.physics.facingAngle[i] += swarm.neuralOutputs.turnIntent[i] * MAXIMUM_TURNING_SPEED * dt;
-    swarm.physics.facingAngle[i] = fmodf(swarm.physics.facingAngle[i], 2 * M_PI);
-    if (swarm.physics.facingAngle[i] <= -M_PI) swarm.physics.facingAngle[i] += 2 * M_PI;
-    if (swarm.physics.facingAngle[i] > M_PI) swarm.physics.facingAngle[i] -= 2 * M_PI;
+    swarm.physics.facingAngle[i] = fmodf(swarm.physics.facingAngle[i], 2 * CUDART_PI_F);
+    if (swarm.physics.facingAngle[i] <= -CUDART_PI_F) swarm.physics.facingAngle[i] += 2 * CUDART_PI_F;
+    if (swarm.physics.facingAngle[i] > CUDART_PI_F) swarm.physics.facingAngle[i] -= 2 * CUDART_PI_F;
 
     // Apply thrust in the direction of facingAngle
     float ax = swarm.neuralOutputs.thrustIntent[i] * cosf(swarm.physics.facingAngle[i]) * swarm.physics.force[i];
