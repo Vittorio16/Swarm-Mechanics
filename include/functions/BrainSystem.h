@@ -12,15 +12,18 @@ namespace BrainSystem {
     void insertBrain(SwarmData& swarm, int index, const std::vector<float>& weights);
 
     // Inline device version of mutateVector used in GPU kernels
-    inline __device__ void mutateVectorDevice(float* weights_array, int offset, int size, float mutationRate, float mutationStrength, curandState* localState) {
-        for (int m = 0; m < size; m++) {
+    inline __device__ void mutateBrainDevice(float* array, int numElements, int agent, int capacity,
+                                             float mutationRate, float mutationStrength,
+                                             curandState* localState) {
+        for (int e = 0; e < numElements; e++) {
             if (curand_uniform(localState) < mutationRate) {
-                float change = (curand_uniform(localState) * 2.0f - 1.0f) * mutationStrength;
-                int idx = offset + m;
-                weights_array[idx] += change;
+                int idx = e * capacity + agent;
                 
-                // Clamping
-                weights_array[idx] = fmaxf(-1.0f, fminf(1.0f, weights_array[idx]));
+                // Calculate random float between -mutationStrength and +mutationStrength
+                float change = (curand_uniform(localState) * 2.0f - 1.0f) * mutationStrength;
+                
+                float v = array[idx] + change;
+                array[idx] = fmaxf(-1.0f, fminf(1.0f, v));
             }
         }
     }

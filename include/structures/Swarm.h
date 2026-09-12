@@ -194,7 +194,8 @@ struct SwarmData {
             CUDA_CHECK(cudaMallocManaged(&foodTangentialVelocity, capacity * sizeof(float)));
             CUDA_CHECK(cudaMallocManaged(&energyReserve, capacity * sizeof(float)));
 
-            CUDA_CHECK(cudaMemset(lockedEnemyIndex, 0, capacity * sizeof(uint64_t)));
+            thrust::device_ptr<uint64_t> locked_ptr(lockedEnemyIndex);
+            thrust::fill(locked_ptr, locked_ptr + capacity, NO_LOCKED_TARGET);
             CUDA_CHECK(cudaMemset(closestEnemyIndex, 0, capacity * sizeof(int)));
             CUDA_CHECK(cudaMemset(closestEnemyX, 0, capacity * sizeof(float)));
             CUDA_CHECK(cudaMemset(closestEnemyY, 0, capacity * sizeof(float)));
@@ -304,7 +305,7 @@ struct SwarmData {
             CUDA_CHECK(cudaMallocManaged(&holes_array, capacity * sizeof(int)));
             CUDA_CHECK(cudaMallocManaged(&movers_array, capacity * sizeof(int)));
             
-            *birth_limit = capacity;
+            *birth_limit = 0;
             *alive_count = 0;
             *hole_count = 0;
             *mover_count = 0;

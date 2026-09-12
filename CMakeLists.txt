@@ -38,6 +38,11 @@ add_executable(SwarmSim ${SOURCES})
 # Allocates different streams for each thread
 target_compile_definitions(SwarmSim PRIVATE CUDA_API_PER_THREAD_DEFAULT_STREAM)
 
+# Reroutes <<<grid, block>>> kernel launches to appropriate streams
+target_compile_options(SwarmSim PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:--default-stream=per-thread>
+)
+
 target_link_libraries(SwarmSim PRIVATE 
     sfml-graphics 
     sfml-window 

@@ -131,6 +131,9 @@ constexpr float TURNING_COST_PENALTY = 0.5f;
 
 /* ------------------- Predator Settings ------------------ */
 
+// Locked predator target
+constexpr uint64_t NO_LOCKED_TARGET = 0xFFFFFFFFFFFFFFFFULL;
+
 // Range in which a predator can eat a prey
 const float KILL_RANGE_SQ = 5.0f;
 

@@ -87,8 +87,9 @@ void SimulationManager::update(float dt, bool renderEnabled) {
                     for (int i = 0; i < batchSize; i++) {
                         w->update(dt, this->generationCount);
                     }
+                    CUDA_CHECK(cudaStreamSynchronize(cudaStreamPerThread));
+
                 });
-                cudaStreamSynchronize(cudaStreamPerThread);
             }
         }
 
@@ -140,11 +141,12 @@ void SimulationManager::evolve() {
         for (int i = 0; i < *graveyard.current_count; i++){
             vector<float> brain;
             brain.reserve(W01_SIZE + W12_SIZE + B0_SIZE + B1_SIZE);
-            
-            for(int j = 0; j < W01_SIZE; j++) brain.push_back(graveyard.w01[i * W01_SIZE + j]);
-            for(int j = 0; j < W12_SIZE; j++) brain.push_back(graveyard.w12[i * W12_SIZE + j]);
-            for(int j = 0; j < B0_SIZE; j++)  brain.push_back(graveyard.b0[i * B0_SIZE + j]);
-            for(int j = 0; j < B1_SIZE; j++)  brain.push_back(graveyard.b1[i * B1_SIZE + j]);
+            const int gcap = graveyard.max_capacity;
+
+            for(int j = 0; j < W01_SIZE; j++) brain.push_back(graveyard.w01[j * gcap + i]);
+            for(int j = 0; j < W12_SIZE; j++) brain.push_back(graveyard.w12[j * gcap + i]);
+            for(int j = 0; j < B0_SIZE; j++)  brain.push_back(graveyard.b0[j * gcap + i]);
+            for(int j = 0; j < B1_SIZE; j++)  brain.push_back(graveyard.b1[j * gcap + i]);
 
             if (graveyard.speciesID[i] == PREY_ID) {
                 allPrey.push_back({graveyard.fitness[i], std::move(brain)});
@@ -259,7 +261,7 @@ void SimulationManager::resetSimulation() {
     // Re-create worlds
     worlds.clear(); 
     for (int i = 0; i < numCores; i++) {
-        worlds.push_back(make_unique<World>(NUM_PREY, NUM_PREDATOR));
+        worlds.push_back(make_unique<World>(NUM_PREY, NUM_PREDATOR, i));
     }
 
     // Adjust mutation parameters based on current generation count

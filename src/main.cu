@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include "Core/Config.h"
+#include "Core/GpuConfig.h"
 #include "SimulationManager.h"
 
 using namespace std;
@@ -23,7 +24,7 @@ void runProfiling(){
     int iterations = 200;
 
     for (int i = 0; i < prey_count.size(); i++) {
-        World world(prey_count[i], predator_count[i]);
+        World world(prey_count[i], predator_count[i, 0);
 
         // These are used to keep the averages
         double sum_buckets = 0, sum_obs = 0, sum_think = 0;
@@ -74,6 +75,7 @@ void runProfiling(){
     std::cout << "Profiling completato. Dati salvati in profiling_results.csv" << std::endl;
 }
 int main() {
+    GpuConfig::init()
     if (PROFILING_ENABLED) {
         runProfiling();
         return 0;

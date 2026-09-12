@@ -32,6 +32,8 @@ World::World(int num_prey, int num_predators, int w_id) :
     LifeSystem::initSwarm(swarm, num_prey, num_predators);
     FoodLatticeSystem::initRNG(foodLattice);
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
+
+    CUDA_CHECK(cudaDeviceSynchronize());
 }
 
 // Destructor
@@ -78,10 +80,10 @@ ProfilingData World::update(float dt, int generationCount){
     float dynamicStrength = std::max(MINIMUM_MUTATION_STRENGTH, STARTING_MUTATION_STRENGTH - (generationCount * MUTATION_STRENGTH_DECAY));
     
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
-    LifeSystem::handleBirths(swarm, dynamicRate, dynamicStrength);
-    
+
     // (Using the new fully-parallelized handleDeaths)
     LifeSystem::handleDeaths(swarm, graveyard); 
+    LifeSystem::handleBirths(swarm, dynamicRate, dynamicStrength);
     
     if (PROFILING_ENABLED) cudaEventRecord(end_cleanup);
     
