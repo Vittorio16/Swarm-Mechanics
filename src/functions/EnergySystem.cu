@@ -28,6 +28,13 @@ __global__ void energySystemUpdateKernel(SwarmData swarm, FoodLatticeData foodLa
         float energyLoss = metabolismCost * dt + effortCost * dt;
         swarm.energyMetrics.energy[i] -= energyLoss;
 
+        // Energy cap and death check
+        if (swarm.energyMetrics.energy[i] > 1.5f * MAX_ENERGY) swarm.energyMetrics.energy[i] = 1.5f * MAX_ENERGY;
+        if (swarm.energyMetrics.energy[i] <= 0.0f){
+            swarm.agentIdentifications.isAlive[i] = false;
+            continue;
+        }
+
         if (swarm.energyMetrics.remainingDigestion[i] > 0.001f) continue;
 
         // Feeding mechanics
@@ -125,8 +132,7 @@ __global__ void energySystemUpdateKernel(SwarmData swarm, FoodLatticeData foodLa
         }
 
         // Cap on energy
-        if (swarm.energyMetrics.energy[i] > 3.0f * MAX_ENERGY / 2.0f) swarm.energyMetrics.energy[i] = 3.0f * MAX_ENERGY / 2.0f;
-        if (swarm.energyMetrics.energy[i] <= 0.0f) swarm.agentIdentifications.isAlive[i] = false;
+        if (swarm.energyMetrics.energy[i] > 1.5f * MAX_ENERGY) swarm.energyMetrics.energy[i] = 1.5f * MAX_ENERGY;
     }
 }
 

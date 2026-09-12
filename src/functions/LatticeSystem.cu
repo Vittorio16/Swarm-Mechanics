@@ -30,7 +30,7 @@ __global__ void latticeBuildKernel(SpatialLatticeData lattice, SwarmData swarm) 
 
 void LatticeSystem::build(SpatialLatticeData& lattice, SwarmData& swarm) {
     // Empties previous lattice
-    CUDA_CHECK(cudaMemset(lattice.cell_counts, 0, lattice.total_cells * sizeof(int)));
+    CUDA_CHECK(cudaMemsetAsync(lattice.cell_counts, 0, lattice.total_cells * sizeof(int), cudaStreamPerThread));
 
     latticeBuildKernel<<<GpuConfig::persistentGrid, BLOCK_SIZE, 0, cudaStreamPerThread>>>(lattice, swarm);
 }

@@ -12,7 +12,7 @@ namespace LifeSystem {
 }
 
 __global__ void setupCurandKernel(curandState* state, unsigned long seed, int max_capacity) {
-    int count = swarm.max_capacity;
+    int count = max_capacity;
     int stride = gridDim.x * blockDim.x;
 
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < count; i += stride){
@@ -68,10 +68,11 @@ __global__ void createAgentsKernel(SwarmData swarm, int num_prey, int num_predat
 void LifeSystem::initSwarm(SwarmData& swarm, int num_prey, int num_predators){
     setupCurandKernel<<<GpuConfig::persistentGrid, BLOCK_SIZE, 0, cudaStreamPerThread>>>(swarm.rng.state, std::random_device{}(), MAX_SWARM_CAPACITY);
 
+    CUDA_CHECK(cudaDeviceSynchronize());
+
     *swarm.current_count = num_prey + num_predators;
     *swarm.agentIdentifications.localAgentIDCounter = *swarm.current_count;
 
-    int i_grid_size = (*swarm.current_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
     createAgentsKernel<<<GpuConfig::persistentGrid, BLOCK_SIZE, 0, cudaStreamPerThread>>>(swarm, num_prey, num_predators);
     
     CUDA_CHECK(cudaDeviceSynchronize());
@@ -128,9 +129,10 @@ __global__ void evaluateAndCountAliveKernel(SwarmData swarm, GraveyardData grave
 __global__ void mapCompactionKernel(SwarmData swarm) {
     int count = *swarm.current_count;
     int stride = gridDim.x * blockDim.x;
+        
+    int boundary = *swarm.compaction.alive_count;
 
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < count; i += stride){
-        int boundary = *swarm.compaction.alive_count;
         // This always bocks because if there are n alive agents they will fit in the first n slots
         if (i < boundary && !swarm.agentIdentifications.isAlive[i]) {
             int idx = atomicAdd(swarm.compaction.hole_count, 1);
@@ -203,17 +205,16 @@ __global__ void moveCompactionKernel(SwarmData swarm) {
         swarm.neuralOutputs.previousThrustIntent[dest] = swarm.neuralOutputs.previousThrustIntent[src];
         swarm.neuralOutputs.previousTurnIntent[dest] = swarm.neuralOutputs.previousTurnIntent[src];
         
-        const int gcap = graveyard.max_capacity;
         const int scap = swarm.max_capacity;
 
         #pragma unroll
-        for (int j = 0; j < W01_SIZE; j++) swarm.brains.w01[j * cap + dest] = swarm.brains.w01[j * scap + src]
+        for (int j = 0; j < W01_SIZE; j++) swarm.brains.w01[j * scap + dest] = swarm.brains.w01[j * scap + src];
         #pragma unroll
-        for (int j = 0; j < W12_SIZE; j++) swarm.brains.w12[j * cap + dest] = swarm.brains.w12[j * scap + src]
+        for (int j = 0; j < W12_SIZE; j++) swarm.brains.w12[j * scap + dest] = swarm.brains.w12[j * scap + src];
         #pragma unroll
-        for (int j = 0; j < B0_SIZE; j++) swarm.brains.b0[j * cap + dest] = swarm.brains.b0[j * scap + src]
+        for (int j = 0; j < B0_SIZE; j++) swarm.brains.b0[j * scap + dest] = swarm.brains.b0[j * scap + src];
         #pragma unroll
-        for (int j = 0; j < B1_SIZE; j++) swarm.brains.b1[j * cap + dest] = swarm.brains.b1[j * scap + src]
+        for (int j = 0; j < B1_SIZE; j++) swarm.brains.b1[j * scap + dest] = swarm.brains.b1[j * scap + src];
     }
 }
 
@@ -312,12 +313,6 @@ __global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mu
             swarm.neuralOutputs.previousTurnIntent[child_idx] = 0.0f;
             swarm.neuralOutputs.thrustIntent[child_idx] = 0.0f;
             swarm.neuralOutputs.turnIntent[child_idx] = 0.0f;
-
-            // Brain copy and mutation
-            const int W01_SIZE = INPUT_LAYER_SIZE * HIDDEN_LAYER_SIZE;
-            const int W12_SIZE = HIDDEN_LAYER_SIZE * OUTPUT_LAYER_SIZE;
-            const int B0_SIZE  = HIDDEN_LAYER_SIZE;
-            const int B1_SIZE  = OUTPUT_LAYER_SIZE;
 
             // Copies parent's brain
             const int cap = swarm.max_capacity;

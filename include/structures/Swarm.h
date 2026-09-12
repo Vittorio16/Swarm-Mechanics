@@ -322,7 +322,7 @@ struct SwarmData {
     } compaction;
 
     // Constructor orchestrates allocations
-    SwarmData(int capacity, int w_id) : max_capacity(capacity), world_id(w_id) {
+    SwarmData(int capacity, int w_id) : world_id(w_id), max_capacity(capacity) {
         CUDA_CHECK(cudaMallocManaged(&current_count, sizeof(int)));
         *current_count = 0;
 

@@ -9,13 +9,15 @@ __global__ void initRandomKernel(SwarmData swarm){
     int count = *swarm.current_count;
     int stride = gridDim.x * blockDim.x;
 
+    int cap = swarm.max_capacity;
+
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < count; i += stride){
         curandState localState = swarm.rng.state[i];
 
-        for (int j = 0; j < W01_SIZE; j++) swarm.brains.w01[i * W01_SIZE + j] = curand_uniform(&localState) * 2.0f - 1.0f;
-        for (int j = 0; j < W12_SIZE; j++) swarm.brains.w12[i * W12_SIZE + j] = curand_uniform(&localState) * 2.0f - 1.0f;
-        for (int j = 0; j < B0_SIZE; j++) swarm.brains.b0[i * B0_SIZE + j] = curand_uniform(&localState) * 2.0f - 1.0f;
-        for (int j = 0; j < B1_SIZE; j++) swarm.brains.b1[i * B1_SIZE + j] = curand_uniform(&localState) * 2.0f - 1.0f;
+        for (int j = 0; j < W01_SIZE; j++) swarm.brains.w01[j * cap + i] = curand_uniform(&localState) * 2.0f - 1.0f;
+        for (int j = 0; j < W12_SIZE; j++) swarm.brains.w12[j * cap + i] = curand_uniform(&localState) * 2.0f - 1.0f;
+        for (int j = 0; j < B0_SIZE; j++) swarm.brains.b0[j * cap + i] = curand_uniform(&localState) * 2.0f - 1.0f;
+        for (int j = 0; j < B1_SIZE; j++) swarm.brains.b1[j * cap + i] = curand_uniform(&localState) * 2.0f - 1.0f;
 
         swarm.rng.state[i] = localState;
     }
@@ -93,7 +95,7 @@ __global__ void brainThinkKernel(SwarmData swarm) {
         swarm.neuralOutputs.thrustIntent[i] = fmaxf(0.0f, outputValues[0]);
         swarm.neuralOutputs.turnIntent[i] = outputValues[1];
         
-        warm.neuralOutputs.previousThrustIntent[i] = swarm.neuralOutputs.thrustIntent[i];
+        swarm.neuralOutputs.previousThrustIntent[i] = swarm.neuralOutputs.thrustIntent[i];
         swarm.neuralOutputs.previousTurnIntent[i] = swarm.neuralOutputs.turnIntent[i];
     }
 }

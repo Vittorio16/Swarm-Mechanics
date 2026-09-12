@@ -60,6 +60,8 @@ void SimulationManager::update(float dt, bool renderEnabled) {
 
     if (renderEnabled) {
         // Only update the first world if rendering is enabled to maintain performance
+        if (worlds.empty()) return;
+        
         worlds[0]->update(dt, this->generationCount);
         this->generationTimer += dt;
 

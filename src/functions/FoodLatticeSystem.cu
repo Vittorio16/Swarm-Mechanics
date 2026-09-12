@@ -10,7 +10,7 @@ namespace FoodLatticeSystem {
 
 // Initializes the cuRAND states for the food lattice
 __global__ void setupFoodCurandKernel(curandState* state, unsigned long seed, int max_capacity) {
-    int count = swarm.max_capacity;
+    int count = max_capacity;
     int stride = gridDim.x * blockDim.x;
 
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < count; i += stride){

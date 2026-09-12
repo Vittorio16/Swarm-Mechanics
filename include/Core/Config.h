@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <vector>
+#include <cstdint>
 
 using namespace std;
 
@@ -67,12 +68,12 @@ const float RANDOM_INJECTION_RATE = 0.20f; // minus the hof injection rate
 /* ------------------- World Settings ------------------ */
 
 // Starting agents
-constexpr int MAX_SWARM_CAPACITY = 500000;
+constexpr int MAX_SWARM_CAPACITY = 30000;
 constexpr int NUM_PREDATOR = 50;
 constexpr int NUM_PREY = 400;
 // Graveyard settings
 
-constexpr int MAX_GRAVEYARD_CAPACITY = 1.5 * MAX_SWARM_CAPACITY;
+constexpr int MAX_GRAVEYARD_CAPACITY = 2 * MAX_SWARM_CAPACITY;
 
 // World dimensions
 constexpr int NUM_CELLE_X = 960;
