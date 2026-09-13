@@ -9,10 +9,10 @@
 #include "functions/LifeSystem.h"
 
 // Constructor
-SimulationManager::SimulationManager(int cores) : numCores(cores) {
+SimulationManager::SimulationManager(int cores, uint64_t runSeed) : numCores(cores) {
     // Initialize N worlds
     for (int i = 0; i < numCores; i++) {
-        worlds.push_back(make_unique<World>(NUM_PREY, NUM_PREDATOR, i));
+        worlds.push_back(make_unique<World>(NUM_PREY, NUM_PREDATOR, i, splitmix64(runSeed + (uint64_t)i)));
 
         // Launch persistent threads
         workers.emplace_back([this] {
@@ -260,10 +260,9 @@ void SimulationManager::evolve() {
 
 
 void SimulationManager::resetSimulation() {
-    // Re-create worlds
-    worlds.clear(); 
-    for (int i = 0; i < numCores; i++) {
-        worlds.push_back(make_unique<World>(NUM_PREY, NUM_PREDATOR, i));
+    // Re-use worlds
+    for (int i = 0; i < (int)worlds.size(); i++){
+        worlds[i]->reset(NUM_PREY, NUM_PREDATOR);
     }
 
     // Adjust mutation parameters based on current generation count

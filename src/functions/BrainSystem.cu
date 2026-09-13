@@ -10,16 +10,15 @@ __global__ void initRandomKernel(SwarmData swarm){
     int stride = gridDim.x * blockDim.x;
 
     int cap = swarm.max_capacity;
+    uint64_t tick = *swarm.tick;
 
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < count; i += stride){
-        curandState localState = swarm.rng.state[i];
+        RngStream rng(swarm.rng_seed, (uint64_t)i, tick, RngPurpose::BRAIN_INIT);
 
-        for (int j = 0; j < W01_SIZE; j++) swarm.brains.w01[j * cap + i] = curand_uniform(&localState) * 2.0f - 1.0f;
-        for (int j = 0; j < W12_SIZE; j++) swarm.brains.w12[j * cap + i] = curand_uniform(&localState) * 2.0f - 1.0f;
-        for (int j = 0; j < B0_SIZE; j++) swarm.brains.b0[j * cap + i] = curand_uniform(&localState) * 2.0f - 1.0f;
-        for (int j = 0; j < B1_SIZE; j++) swarm.brains.b1[j * cap + i] = curand_uniform(&localState) * 2.0f - 1.0f;
-
-        swarm.rng.state[i] = localState;
+        for (int j = 0; j < W01_SIZE; j++) swarm.brains.w01[j * cap + i] = rng.nextFloat(-1.0f, 1.0f);
+        for (int j = 0; j < W12_SIZE; j++) swarm.brains.w12[j * cap + i] = rng.nextFloat(-1.0f, 1.0f);
+        for (int j = 0; j < B0_SIZE; j++) swarm.brains.b0[j * cap + i] = rng.nextFloat(-1.0f, 1.0f);
+        for (int j = 0; j < B1_SIZE; j++) swarm.brains.b1[j * cap + i] = rng.nextFloat(-1.0f, 1.0f);
     }
 }
 
@@ -37,8 +36,9 @@ __global__ void brainThinkKernel(SwarmData swarm) {
         
         // Prepare the inputs for the neural network
         float inputs[INPUT_LAYER_SIZE];
-        inputs[0] = swarm.neuralOutputs.previousThrustIntent[i]; 
-        inputs[1] = swarm.neuralOutputs.previousTurnIntent[i];
+        // Read values are previous generation's, before they are overwritten
+        inputs[0] = swarm.neuralOutputs.thrustIntent[i]; 
+        inputs[1] = swarm.neuralOutputs.turnIntent[i];
         inputs[2] = swarm.physics.speed[i] / swarm.physics.maxSpeed[i]; 
         inputs[3] = swarm.sensors.closestEnemyX[i]; 
         inputs[4] = swarm.sensors.closestEnemyY[i]; 
@@ -94,9 +94,6 @@ __global__ void brainThinkKernel(SwarmData swarm) {
         // Outputs are thrust and turn intents
         swarm.neuralOutputs.thrustIntent[i] = fmaxf(0.0f, outputValues[0]);
         swarm.neuralOutputs.turnIntent[i] = outputValues[1];
-        
-        swarm.neuralOutputs.previousThrustIntent[i] = swarm.neuralOutputs.thrustIntent[i];
-        swarm.neuralOutputs.previousTurnIntent[i] = swarm.neuralOutputs.turnIntent[i];
     }
 }
 // Given sensory inputs, decides on the agent's actions using a feed forward neural network

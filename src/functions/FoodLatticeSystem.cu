@@ -1,39 +1,48 @@
 #include <algorithm>
 #include "functions/FoodLatticeSystem.h"
 #include "Core/GpuConfig.h"
+#include "Core/Rng.h"
 
-namespace FoodLatticeSystem {
-    thread_local std::mt19937 gen(std::random_device{}());
-    thread_local std::uniform_int_distribution<int> disX(0, NUM_CELLE_X - 1);
-    thread_local std::uniform_int_distribution<int> disY(0, NUM_CELLE_Y - 1);
-}
-
-// Initializes the cuRAND states for the food lattice
-__global__ void setupFoodCurandKernel(curandState* state, unsigned long seed, int max_capacity) {
-    int count = max_capacity;
+__global__ void buildChunkSummaryKernel(FoodLatticeData foodLattice){
     int stride = gridDim.x * blockDim.x;
 
-    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < count; i += stride){
-        curand_init(seed, i, 0, &state[i]);
+    for (int c = blockIdx.x * blockDim.x + threadIdx.x;
+         c < foodLattice.total_chunks; c += stride) {
+
+        float total = foodLattice.totalFood[c];
+
+        ChunkSummary s;
+        s.totalFood = total;
+        if (total > 0.001f) {
+            s.comX = foodLattice.sumFoodX[c] / total;
+            s.comY = foodLattice.sumFoodY[c] / total;
+        } else {
+            s.comX = 0.0f;
+            s.comY = 0.0f;
+        }
+        s._pad = 0.0f;
+
+        foodLattice.chunkSummary[c] = s;
     }
 }
 
-void FoodLatticeSystem::initRNG(FoodLatticeData& foodLattice) {
-    setupFoodCurandKernel<<<GpuConfig::persistentGrid, BLOCK_SIZE, 0, cudaStreamPerThread>>>(foodLattice.rng.state, std::random_device{}(), MAX_SWARM_CAPACITY);
-    cudaDeviceSynchronize();
+// Creates chunk memory
+void FoodLatticeSystem::buildChunkSummary(FoodLatticeData& foodLattice){
+    buildChunkSummaryKernel<<<GpuConfig::persistentGrid, BLOCK_SIZE, 0, cudaStreamPerThread>>>(foodLattice);
 }
 
-__global__ void growKernel(FoodLatticeData foodLattice, curandState* rngStates, float growthAmount){
+__global__ void growKernel(FoodLatticeData foodLattice, float growthAmount, uint64_t seed, const uint64_t* tickPtr){
     int count = *foodLattice.foodToSpawn;
     int stride = gridDim.x * blockDim.x;
+    uint64_t tick = *tickPtr;
 
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < count; i += stride){
-        curandState localState = rngStates[i];
+        RngStream rng(seed, (uint64_t)i, tick, RngPurpose::FOOD_SPAWN);
 
         // Bounded Retry: if after MAX_SPAWN_ATTEMPTS we cannot respawn the food cell, we stop trying to
         for (int attempt = 0; attempt < MAX_SPAWN_ATTEMPTS; attempt++) {
-            int cx = (int)(curand_uniform(&localState) * foodLattice.num_cells_x);
-            int cy = (int)(curand_uniform(&localState) * foodLattice.num_cells_y);
+            int cx = rng.nextInt(foodLattice.num_cells_x);
+            int cy = rng.nextInt(foodLattice.num_cells_y);
 
             int grid_index = cy * foodLattice.num_cells_x + cx;
 
@@ -68,7 +77,6 @@ __global__ void growKernel(FoodLatticeData foodLattice, curandState* rngStates, 
                 }
             }
         }
-        rngStates[i] = localState;
     }
 }
 
@@ -79,8 +87,8 @@ __global__ void resetFoodCounterKernel(int* foodToSpawn) {
     }
 }
 
-void FoodLatticeSystem::grow(FoodLatticeData& foodLattice, float growthAmount){
+void FoodLatticeSystem::grow(FoodLatticeData& foodLattice, float growthAmount, uint64_t seed, const uint64_t* tick){
     // We don't use foodToGrow, so that the CPU doesn't have to read it and we don't have to sync
-    growKernel<<<GpuConfig::persistentGrid, BLOCK_SIZE, 0, cudaStreamPerThread>>>(foodLattice, foodLattice.rng.state, growthAmount);
+    growKernel<<<GpuConfig::persistentGrid, BLOCK_SIZE, 0, cudaStreamPerThread>>>(foodLattice, growthAmount, seed, tick);
     resetFoodCounterKernel<<<1, 1>>>(foodLattice.foodToSpawn);
 }

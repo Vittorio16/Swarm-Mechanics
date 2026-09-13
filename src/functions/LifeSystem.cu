@@ -5,40 +5,34 @@
 #include <cuda_runtime.h>
 #include "Core/GpuConfig.h"
 
-namespace LifeSystem {
-    thread_local std::mt19937 gen(std::random_device{}());
-    thread_local std::uniform_int_distribution<int> disX(0, NUM_CELLE_X - 1);
-    thread_local std::uniform_int_distribution<int> disY(0, NUM_CELLE_Y - 1);
+__global__ void advanceTickKernel(uint64_t* tick){
+    if (threadIdx.x == 0 && blockIdx.x == 0) (*tick)++;
 }
 
-__global__ void setupCurandKernel(curandState* state, unsigned long seed, int max_capacity) {
-    int count = max_capacity;
-    int stride = gridDim.x * blockDim.x;
-
-    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < count; i += stride){
-        curand_init(seed, i, 0, &state[i]);
-    }
+void LifeSystem::advanceTick(SwarmData& swarm){
+    advanceTickKernel<<<1, 1, 0, cudaStreamPerThread>>>(swarm.tick);
 }
 
-__global__ void createAgentsKernel(SwarmData swarm, int num_prey, int num_predators){
+__global__ void createAgentsKernel(SwarmData swarm, int num_prey, int num_predators, uint64_t idBase){
     int count = *swarm.current_count;
     int stride = gridDim.x * blockDim.x;
+    uint64_t tick = *swarm.tick;
 
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < count; i += stride){
         int species = (i < num_prey) ? PREY_ID : PREDATOR_ID;
 
-        curandState localState = swarm.rng.state[i];
+        RngStream rng(swarm.rng_seed, (uint64_t)i, tick, RngPurpose::AGENT_SPAWN);
 
         // Shift the world_id 48 bits to the left, leaving 48 bits for the local counter
         uint64_t world_prefix = static_cast<uint64_t>(swarm.world_id) << 48;
-        swarm.agentIdentifications.ID[i] = world_prefix | static_cast<uint64_t>(i);
+        swarm.agentIdentifications.ID[i] = world_prefix | (idBase + static_cast<uint64_t>(i));
 
         swarm.agentIdentifications.speciesID[i] = species;
         swarm.agentIdentifications.isAlive[i] = 1;
 
-        swarm.physics.x[i] = curand_uniform(&localState) * (float)NUM_CELLE_X;
-        swarm.physics.y[i] = curand_uniform(&localState) * (float)NUM_CELLE_Y;
-        swarm.physics.facingAngle[i] = (curand_uniform(&localState) * 2.0f - 1.0f) * CUDART_PI_F;
+        swarm.physics.x[i] = rng.nextFloat() * (float)NUM_CELLE_X;
+        swarm.physics.y[i] = rng.nextFloat() * (float)NUM_CELLE_Y;
+        swarm.physics.facingAngle[i] = rng.nextFloat(-CUDART_PI_F, CUDART_PI_F);
         swarm.physics.vx[i] = 0.0f;
         swarm.physics.vy[i] = 0.0f;
         swarm.physics.speed[i] = 0.0f;
@@ -61,20 +55,44 @@ __global__ void createAgentsKernel(SwarmData swarm, int num_prey, int num_predat
         swarm.fitnessMetrics.timeLived[i] = 0.0f;
         swarm.fitnessMetrics.energyGained[i] = 0.0f;
 
-        swarm.rng.state[i] = localState;
+        // On reset, the constructor doesn't initialize this fields since it's not called
+        swarm.sensors.lockedEnemyIndex[i]       = NO_LOCKED_TARGET;
+        swarm.sensors.closestEnemyIndex[i]      = -1;
+        swarm.sensors.closestEnemyDist[i]       = 1.0f;
+        swarm.sensors.closestEnemyX[i]          = 0.0f;
+        swarm.sensors.closestEnemyY[i]          = 0.0f;
+        swarm.sensors.enemyClosingSpeed[i]      = 0.0f;
+        swarm.sensors.enemyTangentialSpeed[i]   = 0.0f;
+        swarm.sensors.foodSenseX[i]             = 0.0f;
+        swarm.sensors.foodSenseY[i]             = 0.0f;
+        swarm.sensors.foodDistance[i]           = 1.0f;
+        swarm.sensors.foodClosingVelocity[i]    = 0.0f;
+        swarm.sensors.foodTangentialVelocity[i] = 0.0f;
+        swarm.sensors.energyReserve[i]          = 0.0f;
+        swarm.sensors.cachedFoodChunk[i]        = -1;
+        swarm.neuralOutputs.thrustIntent[i]     = 0.0f;
+        swarm.neuralOutputs.turnIntent[i]       = 0.0f;
     }
 }
 
 void LifeSystem::initSwarm(SwarmData& swarm, int num_prey, int num_predators){
-    setupCurandKernel<<<GpuConfig::persistentGrid, BLOCK_SIZE, 0, cudaStreamPerThread>>>(swarm.rng.state, std::random_device{}(), MAX_SWARM_CAPACITY);
+    int total = num_prey + num_predators;
+    if (total > swarm.max_capacity) {
+        std::cerr << "initSwarm: requested " << total << " agents, clamping to "
+                  << swarm.max_capacity << std::endl;
+        float scale   = (float)swarm.max_capacity / (float)total;
+        num_prey      = (int)(num_prey * scale);
+        num_predators = swarm.max_capacity - num_prey;
+        total         = swarm.max_capacity;
+    }
 
-    CUDA_CHECK(cudaDeviceSynchronize());
-
-    *swarm.current_count = num_prey + num_predators;
-    *swarm.agentIdentifications.localAgentIDCounter = *swarm.current_count;
-
-    createAgentsKernel<<<GpuConfig::persistentGrid, BLOCK_SIZE, 0, cudaStreamPerThread>>>(swarm, num_prey, num_predators);
+    *swarm.current_count = total;
     
+    // Uses base to keep agentIds unique across generations
+    uint64_t idBase = *swarm.agentIdentifications.localAgentIDCounter;
+    createAgentsKernel<<<GpuConfig::persistentGrid, BLOCK_SIZE, 0, cudaStreamPerThread>>>(swarm, num_prey, num_predators, idBase);
+    
+    *swarm.agentIdentifications.localAgentIDCounter = idBase + (uint64_t)total;
     CUDA_CHECK(cudaDeviceSynchronize());
     
     // Initializes random brains for the whole swarm
@@ -156,8 +174,6 @@ __global__ void moveCompactionKernel(SwarmData swarm) {
         int src = swarm.compaction.movers_array[i];
 
         // Transfer all SoA data from src to dest
-        swarm.rng.state[dest] = swarm.rng.state[src];
-        
         swarm.agentIdentifications.ID[dest] = swarm.agentIdentifications.ID[src];
         swarm.agentIdentifications.speciesID[dest] = swarm.agentIdentifications.speciesID[src];
         swarm.agentIdentifications.isAlive[dest] = swarm.agentIdentifications.isAlive[src];
@@ -202,8 +218,6 @@ __global__ void moveCompactionKernel(SwarmData swarm) {
         
         swarm.neuralOutputs.thrustIntent[dest] = swarm.neuralOutputs.thrustIntent[src];
         swarm.neuralOutputs.turnIntent[dest] = swarm.neuralOutputs.turnIntent[src];
-        swarm.neuralOutputs.previousThrustIntent[dest] = swarm.neuralOutputs.previousThrustIntent[src];
-        swarm.neuralOutputs.previousTurnIntent[dest] = swarm.neuralOutputs.previousTurnIntent[src];
         
         const int scap = swarm.max_capacity;
 
@@ -243,6 +257,8 @@ void LifeSystem::handleDeaths(SwarmData& swarm, GraveyardData& graveyard){
 __global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mutationStrength){
     int count = *swarm.compaction.birth_limit;
     int stride = gridDim.x * blockDim.x;
+    const int cap = swarm.max_capacity;
+    const uint64_t tick = *swarm.tick;
 
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < count; i += stride){
         if (!swarm.agentIdentifications.isAlive[i]) continue;
@@ -256,6 +272,8 @@ __global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mu
                 atomicSub(swarm.current_count, 1); 
                 continue; 
             }
+            uint64_t parentID = swarm.agentIdentifications.ID[i];
+            RngStream rng(swarm.rng_seed, parentID, tick, RngPurpose::REPRODUCTION);
 
             float energyCost = BASE_REPRODUCTION_COST;
             swarm.energyMetrics.energy[i] -= energyCost * (1.0f + REPRODUCTION_COST_SCALING * swarm.energyMetrics.childCount[i]);
@@ -265,15 +283,14 @@ __global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mu
             // New agent identification
             uint64_t world_prefix = static_cast<uint64_t>(swarm.world_id) << 48;
             unsigned long long int newLocalID = atomicAdd(reinterpret_cast<unsigned long long int*>(swarm.agentIdentifications.localAgentIDCounter), 1ULL);
+            uint64_t childID = world_prefix | static_cast<uint64_t>(newLocalID);
 
-            swarm.agentIdentifications.ID[child_idx] = world_prefix | static_cast<uint64_t>(newLocalID);
+            swarm.agentIdentifications.ID[child_idx] = childID;
             swarm.agentIdentifications.speciesID[child_idx] = swarm.agentIdentifications.speciesID[i];
-            swarm.agentIdentifications.isAlive[child_idx] = true;
+            swarm.agentIdentifications.isAlive[child_idx] = 1;
 
-            curandState localState = swarm.rng.state[i];
-
-            float babyX = swarm.physics.x[i] + (curand_uniform(&localState) * 2.0f - 1.0f);
-            float babyY = swarm.physics.y[i] + (curand_uniform(&localState) * 2.0f - 1.0f);
+            float babyX = swarm.physics.x[i] + rng.nextFloat(-1.0f, 1.0f);
+            float babyY = swarm.physics.y[i] + rng.nextFloat(-1.0f, 1.0f);
 
             // Thoroidal wrapping
             babyX = fmodf(babyX, (float)NUM_CELLE_X);
@@ -286,7 +303,7 @@ __global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mu
             swarm.physics.vx[child_idx] = 0.0f;
             swarm.physics.vy[child_idx] = 0.0f;
             swarm.physics.speed[child_idx] = 0.0f;
-            swarm.physics.facingAngle[child_idx] = (curand_uniform(&localState) * 2.0f - 1.0f) * CUDART_PI_F;
+            swarm.physics.facingAngle[child_idx] = rng.nextFloat(-CUDART_PI_F, CUDART_PI_F);
 
             // Inherits parent's characteristics
             swarm.physics.friction[child_idx] = swarm.physics.friction[i];
@@ -309,8 +326,6 @@ __global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mu
             swarm.fitnessMetrics.energyGained[child_idx] = 0.0f;
 
             // Neural outputs
-            swarm.neuralOutputs.previousThrustIntent[child_idx] = 0.0f;
-            swarm.neuralOutputs.previousTurnIntent[child_idx] = 0.0f;
             swarm.neuralOutputs.thrustIntent[child_idx] = 0.0f;
             swarm.neuralOutputs.turnIntent[child_idx] = 0.0f;
 
@@ -325,13 +340,16 @@ __global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mu
             #pragma unroll
             for (int j = 0; j < B1_SIZE; j++) swarm.brains.b1[j * cap + child_idx] = swarm.brains.b1[j * cap + i];
 
-            // Mutates the brain
-            BrainSystem::mutateBrainDevice(swarm.brains.w01, W01_SIZE, child_idx, cap, mutationRate, mutationStrength, &localState);
-            BrainSystem::mutateBrainDevice(swarm.brains.w12, W12_SIZE, child_idx, cap, mutationRate, mutationStrength, &localState);
-            BrainSystem::mutateBrainDevice(swarm.brains.b0,  B0_SIZE,  child_idx, cap, mutationRate, mutationStrength, &localState);
-            BrainSystem::mutateBrainDevice(swarm.brains.b1,  B1_SIZE,  child_idx, cap, mutationRate, mutationStrength, &localState);
+            // Separate stream keyed on the childs's brand-new ID. If this were keyed
+            // on the parent, two children born to the same parent on the same tick
+            // would receive identical mutations.
+            RngStream mrng(swarm.rng_seed, childID, tick, RngPurpose::MUTATION);
 
-            swarm.rng.state[i] = localState;
+            // Mutates the brain
+            BrainSystem::mutateBrainDevice(swarm.brains.w01, W01_SIZE, child_idx, cap, mutationRate, mutationStrength, mrng);
+            BrainSystem::mutateBrainDevice(swarm.brains.w12, W12_SIZE, child_idx, cap, mutationRate, mutationStrength, mrng);
+            BrainSystem::mutateBrainDevice(swarm.brains.b0,  B0_SIZE,  child_idx, cap, mutationRate, mutationStrength, mrng);
+            BrainSystem::mutateBrainDevice(swarm.brains.b1,  B1_SIZE,  child_idx, cap, mutationRate, mutationStrength, mrng);
         }
     }
 }

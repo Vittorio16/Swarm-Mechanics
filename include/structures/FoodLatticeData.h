@@ -1,20 +1,9 @@
 #pragma once
 #include "Core/Config.h"
-#include <curand_kernel.h>
 
 using namespace std;
 
 struct FoodLatticeData{
-    struct RandData {
-        curandState* state;
-        void allocate(int capacity) {
-            CUDA_CHECK(cudaMallocManaged(&state, capacity * sizeof(curandState)));
-        }
-        void free() {
-            CUDA_CHECK(cudaFree(state));
-        }
-    } rng;
-
     // Global data
     int num_chunks_x;
     int num_chunks_y;
@@ -31,16 +20,24 @@ struct FoodLatticeData{
     int total_cells;
     float* foodGrid;
 
+    struct ChunkSummary {
+        float comX;
+        float comY;
+        float totalFood;
+        float _pad;
+    };
+    ChunkSummary* chunkSummary;
+
     void allocate(int chunks_x, int chunks_y, int cells_x, int cells_y){
         num_chunks_x = chunks_x;
         num_chunks_y = chunks_y;
         total_chunks = chunks_x * chunks_y;
 
-        rng.allocate(MAX_SWARM_CAPACITY);
         CUDA_CHECK(cudaMallocManaged(&foodToSpawn, sizeof(int)));
         CUDA_CHECK(cudaMallocManaged(&sumFoodX, chunks_x * chunks_y * sizeof(float)));
         CUDA_CHECK(cudaMallocManaged(&sumFoodY, chunks_x * chunks_y * sizeof(float)));
         CUDA_CHECK(cudaMallocManaged(&totalFood, chunks_x * chunks_y * sizeof(float)));
+        CUDA_CHECK(cudaMallocManaged(&chunkSummary, total_chunks * sizeof(ChunkSummary)));
 
         *foodToSpawn = CONSTANT_FOOD_AMOUNT;
         CUDA_CHECK(cudaMemset(sumFoodX, 0, chunks_x * chunks_y * sizeof(float)));
@@ -54,15 +51,28 @@ struct FoodLatticeData{
         CUDA_CHECK(cudaMallocManaged(&foodGrid, cells_x * cells_y * sizeof(float)));
 
         CUDA_CHECK(cudaMemset(foodGrid, 0, num_cells_x * num_cells_y * sizeof(float)));
+        CUDA_CHECK(cudaMemset(chunkSummary, 0, total_chunks * sizeof(ChunkSummary)));
     } 
     
+    // resets between generations
+    void reset(){
+        CUDA_CHECK(cudaMemset(foodGrid, 0, total_cells * sizeof(float)));
+        CUDA_CHECK(cudaMemset(totalFood, 0, total_chunks * sizeof(float)));
+        CUDA_CHECK(cudaMemset(sumFoodX,  0, total_chunks * sizeof(float)));
+        CUDA_CHECK(cudaMemset(sumFoodY,  0, total_chunks * sizeof(float)));
+        CUDA_CHECK(cudaMemset(chunkSummary, 0, total_chunks * sizeof(ChunkSummary)));
+
+        // Next grow refills the world
+        *foodToSpawn = CONSTANT_FOOD_AMOUNT;
+    }
+
     void free(){
-        rng.free();
         CUDA_CHECK(cudaFree(foodToSpawn));
         CUDA_CHECK(cudaFree(sumFoodX));
         CUDA_CHECK(cudaFree(sumFoodY));
         CUDA_CHECK(cudaFree(totalFood));
         CUDA_CHECK(cudaFree(foodGrid));
+        CUDA_CHECK(cudaFree(chunkSummary));
     }
 
     FoodLatticeData(int chunks_x, int chunks_y, int cells_x, int cells_y){

@@ -40,7 +40,6 @@ __global__ void energySystemUpdateKernel(SwarmData swarm, FoodLatticeData foodLa
         // Feeding mechanics
         if (swarm.agentIdentifications.speciesID[i] == PREY_ID){
             // Prey gain energy by eating grass 
-        
             float posX = swarm.physics.x[i];
             float posY = swarm.physics.y[i];
             if (isnan(posX) || isinf(posX)) posX = 0.0f;
@@ -106,19 +105,9 @@ __global__ void energySystemUpdateKernel(SwarmData swarm, FoodLatticeData foodLa
                 int t = swarm.sensors.closestEnemyIndex[i];
                 if (t != -1 && swarm.agentIdentifications.isAlive[t]) {
                     // Calculate wrapped distance 
-                    float dx = swarm.physics.x[t] - swarm.physics.x[i];
-                    float dy = swarm.physics.y[t] - swarm.physics.y[i];
+                    ThoroidalDelta d = thoroidalDelta(swarm.physics.x[i], swarm.physics.y[i], swarm.physics.x[t], swarm.physics.y[t], NUM_CELLE_X, NUM_CELLE_Y);
                     
-                    // Thoroidal Wrapping
-                    if (dx > NUM_CELLE_X * 0.5f) dx -= NUM_CELLE_X;
-                    else if (dx < -NUM_CELLE_X * 0.5f) dx += NUM_CELLE_X;
-                    
-                    if (dy > NUM_CELLE_Y * 0.5f) dy -= NUM_CELLE_Y;
-                    else if (dy < -NUM_CELLE_Y * 0.5f) dy += NUM_CELLE_Y;
-                    
-                    float distSq = dx*dx + dy*dy;
-
-                    if (distSq < KILL_RANGE_SQ) {
+                    if (d.distSq < KILL_RANGE_SQ) {
                         // Avoids race condition of multiple predators eating the same prey
                         int wasAlive = atomicExch((int*)&swarm.agentIdentifications.isAlive[t], 0);
                         if (wasAlive == 1) {

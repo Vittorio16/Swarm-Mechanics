@@ -2,6 +2,7 @@
 #include <thread>
 #include <iostream>
 #include <fstream>
+#include <random>
 #include "Core/Config.h"
 #include "Core/GpuConfig.h"
 #include "SimulationManager.h"
@@ -76,6 +77,9 @@ void runProfiling(){
 }
 int main() {
     GpuConfig::init();
+    uint64_t runSeed = std::random_device{}();
+    std::cout << "Run seed: " << runSeed << std::endl;
+
     if (PROFILING_ENABLED) {
         runProfiling();
         return 0;
@@ -103,7 +107,7 @@ int main() {
 
     // Memory allocation in CUDA
     cout << "Allocating Unified Memory... Please wait, do not press CTRL+C." << endl;
-    SimulationManager simManager(numCores - 1);
+    SimulationManager simManager(numCores - 1, runSeed);
     cout << "Allocation Complete! Starting simulation." << endl;
 
     window.setTitle("Swarm Evolution");

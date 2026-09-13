@@ -25,7 +25,8 @@ class World{
     FoodLatticeData foodLattice;
     GraveyardData graveyard;
 
-    World(int numPrey, int numPredators, int world_id = 0);
+    World(int numPrey, int numPredators, int world_id = 0, uint64_t seed = 0);
+    void reset(int num_prey, int num_predators);
     ~World();
     // Updattes the world each tick of the simulation
     ProfilingData update(float dt, int generationCount);

@@ -54,7 +54,7 @@ private:
 
     void evolve();
 public:
-    SimulationManager(int cores);
+    SimulationManager(int cores, uint64_t runSeed);
     ~SimulationManager();
 
     void update(float dt, bool renderEnabled);

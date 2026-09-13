@@ -35,7 +35,10 @@ struct GraveyardData {
         CUDA_CHECK(cudaMemset(b0, 0, capacity * B0_SIZE * sizeof(float)));
         CUDA_CHECK(cudaMemset(b1, 0, capacity * B1_SIZE * sizeof(float)));
     }
-
+    void reset() {
+        *current_count = 0;
+    }
+    
     void free(){
         CUDA_CHECK(cudaFree(current_count));
         CUDA_CHECK(cudaFree(speciesID));
@@ -48,9 +51,5 @@ struct GraveyardData {
     
     GraveyardData(int capacity){
         allocate(capacity);
-    }
-
-    void clear() {
-        *current_count = 0;
     }
 };

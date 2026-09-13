@@ -15,9 +15,9 @@ using namespace std;
 #include <iostream>
 
 // Constructor
-World::World(int num_prey, int num_predators, int w_id) : 
+World::World(int num_prey, int num_predators, int w_id, uint64_t seed): 
     world_id(w_id),
-    swarm(MAX_SWARM_CAPACITY, w_id),
+    swarm(MAX_SWARM_CAPACITY, w_id, seed),
     spatialLattice(NUM_CELLE_X / LATTICE_CELL_WIDTH, NUM_CELLE_Y / LATTICE_CELL_HEIGHT),
     foodLattice(NUM_CELLE_X / FOOD_CELL_WIDTH, NUM_CELLE_Y / FOOD_CELL_HEIGHT, NUM_CELLE_X, NUM_CELLE_Y),
     graveyard(MAX_GRAVEYARD_CAPACITY) {
@@ -30,9 +30,21 @@ World::World(int num_prey, int num_predators, int w_id) :
     cudaEventCreate(&end_cleanup);
 
     LifeSystem::initSwarm(swarm, num_prey, num_predators);
-    FoodLatticeSystem::initRNG(foodLattice);
-    FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
+    FoodLatticeSystem::grow(foodLattice, MAX_FOOD, swarm.rng_seed, swarm.tick);
 
+    CUDA_CHECK(cudaDeviceSynchronize());
+}
+
+void World::reset(int num_prey, int num_predators){
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    swarm.reset();
+    foodLattice.reset();
+    graveyard.reset();
+
+    LifeSystem::initSwarm(swarm, num_prey, num_predators);
+    FoodLatticeSystem::grow(foodLattice, MAX_FOOD, swarm.rng_seed, swarm.tick);
+    
     CUDA_CHECK(cudaDeviceSynchronize());
 }
 
@@ -79,12 +91,16 @@ ProfilingData World::update(float dt, int generationCount){
     float dynamicRate = std::max(MINIMUM_MUTATION_RATE, STARTING_MUTATION_RATE - (generationCount * MUTATION_RATE_DECAY));
     float dynamicStrength = std::max(MINIMUM_MUTATION_STRENGTH, STARTING_MUTATION_STRENGTH - (generationCount * MUTATION_STRENGTH_DECAY));
     
-    FoodLatticeSystem::grow(foodLattice, MAX_FOOD);
-
+    FoodLatticeSystem::grow(foodLattice, MAX_FOOD, swarm.rng_seed, swarm.tick);
+    FoodLatticeSystem::buildChunkSummary(foodLattice);
+    
     // (Using the new fully-parallelized handleDeaths)
     LifeSystem::handleDeaths(swarm, graveyard); 
     LifeSystem::handleBirths(swarm, dynamicRate, dynamicStrength);
     
+    // Advance RNG tick
+    LifeSystem::advanceTick(swarm);
+
     if (PROFILING_ENABLED) cudaEventRecord(end_cleanup);
     
     if (PROFILING_ENABLED) {

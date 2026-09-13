@@ -4,7 +4,7 @@
 #include "structures/Swarm.h"
 
 namespace FoodLatticeSystem {
-    void initRNG(FoodLatticeData& foodLattice);
     // When first building the sym, pass CONSTANT_FOOD_AMOUNT
-    void grow(FoodLatticeData& foodLattice, float growthAmount);
+    void grow(FoodLatticeData& foodLattice, float growthAmount, uint64_t seed, const uint64_t* tick);
+    void buildChunkSummary(FoodLatticeData& foodLattice);
 }

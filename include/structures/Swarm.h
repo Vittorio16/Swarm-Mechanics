@@ -1,6 +1,5 @@
 #pragma once
 #include <cuda_runtime.h>
-#include <curand_kernel.h>
 #include <thrust/device_ptr.h>
 #include <thrust/fill.h>
 #include "Core/Config.h"
@@ -8,17 +7,10 @@
 struct SwarmData {
     int world_id;
     
-    // RNG generation for GPU
-    struct RandData {
-        curandState* state;
-        void allocate(int capacity) {
-            CUDA_CHECK(cudaMallocManaged(&state, capacity * sizeof(curandState)));
-        }
-        void free() {
-            CUDA_CHECK(cudaFree(state));
-        }
-    } rng;
-
+    // RNG
+    uint64_t rng_seed;
+    uint64_t* tick;
+    
     // Population Management
     int max_capacity;
     int* current_count;
@@ -178,6 +170,7 @@ struct SwarmData {
         float *foodSenseX, *foodSenseY, *foodDistance;
         float *foodClosingVelocity, *foodTangentialVelocity;
         float *energyReserve;
+        int* cachedFoodChunk;
 
         void allocate(int capacity){
             CUDA_CHECK(cudaMallocManaged(&lockedEnemyIndex, capacity * sizeof(uint64_t)));
@@ -193,6 +186,7 @@ struct SwarmData {
             CUDA_CHECK(cudaMallocManaged(&foodClosingVelocity, capacity * sizeof(float)));
             CUDA_CHECK(cudaMallocManaged(&foodTangentialVelocity, capacity * sizeof(float)));
             CUDA_CHECK(cudaMallocManaged(&energyReserve, capacity * sizeof(float)));
+            CUDA_CHECK(cudaMallocManaged(&cachedFoodChunk, capacity * sizeof(int)));
 
             thrust::device_ptr<uint64_t> locked_ptr(lockedEnemyIndex);
             thrust::fill(locked_ptr, locked_ptr + capacity, NO_LOCKED_TARGET);
@@ -210,6 +204,8 @@ struct SwarmData {
             CUDA_CHECK(cudaMemset(foodClosingVelocity, 0, capacity * sizeof(float)));
             CUDA_CHECK(cudaMemset(foodTangentialVelocity, 0, capacity * sizeof(float)));
             CUDA_CHECK(cudaMemset(energyReserve, 0, capacity * sizeof(float)));
+            thrust::device_ptr<float> chunk_ptr(cachedFoodChunk);
+            thrust::fill(chunk_ptr, chunk_ptr + capacity, -1);
         }
 
         void free(){
@@ -226,6 +222,7 @@ struct SwarmData {
             CUDA_CHECK(cudaFree(foodClosingVelocity));
             CUDA_CHECK(cudaFree(foodTangentialVelocity));
             CUDA_CHECK(cudaFree(energyReserve));
+            CUDA_CHECK(cudaFree(cachedFoodChunk));
         }
     } sensors;
 
@@ -233,26 +230,18 @@ struct SwarmData {
     struct NeuralOutputData {
         float* thrustIntent;
         float* turnIntent;
-        float* previousThrustIntent;
-        float* previousTurnIntent;
 
         void allocate(int capacity){
             CUDA_CHECK(cudaMallocManaged(&thrustIntent, capacity * sizeof(float)));
             CUDA_CHECK(cudaMallocManaged(&turnIntent, capacity * sizeof(float)));
-            CUDA_CHECK(cudaMallocManaged(&previousThrustIntent, capacity * sizeof(float)));
-            CUDA_CHECK(cudaMallocManaged(&previousTurnIntent, capacity * sizeof(float)));
 
             CUDA_CHECK(cudaMemset(thrustIntent, 0, capacity * sizeof(float)));
             CUDA_CHECK(cudaMemset(turnIntent, 0, capacity * sizeof(float)));
-            CUDA_CHECK(cudaMemset(previousThrustIntent, 0, capacity * sizeof(float)));
-            CUDA_CHECK(cudaMemset(previousTurnIntent, 0, capacity * sizeof(float)));
         }
 
         void free(){
             CUDA_CHECK(cudaFree(thrustIntent));
             CUDA_CHECK(cudaFree(turnIntent));
-            CUDA_CHECK(cudaFree(previousThrustIntent));
-            CUDA_CHECK(cudaFree(previousTurnIntent));
         }
     } neuralOutputs;
 
@@ -322,11 +311,14 @@ struct SwarmData {
     } compaction;
 
     // Constructor orchestrates allocations
-    SwarmData(int capacity, int w_id) : world_id(w_id), max_capacity(capacity) {
+    SwarmData(int capacity, int w_id, uint64_t seed) : 
+        world_id(w_id), rng_seed(seed), max_capacity(capacity) {
         CUDA_CHECK(cudaMallocManaged(&current_count, sizeof(int)));
         *current_count = 0;
 
-        rng.allocate(capacity);
+        CUDA_CHECK(cudaMallocManaged(&tick, sizeof(uint64_t)));
+        *tick = 0;
+
         agentIdentifications.allocate(capacity);
         fitnessMetrics.allocate(capacity);
         energyMetrics.allocate(capacity);
@@ -338,11 +330,23 @@ struct SwarmData {
         compaction.allocate(capacity);
     }
 
+    // Instead of deleting everything between generations, keep memory but reset data
+    void reset(){
+        CUDA_CHECK(cudaMemset(agentIdentifications.isAlive, 0, max_capacity * sizeof(int)));
+
+        *current_count = 0;
+        *compaction.alive_count = 0;
+        *compaction.hole_count = 0;
+        *compaction.mover_count = 0;
+        *compaction.birth_limit = 0;
+        // Doesn't reset localAgentIDCounter and tick to keep randomness
+    }
     // Destructor cleanly releases memory - cannot actually use destructor, since CPU
     // would call it while GPU is still copying the structure
     void freeAll() {
         CUDA_CHECK(cudaFree(current_count));
-        rng.free();
+        CUDA_CHECK(cudaFree(tick));
+
         agentIdentifications.free();
         fitnessMetrics.free();
         energyMetrics.free();

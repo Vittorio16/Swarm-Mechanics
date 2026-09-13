@@ -88,6 +88,9 @@ constexpr int LATTICE_CELL_HEIGHT = 30;
 constexpr int FOOD_CELL_WIDTH = 10;
 constexpr int FOOD_CELL_HEIGHT = 10;
 
+// How many ticks between food checks - landscape is not that variable
+constexpr int FOOD_CHUNK_REFRESH_INTERVAL = 20;
+
 // Food settings per cell
 constexpr float MAX_FOOD = 10.0f;
 constexpr int CONSTANT_FOOD_AMOUNT = 500;

@@ -1,9 +1,15 @@
 #pragma once
-#include <vector>
 #include <cmath>
 #include <cuda_runtime.h>
 #include <math_constants.h>
 using namespace std;
+
+// Cheap version, not using the atan2
+struct ThoroidalDelta {
+    float dx;
+    float dy;
+    float distSq;
+};
 
 struct ThoroidalData {
     float dist;
@@ -13,29 +19,20 @@ struct ThoroidalData {
     float dy;
 };
 
-// Returns all the relevant data for sensory processing
-inline __host__ __device__ ThoroidalData getThoroidalCoordinates(float obsX, float obsY, float targetX, float targetY, int worldWidth, int worldHeight){
-
+// Cheap function to calculate distSq
+__host__ __device__ __forceinline__ ThoroidalDelta thoroidalDelta(float obsX, float obsY, float targetX, float targetY, int worldWidth, int worldHeight){
     float dx = targetX - obsX;
     float dy = targetY - obsY;
+     
+    dx -= worldWidth * rintf(dx / worldWidth);
+    dy -= worldHeight * rintf(dy / worldHeight);
 
-    // Thoroidal Wrapping (Pac-Man Logic)
-    if (dx > worldWidth * 0.5f) {
-        dx -= worldWidth;
-    } 
-    else if (dx < -worldWidth * 0.5f) {
-        dx += worldWidth;
-    }
-    if (dy > worldHeight * 0.5f) {
-        dy -= worldHeight;
-    } 
-    else if (dy < -worldHeight * 0.5f) {
-        dy += worldHeight;
-    }
+    return {dx, dy, dx * dx + dy * dy}
+}
 
-    float dist = hypotf(dx, dy);
-    float distSq = dx*dx + dy*dy;
-    float angleToTarget = atan2f(dy, dx);
+// Returns all the relevant data for sensory processing - only called on enemies close enough
+__host__ __device__ __forceinline__ ThoroidalData getThoroidalCoordinates(float obsX, float obsY, float targetX, float targetY, int worldWidth, int worldHeight){
+    ThoroidalDelta d = thoroidalDelta(obsX, obsY, targetX, targetY, worldWidth, worldHeight);
     
-    return {dist, distSq, angleToTarget, dx, dy};
+    return {sqrtf(d.distSq), d.distSq, atan2f(d.dy, d.dx), d.dx, d.dy};
 }

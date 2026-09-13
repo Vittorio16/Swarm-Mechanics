@@ -1,5 +1,6 @@
 #pragma once
 #include "structures/Swarm.h"
+#include "Core/Rng.h"
 
 using namespace std;
 
@@ -14,15 +15,13 @@ namespace BrainSystem {
     // Inline device version of mutateVector used in GPU kernels
     inline __device__ void mutateBrainDevice(float* array, int numElements, int agent, int capacity,
                                              float mutationRate, float mutationStrength,
-                                             curandState* localState) {
+                                             RngStream& rng) {
         for (int e = 0; e < numElements; e++) {
-            if (curand_uniform(localState) < mutationRate) {
+            if (rng.nextFloat() < mutationRate) {
                 int idx = e * capacity + agent;
                 
                 // Calculate random float between -mutationStrength and +mutationStrength
-                float change = (curand_uniform(localState) * 2.0f - 1.0f) * mutationStrength;
-                
-                float v = array[idx] + change;
+                float v = array[idx] + rng.nextFloat(-mutationStrength, mutationStrength);
                 array[idx] = fmaxf(-1.0f, fminf(1.0f, v));
             }
         }
