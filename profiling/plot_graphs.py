@@ -17,7 +17,8 @@ FILES_TO_PLOT = {
     "Original CPU": "data/profiling_results_cpu_predatori.csv",
     "CPU (SoA)": "data/profiling_results_gpuready_cpu_predatori.csv",
     "CPU (SoA, no Vectors)": "data/profiling_results_cpu_soa_predatori.csv",
-    "GPU (V1)": "data/profiling_results_gpuV1_predatori.csv"
+    "GPU (V1)": "data/profiling_results_gpuV1_predatori.csv",
+    "GPU (V2)": "data/profiling_results_gpuV2_predatori.csv"
 }
 
 # ==========================================

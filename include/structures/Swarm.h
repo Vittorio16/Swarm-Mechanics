@@ -204,7 +204,7 @@ struct SwarmData {
             CUDA_CHECK(cudaMemset(foodClosingVelocity, 0, capacity * sizeof(float)));
             CUDA_CHECK(cudaMemset(foodTangentialVelocity, 0, capacity * sizeof(float)));
             CUDA_CHECK(cudaMemset(energyReserve, 0, capacity * sizeof(float)));
-            thrust::device_ptr<float> chunk_ptr(cachedFoodChunk);
+            thrust::device_ptr<int> chunk_ptr(cachedFoodChunk);
             thrust::fill(chunk_ptr, chunk_ptr + capacity, -1);
         }
 

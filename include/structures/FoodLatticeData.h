@@ -3,6 +3,13 @@
 
 using namespace std;
 
+struct ChunkSummary {
+        float comX;
+        float comY;
+        float totalFood;
+        float _pad;
+};
+
 struct FoodLatticeData{
     // Global data
     int num_chunks_x;
@@ -20,12 +27,6 @@ struct FoodLatticeData{
     int total_cells;
     float* foodGrid;
 
-    struct ChunkSummary {
-        float comX;
-        float comY;
-        float totalFood;
-        float _pad;
-    };
     ChunkSummary* chunkSummary;
 
     void allocate(int chunks_x, int chunks_y, int cells_x, int cells_y){

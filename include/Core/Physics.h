@@ -27,7 +27,7 @@ __host__ __device__ __forceinline__ ThoroidalDelta thoroidalDelta(float obsX, fl
     dx -= worldWidth * rintf(dx / worldWidth);
     dy -= worldHeight * rintf(dy / worldHeight);
 
-    return {dx, dy, dx * dx + dy * dy}
+    return {dx, dy, dx * dx + dy * dy};
 }
 
 // Returns all the relevant data for sensory processing - only called on enemies close enough

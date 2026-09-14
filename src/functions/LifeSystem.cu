@@ -264,11 +264,11 @@ __global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mu
         if (!swarm.agentIdentifications.isAlive[i]) continue;
 
         if (swarm.energyMetrics.energy[i] > MAX_ENERGY && swarm.energyMetrics.reproductionCooldown[i] <= 0.001f){
-            if (*swarm.current_count >= swarm.max_capacity) continue;
+            if (*swarm.current_count >= cap) continue;
 
             int child_idx = atomicAdd(swarm.current_count, 1);
             // Prevent buffer overflow if the swarm maxes out 
-            if (child_idx >= swarm.max_capacity) {
+            if (child_idx >= cap) {
                 atomicSub(swarm.current_count, 1); 
                 continue; 
             }

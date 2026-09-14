@@ -17,6 +17,7 @@ __global__ void enemySenseKernel(SwarmData swarm, const SpatialLatticeData latti
         const float sensingSq = swarm.perceptions.sensingRange[i];
         const float myX = swarm.physics.x[i];
         const float myY = swarm.physics.y[i];
+        const float halfFov = swarm.perceptions.fovAngle[i] * (CUDART_PI_F / 360.0f);
 
         uint64_t lockedIndex = swarm.sensors.lockedEnemyIndex[i];
         bool foundLockedTarget = false;
@@ -24,6 +25,7 @@ __global__ void enemySenseKernel(SwarmData swarm, const SpatialLatticeData latti
         // Used to keep track of "best" observation
         float minDistSq = INFINITY;
         int bestEnemyIndex = -1;
+        float bestDistSq = INFINITY;
         float bestDist = INFINITY;
         // float bestAngleToTarget = 0.0f;
         float bestDx = 0.0f;
@@ -74,6 +76,7 @@ __global__ void enemySenseKernel(SwarmData swarm, const SpatialLatticeData latti
                     if (mySpecies == PREDATOR_ID && d.distSq <= KILL_RANGE_SQ) {
                         bestEnemyIndex = idx_in_swarm;
                         bestDx = d.dx; bestDy = d.dy;
+                        bestDistSq = d.distSq;
                         goto TARGET_FOUND; 
                     }
 
@@ -81,6 +84,7 @@ __global__ void enemySenseKernel(SwarmData swarm, const SpatialLatticeData latti
                     if (lockedIndex != NO_LOCKED_TARGET && swarm.agentIdentifications.ID[idx_in_swarm] == lockedIndex && mySpecies != PREY_ID) {
                         bestEnemyIndex = idx_in_swarm;
                         bestDx = d.dx; bestDy = d.dy;
+                        bestDistSq = d.distSq;
                         foundLockedTarget = true; 
                         continue;
                     }
@@ -91,12 +95,15 @@ __global__ void enemySenseKernel(SwarmData swarm, const SpatialLatticeData latti
                         bestEnemyIndex = idx_in_swarm;
                         bestDx = d.dx;
                         bestDy = d.dy;
+                        bestDistSq = d.distSq;
                     }
                 }
             }
         }
         TARGET_FOUND:
-        bestDist = sqrtf(bestDistSq);
+        if (bestEnemyIndex != -1) {
+            bestDist = sqrtf(bestDistSq);
+        }
 
         // Updates the agent's sensory data with the observation
         swarm.sensors.closestEnemyIndex[i] = bestEnemyIndex;
@@ -188,7 +195,7 @@ __global__ void foodSenseKernel(SwarmData swarm, const FoodLatticeData foodLatti
                     if (s.totalFood <= 0.001f) continue;
                 
                     ThoroidalDelta d = thoroidalDelta(myX, myY, s.comX, s.comY, NUM_CELLE_X, NUM_CELLE_Y);
-                    float distSq = fmaxf(d.distq, 0.1f);
+                    float distSq = fmaxf(d.distSq, 0.1f);
 
                     if (distSq >= grassRadiusSq) continue;
 
@@ -233,8 +240,8 @@ __global__ void foodSenseKernel(SwarmData swarm, const FoodLatticeData foodLatti
                     if (distSq > grassRadiusSq) continue;
 
                     float score = foodAmount * foodAmount / distSq;
-                    if (score > bestCellScore) {
-                        bestCellScore = score;
+                    if (score > bestCellFoodScore) {
+                        bestCellFoodScore = score;
                         bestCellDx = d.dx;
                         bestCellDy = d.dy;
                     }
@@ -251,7 +258,7 @@ __global__ void foodSenseKernel(SwarmData swarm, const FoodLatticeData foodLatti
             float bestFoodY = bestCellDx * s + bestCellDy * c;
 
             // Grass inputs  
-            float distToFood = fmaxf(sqrtf((bestFoodX * bestFoodX + bestFoodY * bestFoodY), 0.001f);
+            float distToFood = fmaxf(sqrtf(bestFoodX * bestFoodX + bestFoodY * bestFoodY), 0.001f);
 
             // Normalize the food sense vector, dividing the direction vector from the distance
             float normFoodX = bestFoodX / distToFood;
