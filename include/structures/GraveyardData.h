@@ -27,15 +27,18 @@ struct GraveyardData {
         CUDA_CHECK(cudaMallocManaged(&b0, capacity * B0_SIZE * sizeof(float)));
         CUDA_CHECK(cudaMallocManaged(&b1, capacity * B1_SIZE * sizeof(float)));
 
-        *current_count = 0;    
         CUDA_CHECK(cudaMemset(speciesID, 0, capacity * sizeof(int)));
         CUDA_CHECK(cudaMemset(fitness, 0, capacity * sizeof(float)));
         CUDA_CHECK(cudaMemset(w01, 0, capacity * W01_SIZE * sizeof(float)));
         CUDA_CHECK(cudaMemset(w12, 0, capacity * W12_SIZE * sizeof(float)));
         CUDA_CHECK(cudaMemset(b0, 0, capacity * B0_SIZE * sizeof(float)));
         CUDA_CHECK(cudaMemset(b1, 0, capacity * B1_SIZE * sizeof(float)));
+
+        CUDA_CHECK(cudaDeviceSynchronize());
+        *current_count = 0;    
     }
     void reset() {
+        CUDA_CHECK(cudaDeviceSynchronize());
         *current_count = 0;
     }
     

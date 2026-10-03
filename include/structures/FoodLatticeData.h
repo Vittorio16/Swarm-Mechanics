@@ -40,7 +40,6 @@ struct FoodLatticeData{
         CUDA_CHECK(cudaMallocManaged(&totalFood, chunks_x * chunks_y * sizeof(float)));
         CUDA_CHECK(cudaMallocManaged(&chunkSummary, total_chunks * sizeof(ChunkSummary)));
 
-        *foodToSpawn = CONSTANT_FOOD_AMOUNT;
         CUDA_CHECK(cudaMemset(sumFoodX, 0, chunks_x * chunks_y * sizeof(float)));
         CUDA_CHECK(cudaMemset(sumFoodY, 0, chunks_x * chunks_y * sizeof(float)));
         CUDA_CHECK(cudaMemset(totalFood, 0, chunks_x * chunks_y * sizeof(float)));
@@ -53,6 +52,9 @@ struct FoodLatticeData{
 
         CUDA_CHECK(cudaMemset(foodGrid, 0, num_cells_x * num_cells_y * sizeof(float)));
         CUDA_CHECK(cudaMemset(chunkSummary, 0, total_chunks * sizeof(ChunkSummary)));
+
+        CUDA_CHECK(cudaDeviceSynchronize());
+        *foodToSpawn = CONSTANT_FOOD_AMOUNT;
     } 
     
     // resets between generations
@@ -64,6 +66,7 @@ struct FoodLatticeData{
         CUDA_CHECK(cudaMemset(chunkSummary, 0, total_chunks * sizeof(ChunkSummary)));
 
         // Next grow refills the world
+        CUDA_CHECK(cudaDeviceSynchronize());
         *foodToSpawn = CONSTANT_FOOD_AMOUNT;
     }
 

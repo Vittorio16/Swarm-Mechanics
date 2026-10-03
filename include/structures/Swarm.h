@@ -33,7 +33,6 @@ struct SwarmData {
             CUDA_CHECK(cudaMemset(ID, 0, capacity * sizeof(uint64_t)));
             CUDA_CHECK(cudaMemset(speciesID, 0, capacity * sizeof(int)));
             CUDA_CHECK(cudaMemset(isAlive, 0, capacity * sizeof(int)));
-            *localAgentIDCounter = 0;
         }
 
         void free(){
@@ -293,11 +292,6 @@ struct SwarmData {
             CUDA_CHECK(cudaMallocManaged(&mover_count, sizeof(int)));
             CUDA_CHECK(cudaMallocManaged(&holes_array, capacity * sizeof(int)));
             CUDA_CHECK(cudaMallocManaged(&movers_array, capacity * sizeof(int)));
-            
-            *birth_limit = 0;
-            *alive_count = 0;
-            *hole_count = 0;
-            *mover_count = 0;
         }
 
         void free(){
@@ -314,10 +308,7 @@ struct SwarmData {
     SwarmData(int capacity, int w_id, uint64_t seed) : 
         world_id(w_id), rng_seed(seed), max_capacity(capacity) {
         CUDA_CHECK(cudaMallocManaged(&current_count, sizeof(int)));
-        *current_count = 0;
-
         CUDA_CHECK(cudaMallocManaged(&tick, sizeof(uint64_t)));
-        *tick = 0;
 
         agentIdentifications.allocate(capacity);
         fitnessMetrics.allocate(capacity);
@@ -328,12 +319,23 @@ struct SwarmData {
         neuralOutputs.allocate(capacity);
         brains.allocate(capacity);
         compaction.allocate(capacity);
+
+        CUDA_CHECK(cudaDeviceSynchronize());
+
+        *current_count = 0;
+        *tick = 0;
+        *agentIdentifications.localAgentIDCounter = 0;
+        *compaction.birth_limit = 0;
+        *compaction.alive_count = 0;
+        *compaction.hole_count  = 0;
+        *compaction.mover_count = 0;
     }
 
     // Instead of deleting everything between generations, keep memory but reset data
     void reset(){
         CUDA_CHECK(cudaMemset(agentIdentifications.isAlive, 0, max_capacity * sizeof(int)));
-
+        CUDA_CHECK(cudaDeviceSynchronize());
+        
         *current_count = 0;
         *compaction.alive_count = 0;
         *compaction.hole_count = 0;

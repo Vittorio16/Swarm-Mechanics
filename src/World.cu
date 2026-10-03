@@ -29,6 +29,8 @@ World::World(int num_prey, int num_predators, int w_id, uint64_t seed):
     cudaEventCreate(&end_move);
     cudaEventCreate(&end_cleanup);
 
+    CUDA_CHECK(cudaDeviceSynchronize());
+    
     LifeSystem::initSwarm(swarm, num_prey, num_predators);
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD, swarm.rng_seed, swarm.tick);
 
