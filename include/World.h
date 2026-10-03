@@ -1,5 +1,8 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#ifdef USE_SFML_GUI
+    #include <SFML/Graphics.hpp>
+#endif
+
 #include "Core/Config.h"
 
 #include "structures/Swarm.h"
@@ -13,7 +16,9 @@ class World{
     private:  
     int world_id;
     // Texture
-    sf::RenderTexture gridTexture; 
+    #ifdef USE_SFML_GUI
+        sf::RenderTexture gridTexture;
+    #endif
     bool gridTextureValid = false; 
     
     // CUDA events for profiling
@@ -32,9 +37,10 @@ class World{
     ProfilingData update(float dt, int generationCount);
 
     // Methods used for visual representation
-    void draw(sf::RenderWindow& window);
-    void drawFoodLattice(float scaleX, float scaleY);
-    void resizeGridTexture(int width, int height);
-    void remapBackground(sf::Vector2u windowSize, float scaleX, float scaleY);
-
+    #ifdef USE_SFML_GUI
+        void draw(sf::RenderWindow& window);
+        void drawFoodLattice(float scaleX, float scaleY);
+        void resizeGridTexture(int width, int height);
+        void remapBackground(sf::Vector2u windowSize, float scaleX, float scaleY);
+    #endif
 };

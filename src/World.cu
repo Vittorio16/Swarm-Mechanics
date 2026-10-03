@@ -131,6 +131,7 @@ ProfilingData World::update(float dt, int generationCount){
     }
 }
 
+#ifdef USE_SFML_GUI
 // Optionally draw chunk boundaries for debugging
 void World::drawFoodLattice(float scaleX, float scaleY){
     sf::Font font;
@@ -399,3 +400,5 @@ void World::draw(sf::RenderWindow& window){
         window.draw(boidShape);
     }
 }
+
+#endif

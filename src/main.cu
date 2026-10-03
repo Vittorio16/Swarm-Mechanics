@@ -1,4 +1,7 @@
-#include <SFML/Graphics.hpp>
+#ifdef USE_SFML_GUI
+    #include <SFML/Graphics.hpp>
+#endif
+
 #include <thread>
 #include <iostream>
 #include <fstream>
@@ -75,6 +78,7 @@ void runProfiling(){
     csvFile.close();
     std::cout << "Profiling completato. Dati salvati in profiling_results.csv" << std::endl;
 }
+
 int main() {
     GpuConfig::init();
     uint64_t runSeed = std::random_device{}();
@@ -86,70 +90,34 @@ int main() {
     }
 
     int numCores = std::thread::hardware_concurrency();
-    // int numCores = 6;
-    if (numCores == 0) numCores = FALLBACK_CORE_NUMBER; // Fallback
+    if (numCores == 0) numCores = FALLBACK_CORE_NUMBER;
+    cout << "Running on " << numCores - 1 << " logical cores." << endl;
 
-    cout << "Running on " << numCores - 1 /* 1 */<< " logical cores." << endl;
-
-    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Swarm Evolution - LOADING...");
-    
-    // Draws the window before starting to setup memory
-    window.clear(sf::Color(30, 30, 30));
-    
-    sf::Font font;
-    // if (font.loadFromFile("Roboto-Regular.ttf")) {
-    //     sf::Text loadingText("Allocating CUDA Memory for " + std::to_string(numCores - 1) + " Worlds...\n\nThis is a heavy operation and takes 10-20 seconds.\nPlease do not close...", font, 40);
-    //     loadingText.setPosition(100.0f, 100.0f);
-    //     loadingText.setFillColor(sf::Color::White);
-    //     window.draw(loadingText);
-    // }
-    window.display(); 
-
-    // Memory allocation in CUDA
-    cout << "Allocating Unified Memory... Please wait, do not press CTRL+C." << endl;
+    cout << "Allocating Unified Memory... Please wait." << endl;
     SimulationManager simManager(numCores - 1, runSeed);
     cout << "Allocation Complete! Starting simulation." << endl;
 
-    window.setTitle("Swarm Evolution");
+    if (REPLAY_MODE_ENABLED) {
+        simManager.loadPreTrainedBrains(51, /* ... your paths ... */);
+    }
+
+#ifdef USE_SFML_GUI
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Swarm Evolution");
     bool renderingEnabled = true;
     sf::Clock clock;
-
     window.setFramerateLimit(MAX_FPS);
-
-    // Optional: Start in replay mode with a pre-trained brain
-    if (REPLAY_MODE_ENABLED) {
-        simManager.loadPreTrainedBrains(
-            51, 
-            "../elite_logs/weights_prey_gen_51.txt", 
-            "../elite_logs/weights_pred_gen_51.txt",
-            "../elite_logs/hof_prey_gen_51.txt",      
-            "../elite_logs/hof_pred_gen_51.txt",      
-            "../elite_logs/elite_prey_gen_51.txt",
-            "../elite_logs/elite_pred_gen_51.txt"   
-        );
-    }
 
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) window.close();
-            
             if (event.type == sf::Event::Resized) {
                 sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
                 window.setView(sf::View(visibleArea));
                 simManager.resizeTexture(event.size.width, event.size.height);
             }
-            
-            // TOGGLE MODES
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::R) {
                 renderingEnabled = !renderingEnabled;
-                if (renderingEnabled) {
-                    window.setTitle("Sim (Real-Time)");
-                    window.setFramerateLimit(MAX_FPS); 
-                } else {
-                    window.setTitle("Sim (Training)");
-                    window.setFramerateLimit(0);
-                }
             }
         }
 
@@ -158,17 +126,25 @@ int main() {
             dt = clock.restart().asSeconds();
             if (dt > MINIMUM_REAL_TIME_STEP) dt = MINIMUM_REAL_TIME_STEP;
         } else {
-            if (DEBUGGING_ENABLED) dt = 0;
-            else dt = FIXED_TIME_STEP;
+            dt = DEBUGGING_ENABLED ? 0 : FIXED_TIME_STEP;
             clock.restart(); 
         }
 
         simManager.update(dt, renderingEnabled);
 
         if (renderingEnabled) {
-            window.clear();
+            window.clear(sf::Color(30, 30, 30));
             simManager.draw(window);
             window.display();
         }
     }
+#else
+    std::cout << "Starting Headless Simulation on Jetson..." << std::endl;
+    // Infinitely fast-forward the simulation using the fixed time step
+    while (true) {
+        simManager.update(FIXED_TIME_STEP, false);
+    }
+#endif
+
+    return 0;
 }

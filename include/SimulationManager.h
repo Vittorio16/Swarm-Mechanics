@@ -66,9 +66,11 @@ public:
         const string& hallOfFamePrey = "", const string& hallOfFamePredator = "",
         const string& elitePrey = "", const string& elitePredator = "");
 
-    // Helper to draw the main world
-    void draw(sf::RenderWindow& window);
+    #ifdef USE_SFML_GUI
+        // Helper to draw the main world
+        void draw(sf::RenderWindow& window);
     
-    // Helper to pass resize events
-    void resizeTexture(int w, int h);
+        // Helper to pass resize events
+        void resizeTexture(int w, int h);
+    #endif
 };

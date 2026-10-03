@@ -307,6 +307,8 @@ void SimulationManager::resetSimulation() {
     }
 }
 
+#ifdef USE_SFML_GUI
+
 void SimulationManager::draw(sf::RenderWindow& window) {
     if (!worlds.empty()) {
         worlds[0]->draw(window);
@@ -316,6 +318,8 @@ void SimulationManager::draw(sf::RenderWindow& window) {
 void SimulationManager::resizeTexture(int w, int h) {
     if (!worlds.empty()) worlds[0]->resizeGridTexture(w, h);
 }
+
+#endif
 
 // Loads pre-trained brains and hall of fame from files, and fast-forwards the simulation to a specified generation
 void SimulationManager::loadPreTrainedBrains(int startGeneration, const string& preyBrains, const string& predatorBrains, 
