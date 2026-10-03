@@ -20,8 +20,8 @@ void runProfiling(){
     csvFile << "NumPrey,NumPredators,Buckets,Observation,Think,Move,Cleanup,Total,Check_total\n";
 
     // Define the different numbers of agents to test
-    vector<int> prey_count = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
-    vector<int> predator_count = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    vector<int> predator_count = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072};
+    vector<int> prey_count = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072};
     // vector<int> predator_count = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072};
 
     // Iterations for averaging the profiling results
@@ -98,7 +98,12 @@ int main() {
     cout << "Allocation Complete! Starting simulation." << endl;
 
     if (REPLAY_MODE_ENABLED) {
-        simManager.loadPreTrainedBrains(51, /* ... your paths ... */);
+        simManager.loadPreTrainedBrains(51, "../elite_logs/weights_prey_gen_51.txt",
+            "../elite_logs/weights_pred_gen_51.txt",
+            "../elite_logs/hof_prey_gen_51.txt",
+            "../elite_logs/hof_pred_gen_51.txt",
+            "../elite_logs/elite_prey_gen_51.txt",
+            "../elite_logs/elite_pred_gen_51.txt" );
     }
 
 #ifdef USE_SFML_GUI
