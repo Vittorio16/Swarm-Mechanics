@@ -86,13 +86,15 @@ void LifeSystem::initSwarm(SwarmData& swarm, int num_prey, int num_predators){
         total         = swarm.max_capacity;
     }
 
-    *swarm.current_count = total;
     
     // Uses base to keep agentIds unique across generations
     uint64_t idBase = *swarm.agentIdentifications.localAgentIDCounter;
+
+    *swarm.current_count = total;
+    *swarm.agentIdentifications.localAgentIDCounter = idBase + (uint64_t)total;
+
     createAgentsKernel<<<GpuConfig::persistentGrid, BLOCK_SIZE, 0, cudaStreamPerThread>>>(swarm, num_prey, num_predators, idBase);
     
-    *swarm.agentIdentifications.localAgentIDCounter = idBase + (uint64_t)total;
     CUDA_CHECK(cudaDeviceSynchronize());
     
     // Initializes random brains for the whole swarm
@@ -209,6 +211,7 @@ __global__ void moveCompactionKernel(SwarmData swarm) {
         swarm.sensors.closestEnemyDist[dest] = swarm.sensors.closestEnemyDist[src];
         swarm.sensors.enemyClosingSpeed[dest] = swarm.sensors.enemyClosingSpeed[src];
         swarm.sensors.enemyTangentialSpeed[dest] = swarm.sensors.enemyTangentialSpeed[src];
+        swarm.sensors.cachedFoodChunk[dest] = swarm.sensors.cachedFoodChunk[src];
         swarm.sensors.foodSenseX[dest] = swarm.sensors.foodSenseX[src];
         swarm.sensors.foodSenseY[dest] = swarm.sensors.foodSenseY[src];
         swarm.sensors.foodDistance[dest] = swarm.sensors.foodDistance[src];

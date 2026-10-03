@@ -115,6 +115,7 @@ void SimulationManager::update(float dt, bool renderEnabled) {
 
 // Evolves agents by polling best ones 
 void SimulationManager::evolve() {
+    CUDA_CHECK(cudaDeviceSynchronize());
     cout << "--- Generation " << generationCount << " Complete ---" << endl;
     
     vector<AgentEvaluation> allPrey;

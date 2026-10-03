@@ -180,7 +180,7 @@ __global__ void foodSenseKernel(SwarmData swarm, const FoodLatticeData foodLatti
             
             int maxChunkDist = (int)ceilf(grassRadius / FOOD_CELL_WIDTH);
             float bestFoodScore = -1.0f;
-            int bestChunkIndex = -1;
+            bestChunkIndex = -1;
 
             // Loop through nearby chunks in the food lattice
             for (int h = -maxChunkDist; h <= maxChunkDist; h++) {

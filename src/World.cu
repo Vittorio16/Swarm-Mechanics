@@ -30,9 +30,10 @@ World::World(int num_prey, int num_predators, int w_id, uint64_t seed):
     cudaEventCreate(&end_cleanup);
 
     CUDA_CHECK(cudaDeviceSynchronize());
-    
+
     LifeSystem::initSwarm(swarm, num_prey, num_predators);
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD, swarm.rng_seed, swarm.tick);
+    FoodLatticeSystem::buildChunkSummary(foodLattice);
 
     CUDA_CHECK(cudaDeviceSynchronize());
 }
@@ -46,6 +47,7 @@ void World::reset(int num_prey, int num_predators){
 
     LifeSystem::initSwarm(swarm, num_prey, num_predators);
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD, swarm.rng_seed, swarm.tick);
+    FoodLatticeSystem::buildChunkSummary(foodLattice);
     
     CUDA_CHECK(cudaDeviceSynchronize());
 }
