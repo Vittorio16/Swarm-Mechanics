@@ -30,7 +30,7 @@ file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.cu")
 add_executable(SwarmSim ${SOURCES})
 
 target_compile_definitions(SwarmSim PRIVATE CUDA_API_PER_THREAD_DEFAULT_STREAM)
-target_compile_options(SwarmSim PRIVATE \(<\):--default-stream=per-thread>)
+target_compile_options(SwarmSim PRIVATE $(<$):--default-stream=per-thread>)
 target_link_libraries(SwarmSim PRIVATE CUDA::curand)
 
 # Only link SFML and set definition if GUI is enabled 
