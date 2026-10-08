@@ -14,11 +14,12 @@ COLUMNS = {"Buckets","Observation","Think","Move","Cleanup","Total"}
 # The format is: {"Label for Legend": "filename.csv"}
 # This example compares all versions for the "Prey Only" scenario
 FILES_TO_PLOT = {
-    "Original CPU": "data/profiling_results_cpu_predatori.csv",
-    "CPU (SoA)": "data/profiling_results_gpuready_cpu_predatori.csv",
-    "CPU (SoA, no Vectors)": "data/profiling_results_cpu_soa_predatori.csv",
-    "GPU (V1)": "data/profiling_results_gpuV1_predatori.csv",
-    "GPU (V2)": "data/profiling_results_gpuV2_predatori.csv"
+    "Original CPU": "data/profiling_results_cpu_prede_predatori.csv",
+    "CPU (SoA)": "data/profiling_results_gpuready_cpu_prede_predatori.csv",
+    "CPU (SoA, no Vectors)": "data/profiling_results_cpu_soa_prede_predatori.csv",
+    "GPU (V1)": "data/profiling_results_gpuV1_prede_predatori.csv",
+    "GPU (V2)": "data/profiling_results_gpuV2_prede_predatori.csv",
+    "Jetson 32GB": "data/profiling_results_jetson32_prede_predatori.csv"
 }
 
 # ==========================================
@@ -82,7 +83,7 @@ def plot_column_across_files(files_dict, target_column, title, save_filename):
 if __name__ == "__main__":
     for target_column in COLUMNS:
         # Set the title of the graph
-        GRAPH_TITLE = f"{target_column} Time Comparison: Predator"
-        SAVE_FILENAME = f"graphs/{target_column}/predator.png"
+        GRAPH_TITLE = f"{target_column} Time Comparison: Prey and Predator"
+        SAVE_FILENAME = f"graphs/{target_column}/prey_predator.png"
         
         plot_column_across_files(FILES_TO_PLOT, target_column, GRAPH_TITLE, SAVE_FILENAME)
