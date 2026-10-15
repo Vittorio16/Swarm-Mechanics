@@ -21,13 +21,13 @@ void GpuConfig::init(int gridMultiplier) {
     // Enough blocks to fill every SM several times over so the scheduler can
     // hide latency, without paying to launch blocks that do nothing.
     smCount  = prop.multiProcessorCount;
-    clockKHz = prop.clockRate;
+    CUDA_CHECK(cudaDeviceGetAttribute(&clockKHz, cudaDevAttrClockRate, device));
     persistentGrid = prop.multiProcessorCount * 8;
     deviceName = prop.name;
 
     if (gridMultiplier < 1) gridMultiplier = 1;
     persistentGrid = gridMultiplier * smCount;
-    
+
     std::cout << "GPU: " << prop.name
               << " | SMs: " << prop.multiProcessorCount
               << " | integrated: " << prop.integrated

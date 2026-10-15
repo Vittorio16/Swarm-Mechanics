@@ -4,106 +4,73 @@
 
 #include <thread>
 #include <iostream>
-#include <fstream>
+#include <string>
 #include <random>
 #include "Core/Config.h"
 #include "Core/GpuConfig.h"
+#include "Core/RunConfig.h"
 #include "SimulationManager.h"
 
 using namespace std;
 
-// Helper used to run profiling on the simulation 
-void runProfiling(){
-    cout << "Avvio Profiling..." << std::endl;
-    
-    ofstream csvFile("../profiling/data/profiling_results.csv");
-    csvFile << "NumPrey,NumPredators,Buckets,Observation,Think,Move,Cleanup,Total,Check_total\n";
+static RunConfig parseArgs(int argc, char** argv) {
+    RunConfig c;
+    for (int i = 1; i < argc; i++) {
+        string k = argv[i];
+        if (k == "--json") { c.emitJson = true; continue; }
+        if (i + 1 >= argc) { cerr << "missing value for " << k << endl; break; }
+        string v = argv[++i];
 
-    // Define the different numbers of agents to test
-    vector<int> predator_count = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072};
-    vector<int> prey_count = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072};
-    // vector<int> predator_count = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072};
-
-    // Iterations for averaging the profiling results
-    int iterations = 200;
-
-    for (int i = 0; i < prey_count.size(); i++) {
-        World world(prey_count[i], predator_count[i], 0);
-
-        // These are used to keep the averages
-        double sum_buckets = 0, sum_obs = 0, sum_think = 0;
-        double sum_move = 0, sum_cleanup = 0, sum_total = 0, sum_check_total = 0;
-
-        // Empty ticks to load in cache
-        for(int w = 0; w < 5; w++) {
-            world.update(FIXED_TIME_STEP, 0);
-        }
-
-        // Loop di profiling reale
-        for (int j = 0; j < iterations; j++) {
-            ProfilingData data = world.update(FIXED_TIME_STEP, 0);
-            
-            sum_buckets += data.t_buckets;
-            sum_obs     += data.t_obs;
-            sum_think   += data.t_think;
-            sum_move    += data.t_move;
-            sum_cleanup += data.t_cleanup;
-            sum_total   += data.t_total;
-            sum_check_total += data.check_t_total;
-        }
-
-        // Average the results over the number of iterations
-        double avg_buckets = sum_buckets / iterations;
-        double avg_obs     = sum_obs / iterations;
-        double avg_think   = sum_think / iterations;
-        double avg_move    = sum_move / iterations;
-        double avg_cleanup = sum_cleanup / iterations;
-        double avg_total   = sum_total / iterations;
-        double avg_check_total = sum_check_total / iterations;
-
-        // Single row in the CSV file
-        csvFile << prey_count[i] << ","
-                << predator_count[i] << ","
-                << avg_buckets << ","
-                << avg_obs << ","
-                << avg_think << ","
-                << avg_move << ","
-                << avg_cleanup << ","
-                << avg_total << ","
-                << avg_check_total << "\n";
-                
-        std::cout << "Completato prey_count = " << prey_count[i] << ", predator_count = " << predator_count[i] << " (Tempo medio totale: " << avg_total << " us)" << std::endl;
+        if      (k == "--prey")         c.numPrey        = stoi(v);
+        else if (k == "--predators")    c.numPredators   = stoi(v);
+        else if (k == "--worlds")       c.numWorlds      = stoi(v);
+        else if (k == "--grid-mult")    c.gridMultiplier = stoi(v);
+        else if (k == "--grass-radius") c.grassRadius    = stof(v);
+        else if (k == "--pred-radius")  c.predViewRadius = stof(v);
+        else if (k == "--gen-duration") c.genDuration    = stof(v);
+        else if (k == "--seed")         c.seed           = stoull(v);
+        else if (k == "--generations")  c.maxGenerations = stoi(v);
+        else if (k == "--max-ticks")    c.maxTicks       = stoull(v);
+        else if (k == "--tag")          c.tag            = v;
+        else cerr << "unknown option: " << k << endl;
     }
-
-    csvFile.close();
-    std::cout << "Profiling completato. Dati salvati in profiling_results.csv" << std::endl;
+    return c;
 }
 
-int main() {
-    GpuConfig::init();
-    uint64_t runSeed = std::random_device{}();
-    std::cout << "Run seed: " << runSeed << std::endl;
+int main(int argc, char** argv) {
+    RunConfig cfg = parseArgs(argc, argv);
 
-    if (PROFILING_ENABLED) {
-        runProfiling();
-        return 0;
+    GpuConfig::init(cfg.gridMultiplier);
+
+    uint64_t runSeed = cfg.seed ? cfg.seed : (uint64_t)std::random_device{}();
+
+    int numWorlds = cfg.numWorlds;
+    if (numWorlds <= 0) {
+        int cores = std::thread::hardware_concurrency();
+        if (cores == 0) cores = FALLBACK_CORE_NUMBER;
+        numWorlds = cores - 1;
+    }
+    if (numWorlds < 1) numWorlds = 1;
+
+    if (!cfg.emitJson) {
+        cout << "GPU: " << GpuConfig::deviceName
+             << " | SMs: " << GpuConfig::smCount
+             << " | cma: " << GpuConfig::concurrentManagedAccess
+             << " | grid: " << GpuConfig::persistentGrid << endl;
+        cout << "Run seed: " << runSeed << " | worlds: " << numWorlds << endl;
     }
 
-    int numCores = std::min(9, (int)std::thread::hardware_concurrency()); 
-    if (numCores == 0) numCores = FALLBACK_CORE_NUMBER;
-    cout << "Running on " << numCores - 1 << " logical cores." << endl;
-
-    cout << "Allocating Unified Memory... Please wait." << endl;
-    SimulationManager simManager(numCores - 1, runSeed);
-    cout << "Allocation Complete! Starting simulation." << endl;
+    SimulationManager simManager(numWorlds, runSeed, cfg);
+    simManager.emitRunHeader();
 
     if (REPLAY_MODE_ENABLED) {
-        simManager.loadPreTrainedBrains(51, "../elite_logs/weights_prey_gen_51.txt",
+        simManager.loadPreTrainedBrains(51,
+            "../elite_logs/weights_prey_gen_51.txt",
             "../elite_logs/weights_pred_gen_51.txt",
             "../elite_logs/hof_prey_gen_51.txt",
             "../elite_logs/hof_pred_gen_51.txt",
             "../elite_logs/elite_prey_gen_51.txt",
-            "../elite_logs/elite_pred_gen_51.txt" );
+            "../elite_logs/elite_pred_gen_51.txt");
     }
 
 #ifdef USE_SFML_GUI
@@ -112,7 +79,7 @@ int main() {
     sf::Clock clock;
     window.setFramerateLimit(MAX_FPS);
 
-    while (window.isOpen()) {
+    while (window.isOpen() && !simManager.finished()) {
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) window.close();
@@ -132,7 +99,7 @@ int main() {
             if (dt > MINIMUM_REAL_TIME_STEP) dt = MINIMUM_REAL_TIME_STEP;
         } else {
             dt = DEBUGGING_ENABLED ? 0 : FIXED_TIME_STEP;
-            clock.restart(); 
+            clock.restart();
         }
 
         simManager.update(dt, renderingEnabled);
@@ -144,9 +111,9 @@ int main() {
         }
     }
 #else
-    std::cout << "Starting Headless Simulation on Jetson..." << std::endl;
-    // Infinitely fast-forward the simulation using the fixed time step
-    while (true) {
+    if (!cfg.emitJson) cout << "Running simulation in headless mode..." << endl;\
+    
+    while (!simManager.finished()) {
         simManager.update(FIXED_TIME_STEP, false);
     }
 #endif

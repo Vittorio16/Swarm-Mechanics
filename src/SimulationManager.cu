@@ -5,6 +5,7 @@
 #include <fstream>
 #include "SimulationManager.h"
 #include "Core/GlobalHelpers.h"
+#include "Core/GpuConfig.h"
 #include "functions/BrainSystem.h"
 #include "functions/LifeSystem.h"
 
@@ -104,7 +105,7 @@ void SimulationManager::update(float dt, bool renderEnabled) {
             
             {
                 unique_lock<mutex> lock(queueMutex);
-                tasks.emplace([w, dt, batchSize, this] {
+                tasks.emplace([w, dt, batchSize, sampleThis, this] {
                     for (int i = 0; i < batchSize; i++) {
                         w->update(dt, this->generationCount, sampleThis && (i == 0));
                     }
@@ -137,9 +138,86 @@ void SimulationManager::update(float dt, bool renderEnabled) {
     }
 }
 
+// Counts the number of living prey and predators across all worlds
+void SimulationManager::countSpecies() {
+    preyCount = 0;
+    predCount = 0;
+    for (auto& world : worlds) {
+        SwarmData& s = world->swarm;
+        for (int i = 0; i < *s.current_count; i++) {
+            if (!s.agentIdentifications.isAlive[i]) continue;
+            if (s.agentIdentifications.speciesID[i] == PREY_ID) preyCount++;
+            else predCount++;
+        }
+    }
+}
+
+// USed for profiling
+void SimulationManager::emitRunHeader() const {
+    if (!cfg.emitJson) return;
+    cout << "{\"type\":\"header\""
+         << ",\"tag\":\"" << cfg.tag << "\""
+         << ",\"seed\":" << runSeed
+         << ",\"device\":\"" << GpuConfig::deviceName << "\""
+         << ",\"sms\":" << GpuConfig::smCount
+         << ",\"clock_khz\":" << GpuConfig::clockKHz
+         << ",\"cma\":" << GpuConfig::concurrentManagedAccess
+         << ",\"grid\":" << GpuConfig::persistentGrid
+         << ",\"worlds\":" << worlds.size()
+         << ",\"world_x\":" << NUM_CELLE_X
+         << ",\"world_y\":" << NUM_CELLE_Y
+         << ",\"lattice_cell\":" << LATTICE_CELL_WIDTH
+         << ",\"food_cell\":" << FOOD_CELL_WIDTH
+         << ",\"max_per_cell\":" << MAX_AGENTS_PER_CELL
+         << ",\"hidden\":" << HIDDEN_LAYER_SIZE
+         << ",\"capacity\":" << MAX_SWARM_CAPACITY
+         << ",\"food_refresh\":" << FOOD_CHUNK_REFRESH_INTERVAL
+         << ",\"food_cells\":" << CONSTANT_FOOD_AMOUNT
+         << "}" << endl;
+}
+
+void SimulationManager::emitGenerationRow() {
+    const TickProfile& p = worlds[0]->lastProfile;
+
+    if (cfg.emitJson) {
+        cout << "{\"type\":\"gen\""
+             << ",\"tag\":\"" << cfg.tag << "\""
+             << ",\"gen\":" << generationCount
+             << ",\"ticks\":" << totalTicks
+             << ",\"ticks_per_s\":" << (int)ticksPerSecond
+             << ",\"prey\":" << preyCount
+             << ",\"pred\":" << predCount
+             << ",\"agents\":" << (preyCount + predCount)
+             << ",\"us_lattice\":" << p.buckets
+             << ",\"us_sense\":"   << p.obs
+             << ",\"us_think\":"   << p.think
+             << ",\"us_move\":"    << p.move
+             << ",\"us_cleanup\":" << p.cleanup
+             << ",\"us_total\":"   << p.total
+             << "}" << endl;
+    } else {
+        cout << "--- Generation " << generationCount << " ---" << endl;
+        cout << "  " << (int)ticksPerSecond << " ticks/s"
+             << "  | prey " << preyCount << "  pred " << predCount << endl;
+        if (p.valid && p.total > 0.0f) {
+            auto pct = [&](float v){ return (int)(100.0f * v / p.total); };
+            cout << "  tick " << (int)p.total << " us:"
+                 << "  lattice " << pct(p.buckets) << "%"
+                 << "  sense "   << pct(p.obs)     << "%"
+                 << "  think "   << pct(p.think)   << "%"
+                 << "  move "    << pct(p.move)    << "%"
+                 << "  cleanup " << pct(p.cleanup) << "%" << endl;
+        }
+    }
+}
+
 // Evolves agents by polling best ones 
 void SimulationManager::evolve() {
     CUDA_CHECK(cudaDeviceSynchronize());
+
+    countSpecies();
+    emitGenerationRow();
+
     cout << "--- Generation " << generationCount << " Complete ---" << endl;
     
     // Testing predator numbers
@@ -296,8 +374,13 @@ void SimulationManager::evolve() {
 
 void SimulationManager::resetSimulation() {
     // Re-use worlds
+    int prey = (cfg.numPrey >= 0) ? cfg.numPrey : NUM_PREY;
+    int pred = (cfg.numPredators >= 0) ? cfg.numPredators : NUM_PREDATOR;
+    float gr = (cfg.grassRadius > 0.0f) ? cfg.grassRadius : GRASS_SENSING_RADIUS;
+    float pv = (cfg.predViewRadius > 0.0f) ? cfg.predViewRadius : PREDATOR_VIEW_RADIUS;
+
     for (int i = 0; i < (int)worlds.size(); i++){
-        worlds[i]->reset(NUM_PREY, NUM_PREDATOR);
+        worlds[i]->reset(prey, pred, gr, pv);
     }
 
     // Adjust mutation parameters based on current generation count

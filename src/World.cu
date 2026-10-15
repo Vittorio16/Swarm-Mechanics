@@ -70,7 +70,7 @@ World::~World() {
 }
 
 // Updates the world each tick of the simulation
-ProfilingData World::update(float dt, int generationCount, bool profileTick){
+void World::update(float dt, int generationCount, bool profileTick){
     // Snapshot of the current swarm count for this tick, so that it doesn't have to be passed around between CPU and GPU
     cudaStream_t stream = cudaStreamPerThread;
 

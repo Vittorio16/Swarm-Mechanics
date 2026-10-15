@@ -12,7 +12,7 @@
 using namespace std;
 
 // Breakdown of one sampled tick of the simulation, used for profiling
-struct TIckProfile {
+struct TickProfile {
     float buckets = 0.0f;
     float obs = 0.0f;
     float think = 0.0f;
@@ -20,7 +20,7 @@ struct TIckProfile {
     float cleanup = 0.0f;
     float total = 0.0f;
     bool valid = false;
-}
+};
 
 class World{
     private:  
@@ -33,7 +33,7 @@ class World{
     
     // CUDA events for profiling
     cudaEvent_t start_total, end_buckets, end_obs, end_think, end_move, end_cleanup;
-    bool profile_pending = false;
+    bool profilePending = false;
     
     public:
     SwarmData swarm;
@@ -52,7 +52,7 @@ class World{
 
     // Safe only after sync
     void readProfile();
-    
+
     // Methods used for visual representation
     #ifdef USE_SFML_GUI
         void draw(sf::RenderWindow& window);
