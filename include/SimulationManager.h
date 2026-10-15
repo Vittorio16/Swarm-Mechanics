@@ -8,8 +8,10 @@
 #include <condition_variable>
 #include <functional>
 #include <atomic>
+#include <chrono>
 #include "World.h"
 #include "Core/Config.h"
+#include "Core/RunConfig.h"
 
 using namespace std;
 
@@ -52,7 +54,19 @@ private:
     float generationTimer = 0.0f;
     int generationCount = 0;
 
+    // Run configuration and live statistics
+    RunConfig cfg;
+    uint64_t runSeed = 0;
+    uint64_t totalTicks = 0;
+    double ticksPerSecond = 0.0;
+    int batchesSinceSample = 0;
+    int preyCount = 0;
+    int predCount = 0;
+
     void evolve();
+    void countSpecies();
+    void emitGenerationRow();
+
 public:
     SimulationManager(int cores, uint64_t runSeed);
     ~SimulationManager();
@@ -61,6 +75,9 @@ public:
 
     void resetSimulation();
 
+    bool finished() const;
+    void emitRunHeader() const;
+    
     // Loads pre-trained brains and hall of fame from files, and fast-forwards the simulation to a specified generation
     void loadPreTrainedBrains(int startGeneration, const string& preyBrains, const string& predatorBrains, 
         const string& hallOfFamePrey = "", const string& hallOfFamePredator = "",

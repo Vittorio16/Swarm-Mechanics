@@ -4,7 +4,7 @@
 
 namespace LifeSystem {
     void advanceTick(SwarmData& swarm);
-    void initSwarm(SwarmData& swarm, int num_prey, int num_predators);
+    void initSwarm(SwarmData& swarm, int num_prey, int num_predators, float grassRadius = GRASS_SENSING_RADIUS, float predViewRadius = PREDATOR_VIEW_RADIUS);
     void handleDeaths(SwarmData& swarm, GraveyardData& graveyard);
     void handleBirths(SwarmData& swarm, float mutationRate, float mutationStrength);
     float getFitness(SwarmData& swarm, int index);

@@ -15,7 +15,7 @@ using namespace std;
 #include <iostream>
 
 // Constructor
-World::World(int num_prey, int num_predators, int w_id, uint64_t seed): 
+World::World(int num_prey, int num_predators, int w_id, uint64_t seed, float grassRadius, float predViewRadius): 
     world_id(w_id),
     swarm(MAX_SWARM_CAPACITY, w_id, seed),
     spatialLattice(NUM_CELLE_X / LATTICE_CELL_WIDTH, NUM_CELLE_Y / LATTICE_CELL_HEIGHT),
@@ -31,21 +31,21 @@ World::World(int num_prey, int num_predators, int w_id, uint64_t seed):
 
     CUDA_CHECK(cudaDeviceSynchronize());
 
-    LifeSystem::initSwarm(swarm, num_prey, num_predators);
+    LifeSystem::initSwarm(swarm, num_prey, num_predators, grassRadius, predViewRadius);
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD, swarm.rng_seed, swarm.tick);
     FoodLatticeSystem::buildChunkSummary(foodLattice);
 
     CUDA_CHECK(cudaDeviceSynchronize());
 }
 
-void World::reset(int num_prey, int num_predators){
+void World::reset(int num_prey, int num_predators, float grassRadius, float predViewRadius) {
     CUDA_CHECK(cudaDeviceSynchronize());
 
     swarm.reset();
     foodLattice.reset();
     graveyard.reset();
 
-    LifeSystem::initSwarm(swarm, num_prey, num_predators);
+    LifeSystem::initSwarm(swarm, num_prey, num_predators, grassRadius, predViewRadius);
     FoodLatticeSystem::grow(foodLattice, MAX_FOOD, swarm.rng_seed, swarm.tick);
     FoodLatticeSystem::buildChunkSummary(foodLattice);
     
@@ -70,26 +70,28 @@ World::~World() {
 }
 
 // Updates the world each tick of the simulation
-ProfilingData World::update(float dt, int generationCount){
+ProfilingData World::update(float dt, int generationCount, bool profileTick){
     // Snapshot of the current swarm count for this tick, so that it doesn't have to be passed around between CPU and GPU
-    if (PROFILING_ENABLED) cudaEventRecord(start_total);
+    cudaStream_t stream = cudaStreamPerThread;
+
+    if (profileTick) cudaEventRecord(start_total, stream);
 
     // --- 1. SPATIAL LATTICE (Buckets) ---
     LatticeSystem::build(spatialLattice, swarm);
-    if (PROFILING_ENABLED) cudaEventRecord(end_buckets);
+    if (profileTick) cudaEventRecord(end_buckets, stream);
 
     // --- 2. OBSERVATION (Sensors) ---
     SensorySystem::update(swarm, spatialLattice, foodLattice);
-    if (PROFILING_ENABLED) cudaEventRecord(end_obs);
+    if (profileTick) cudaEventRecord(end_obs, stream);
 
     // --- 3. THINK (Neural Network) ---
     BrainSystem::think(swarm);
-    if (PROFILING_ENABLED) cudaEventRecord(end_think);
+    if (profileTick) cudaEventRecord(end_think, stream);
 
     // --- 4. MOVE (Physics & Energy) ---
     PhysicsSystem::update(swarm, dt);
     EnergySystem::update(swarm, foodLattice, dt);
-    if (PROFILING_ENABLED) cudaEventRecord(end_move);
+    if (profileTick) cudaEventRecord(end_move, stream);
 
     // --- 5. CLEANUP (Life Cycle and Grass Growth) ---
     float dynamicRate = std::max(MINIMUM_MUTATION_RATE, STARTING_MUTATION_RATE - (generationCount * MUTATION_RATE_DECAY));
@@ -105,34 +107,33 @@ ProfilingData World::update(float dt, int generationCount){
     // Advance RNG tick
     LifeSystem::advanceTick(swarm);
 
-    if (PROFILING_ENABLED) cudaEventRecord(end_cleanup);
-    
-    if (PROFILING_ENABLED) {
-        // Halt the CPU here to wait for all the events to be successfully stamped
-        cudaEventSynchronize(end_cleanup);
-
-        float ms_buckets, ms_obs, ms_think, ms_move, ms_cleanup, ms_total;
-        
-        cudaEventElapsedTime(&ms_buckets, start_total, end_buckets);
-        cudaEventElapsedTime(&ms_obs, end_buckets, end_obs);
-        cudaEventElapsedTime(&ms_think, end_obs, end_think);
-        cudaEventElapsedTime(&ms_move, end_think, end_move);
-        cudaEventElapsedTime(&ms_cleanup, end_move, end_cleanup);
-        cudaEventElapsedTime(&ms_total, start_total, end_cleanup);
-
-        // Convert to Microseconds to match CSV format
-        return {
-            (double)(ms_buckets * 1000.0), 
-            (double)(ms_obs * 1000.0), 
-            (double)(ms_think * 1000.0), 
-            (double)(ms_move * 1000.0), 
-            (double)(ms_cleanup * 1000.0), 
-            (double)(ms_total * 1000.0), 
-            (double)((ms_buckets + ms_obs + ms_think + ms_move + ms_cleanup) * 1000.0)
-        };
-    } else {
-        return {0, 0, 0, 0, 0, 0, 0};
+    if (profileTick) {
+        cudaEventRecord(end_cleanup, stream);
+        profilePending = true;
     }
+}
+
+// Reads last aquired profile
+void World::readProfile(){
+    if (!profilePending) return;
+    profilePending = false;
+
+    float b, o, th, m, c;
+    cudaEventElapsedTime(&b,  start_total, end_buckets);
+    cudaEventElapsedTime(&o,  end_buckets, end_obs);
+    cudaEventElapsedTime(&th, end_obs,     end_think);
+    cudaEventElapsedTime(&m,  end_think,   end_move);
+    cudaEventElapsedTime(&c,  end_move,    end_cleanup);
+
+    // cudaEventElapsedTime returns milliseconds.
+    lastProfile.buckets = b  * 1000.0f;
+    lastProfile.obs     = o  * 1000.0f;
+    lastProfile.think   = th * 1000.0f;
+    lastProfile.move    = m  * 1000.0f;
+    lastProfile.cleanup = c  * 1000.0f;
+    lastProfile.total   = lastProfile.buckets + lastProfile.obs + lastProfile.think
+                        + lastProfile.move + lastProfile.cleanup;
+    lastProfile.valid   = true;
 }
 
 #ifdef USE_SFML_GUI

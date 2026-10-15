@@ -13,7 +13,7 @@ void LifeSystem::advanceTick(SwarmData& swarm){
     advanceTickKernel<<<1, 1, 0, cudaStreamPerThread>>>(swarm.tick);
 }
 
-__global__ void createAgentsKernel(SwarmData swarm, int num_prey, int num_predators, uint64_t idBase){
+__global__ void createAgentsKernel(SwarmData swarm, int num_prey, int num_predators, uint64_t idBase, float grassRadius, float predViewRadius){
     int count = *swarm.current_count;
     int stride = gridDim.x * blockDim.x;
     uint64_t tick = *swarm.tick;
@@ -75,7 +75,7 @@ __global__ void createAgentsKernel(SwarmData swarm, int num_prey, int num_predat
     }
 }
 
-void LifeSystem::initSwarm(SwarmData& swarm, int num_prey, int num_predators){
+void LifeSystem::initSwarm(SwarmData& swarm, int num_prey, int num_predators, float grassRadius, float predViewRadius){
     int total = num_prey + num_predators;
     if (total > swarm.max_capacity) {
         std::cerr << "initSwarm: requested " << total << " agents, clamping to "
@@ -93,8 +93,9 @@ void LifeSystem::initSwarm(SwarmData& swarm, int num_prey, int num_predators){
     *swarm.current_count = total;
     *swarm.agentIdentifications.localAgentIDCounter = idBase + (uint64_t)total;
 
-    createAgentsKernel<<<GpuConfig::persistentGrid, BLOCK_SIZE, 0, cudaStreamPerThread>>>(swarm, num_prey, num_predators, idBase);
-    
+    createAgentsKernel<<<GpuConfig::persistentGrid, BLOCK_SIZE, 0, cudaStreamPerThread>>>(swarm, num_prey, num_predators, idBase, grassRadius, predViewRadius);
+
+    CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
     
     // Initializes random brains for the whole swarm

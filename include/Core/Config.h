@@ -6,6 +6,44 @@
 using namespace std;
 
 
+/* ---------- Sweep overrides for profiling ---------- */
+#if defined(__has_include)
+  #if __has_include("Core/SweepConfig.h")
+    #include "Core/SweepConfig.h"
+  #endif
+#endif
+
+#ifndef SWEEP_NUM_CELLE_X
+  #define SWEEP_NUM_CELLE_X 960
+#endif
+#ifndef SWEEP_NUM_CELLE_Y
+  #define SWEEP_NUM_CELLE_Y 540
+#endif
+#ifndef SWEEP_LATTICE_CELL_WIDTH
+  #define SWEEP_LATTICE_CELL_WIDTH 30
+#endif
+#ifndef SWEEP_LATTICE_CELL_HEIGHT
+  #define SWEEP_LATTICE_CELL_HEIGHT 30
+#endif
+#ifndef SWEEP_FOOD_CELL_WIDTH
+  #define SWEEP_FOOD_CELL_WIDTH 10
+#endif
+#ifndef SWEEP_FOOD_CELL_HEIGHT
+  #define SWEEP_FOOD_CELL_HEIGHT 10
+#endif
+#ifndef SWEEP_MAX_AGENTS_PER_CELL
+  #define SWEEP_MAX_AGENTS_PER_CELL 64
+#endif
+#ifndef SWEEP_HIDDEN_LAYER_SIZE
+  #define SWEEP_HIDDEN_LAYER_SIZE 8
+#endif
+#ifndef SWEEP_MAX_SWARM_CAPACITY
+  #define SWEEP_MAX_SWARM_CAPACITY 40000
+#endif
+#ifndef SWEEP_FOOD_CHUNK_REFRESH_INTERVAL
+  #define SWEEP_FOOD_CHUNK_REFRESH_INTERVAL 20
+#endif
+
 /* ------------------- Main settings ------------------ */
 
 // GPU settings
@@ -25,8 +63,6 @@ constexpr int MAX_FPS = 170;
 constexpr bool REPLAY_MODE_ENABLED = false;
 // Enable to stop time when pressing R
 constexpr bool DEBUGGING_ENABLED = false;
-// Enable to run profiling tests on the simulation, which will output a CSV file with performance data
-constexpr bool PROFILING_ENABLED = false;
 
 
 /* ------------------- Simulation Settings ------------------ */
@@ -67,16 +103,17 @@ const float RANDOM_INJECTION_RATE = 0.20f; // minus the hof injection rate
 
 /* ------------------- World Settings ------------------ */
 
-// World dimensions
-constexpr int NUM_CELLE_X = 4800;
-constexpr int NUM_CELLE_Y = 2700;
-
 // Starting agents
-constexpr int MAX_SWARM_CAPACITY = 100000;
+constexpr int MAX_SWARM_CAPACITY = SWEEP_MAX_SWARM_CAPACITY;
+
+// Cells in the grid
+constexpr int NUM_CELLE_X = SWEEP_NUM_CELLE_X;
+constexpr int NUM_CELLE_Y = SWEEP_NUM_CELLE_Y;
 
 constexpr float PREDATOR_DENSITY = 0.00004f;
 constexpr float PREY_DENSITY = 0.0008f;
 
+// Defaults overwritten by sweep overrides
 constexpr int NUM_PREDATOR = (int)(NUM_CELLE_X * NUM_CELLE_Y * PREDATOR_DENSITY);
 constexpr int NUM_PREY = (int)(NUM_CELLE_X * NUM_CELLE_Y * PREY_DENSITY);
 // Graveyard settings
@@ -84,16 +121,16 @@ constexpr int NUM_PREY = (int)(NUM_CELLE_X * NUM_CELLE_Y * PREY_DENSITY);
 constexpr int MAX_GRAVEYARD_CAPACITY = 2 * MAX_SWARM_CAPACITY;
 
 // Enemy observation lattice parameters
-constexpr int MAX_AGENTS_PER_CELL = 512;
-constexpr int LATTICE_CELL_WIDTH = 30;
-constexpr int LATTICE_CELL_HEIGHT = 30;
+constexpr int MAX_AGENTS_PER_CELL = SWEEP_MAX_AGENTS_PER_CELL;
+constexpr int LATTICE_CELL_WIDTH = SWEEP_LATTICE_CELL_WIDTH;
+constexpr int LATTICE_CELL_HEIGHT = SWEEP_LATTICE_CELL_HEIGHT;
 
 // Food lattice parameters
-constexpr int FOOD_CELL_WIDTH = 10;
-constexpr int FOOD_CELL_HEIGHT = 10;
+constexpr int FOOD_CELL_WIDTH = SWEEP_FOOD_CELL_WIDTH;
+constexpr int FOOD_CELL_HEIGHT = SWEEP_FOOD_CELL_HEIGHT;
 
 // How many ticks between food checks - landscape is not that variable
-constexpr int FOOD_CHUNK_REFRESH_INTERVAL = 20;
+constexpr int FOOD_CHUNK_REFRESH_INTERVAL = SWEEP_FOOD_CHUNK_REFRESH_INTERVAL;
 
 // Food settings per cell
 constexpr float MAX_FOOD = 10.0f;
@@ -192,7 +229,7 @@ const float PREY_HUNTED_PENALTY = 0.1f;
 
 // Brain size parameters - take care to keep these consistent with the ones inputted from the agents
 const int INPUT_LAYER_SIZE = 14;
-const int HIDDEN_LAYER_SIZE = 8;
+const int HIDDEN_LAYER_SIZE = SWEEP_HIDDEN_LAYER_SIZE;
 const int OUTPUT_LAYER_SIZE = 2;
 
 const int W01_SIZE = INPUT_LAYER_SIZE * HIDDEN_LAYER_SIZE;
@@ -204,6 +241,13 @@ const int B1_SIZE  = OUTPUT_LAYER_SIZE;
 
 
 /* ------------------- Utilities ------------------ */
+
+// --- Guards ---
+static_assert(NUM_CELLE_X % LATTICE_CELL_WIDTH  == 0, "lattice must tile X evenly");
+static_assert(NUM_CELLE_Y % LATTICE_CELL_HEIGHT == 0, "lattice must tile Y evenly");
+static_assert(NUM_CELLE_X % FOOD_CELL_WIDTH     == 0, "food chunks must tile X evenly");
+static_assert(NUM_CELLE_Y % FOOD_CELL_HEIGHT    == 0, "food chunks must tile Y evenly");
+
 // enum Terrain {Standard};
 
 // struct Cell{
