@@ -10,7 +10,7 @@ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_ARCHITECTURES native)
 # set(CMAKE_CUDA_ARCHITECTURES 87)
 
-option(BUILD_GUI "Build with SFML GUI" OFF)
+option(BUILD_GUI "Build with SFML GUI" ON)
 
 if(BUILD_GUI)
     include(FetchContent)

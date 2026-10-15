@@ -118,6 +118,16 @@ void SimulationManager::evolve() {
     CUDA_CHECK(cudaDeviceSynchronize());
     cout << "--- Generation " << generationCount << " Complete ---" << endl;
     
+    // Testing predator numbers
+    int prey = 0, predators = 0;
+    const SwarmData& swarm = worlds[0]->swarm;
+    for (int i = 0; i < *swarm.current_count; i++){
+        if (!swarm.agentIdentifications.isAlive[i]) continue;
+        if (swarm.agentIdentifications.speciesID[i] == PREY_ID) prey++;
+        else predators++;
+    }
+    cout << "Living Prey: " << prey << ", Living Predators: " << predators << endl;
+    
     vector<AgentEvaluation> allPrey;
     vector<AgentEvaluation> allPredators;
 

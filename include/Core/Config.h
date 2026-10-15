@@ -26,7 +26,7 @@ constexpr bool REPLAY_MODE_ENABLED = false;
 // Enable to stop time when pressing R
 constexpr bool DEBUGGING_ENABLED = false;
 // Enable to run profiling tests on the simulation, which will output a CSV file with performance data
-constexpr bool PROFILING_ENABLED = true;
+constexpr bool PROFILING_ENABLED = false;
 
 
 /* ------------------- Simulation Settings ------------------ */
@@ -67,20 +67,24 @@ const float RANDOM_INJECTION_RATE = 0.20f; // minus the hof injection rate
 
 /* ------------------- World Settings ------------------ */
 
+// World dimensions
+constexpr int NUM_CELLE_X = 4800;
+constexpr int NUM_CELLE_Y = 2700;
+
 // Starting agents
-constexpr int MAX_SWARM_CAPACITY = 500000;
-constexpr int NUM_PREDATOR = 50;
-constexpr int NUM_PREY = 400;
+constexpr int MAX_SWARM_CAPACITY = 100000;
+
+constexpr float PREDATOR_DENSITY = 0.00004f;
+constexpr float PREY_DENSITY = 0.0008f;
+
+constexpr int NUM_PREDATOR = (int)(NUM_CELLE_X * NUM_CELLE_Y * PREDATOR_DENSITY);
+constexpr int NUM_PREY = (int)(NUM_CELLE_X * NUM_CELLE_Y * PREY_DENSITY);
 // Graveyard settings
 
 constexpr int MAX_GRAVEYARD_CAPACITY = 2 * MAX_SWARM_CAPACITY;
 
-// World dimensions
-constexpr int NUM_CELLE_X = 960;
-constexpr int NUM_CELLE_Y = 540;
-
 // Enemy observation lattice parameters
-constexpr int MAX_AGENTS_PER_CELL = 1024;
+constexpr int MAX_AGENTS_PER_CELL = 512;
 constexpr int LATTICE_CELL_WIDTH = 30;
 constexpr int LATTICE_CELL_HEIGHT = 30;
 
@@ -93,7 +97,8 @@ constexpr int FOOD_CHUNK_REFRESH_INTERVAL = 20;
 
 // Food settings per cell
 constexpr float MAX_FOOD = 10.0f;
-constexpr int CONSTANT_FOOD_AMOUNT = 500;
+constexpr float FOOD_DENSITY = 0.001f;
+constexpr int CONSTANT_FOOD_AMOUNT = (int)(NUM_CELLE_X * NUM_CELLE_Y * FOOD_DENSITY);
 constexpr int MAX_SPAWN_ATTEMPTS = 10;
 
 // Only saves dead agents with fitness greater than this to be later analyzed

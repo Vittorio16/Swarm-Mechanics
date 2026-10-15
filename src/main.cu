@@ -89,7 +89,7 @@ int main() {
         return 0;
     }
 
-    int numCores = std::thread::hardware_concurrency();
+    int numCores = std::min(9, (int)std::thread::hardware_concurrency()); 
     if (numCores == 0) numCores = FALLBACK_CORE_NUMBER;
     cout << "Running on " << numCores - 1 << " logical cores." << endl;
 
