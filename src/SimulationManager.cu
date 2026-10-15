@@ -9,10 +9,15 @@
 #include "functions/LifeSystem.h"
 
 // Constructor
-SimulationManager::SimulationManager(int cores, uint64_t runSeed) : numCores(cores) {
+SimulationManager::SimulationManager(int cores, uint64_t seed, const RunConfig& c) : numCores(cores), cfg(c), runSeed(seed) {
     // Initialize N worlds
+    int prey = (cfg.numPrey >= 0) ? cfg.numPrey : NUM_PREY;
+    int pred = (cfg.numPredators >= 0) ? cfg.numPredators : NUM_PREDATOR;
+    float gr = (cfg.grassRadius > 0.0f) ? cfg.grassRadius : GRASS_SENSING_RADIUS;
+    float pv = (cfg.predViewRadius > 0.0f) ? cfg.predViewRadius : PREDATOR_VIEW_RADIUS;
+
     for (int i = 0; i < numCores; i++) {
-        worlds.push_back(make_unique<World>(NUM_PREY, NUM_PREDATOR, i, splitmix64(runSeed + (uint64_t)i)));
+        worlds.push_back(make_unique<World>(prey, pred, i, splitmix64(runSeed + (uint64_t)i), gr, pv));
 
         // Launch persistent threads
         workers.emplace_back([this] {
@@ -54,25 +59,33 @@ SimulationManager::~SimulationManager() {
     }
 }
 
+// Checks whether to end the simulation
+bool SimulationManager::finished() const {
+    if (cfg.maxGenerations > 0 && generationCount >= cfg.maxGenerations) return true;
+    if (cfg.maxTicks > 0 && totalTicks >= cfg.maxTicks) return true;
+    return false;
+}
+
 // Updates all worlds
 void SimulationManager::update(float dt, bool renderEnabled) {
-    float currentDuration = min(MAXIMUM_GENERATION_DURATION, STARTING_GENERATION_DURATION + generationCount * GENERATION_SCALING_FACTOR);
+    if (worlds.empty()) return;
+
+    float baseDuration = (cfg.genDuration > 0.0f) ? cfg.genDuration : STARTING_GENERATION_DURATION;
+    float currentDuration = min(MAXIMUM_GENERATION_DURATION, baseDuration + generationCount * GENERATION_SCALING_FACTOR);
 
     if (renderEnabled) {
         // Only update the first world if rendering is enabled to maintain performance
-        if (worlds.empty()) return;
-        
         worlds[0]->update(dt, this->generationCount);
-        this->generationTimer += dt;
 
-        cudaStreamSynchronize(cudaStreamPerThread);
+        CUDA_CHECK(cudaStreamSynchronize(cudaStreamPerThread));
+        this->generationTimer += dt;
+        totalTicks++;
     } 
     else {
-        tasksRemaining = worlds.size();
-        vector<future<void>> futures;
+        tasksRemaining = (int)worlds.size();
 
         // Dynamically determine batch size
-        float timeRemaining = currentDuration - this->generationTimer;
+        float timeRemaining = currentDuration - generationTimer;
         int ticksRemaining = (int)ceil(timeRemaining / dt);
 
         int batchSize = std::min(MAXIMUM_BATCH_SIZE, ticksRemaining);
@@ -80,17 +93,23 @@ void SimulationManager::update(float dt, bool renderEnabled) {
         // Enssure correct batch size when generation is ending
         if (batchSize <= 0) batchSize = 1;
 
-        for (auto& world : worlds) {
-            World* w = world.get(); 
+        bool sample = (++batchesSinceSample >= 10);
+        if (sample) batchesSinceSample = 0;
+
+        auto wallStart = std::chrono::high_resolution_clock::now();
+
+        for (size_t wi = 0; wi < worlds.size(); wi++) {
+            World* w = worlds[wi].get(); 
+            bool sampleThis = sample && (wi == 0);
             
             {
                 unique_lock<mutex> lock(queueMutex);
                 tasks.emplace([w, dt, batchSize, this] {
                     for (int i = 0; i < batchSize; i++) {
-                        w->update(dt, this->generationCount);
+                        w->update(dt, this->generationCount, sampleThis && (i == 0));
                     }
                     CUDA_CHECK(cudaStreamSynchronize(cudaStreamPerThread));
-
+                    w->readProfile();
                 });
             }
         }
@@ -102,6 +121,11 @@ void SimulationManager::update(float dt, bool renderEnabled) {
         unique_lock<mutex> lock(syncMutex);
         syncCondition.wait(lock, [this] { return tasksRemaining == 0; });
 
+        double wallMs = std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - wallStart).count();
+    
+        if (wallMs > 0.0) ticksPerSecond = batchSize / (wallMs / 1000.0);
+        totalTicks += (uint64_t)batchSize;
         generationTimer += dt * batchSize;
     }
 

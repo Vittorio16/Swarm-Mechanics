@@ -68,7 +68,7 @@ private:
     void emitGenerationRow();
 
 public:
-    SimulationManager(int cores, uint64_t runSeed);
+    SimulationManager(int cores, uint64_t runSeed, const RunConfig& cfg);
     ~SimulationManager();
 
     void update(float dt, bool renderEnabled);
