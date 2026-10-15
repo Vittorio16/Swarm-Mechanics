@@ -47,10 +47,10 @@ __global__ void createAgentsKernel(SwarmData swarm, int num_prey, int num_predat
         swarm.physics.maxSpeed[i] = (species == PREY_ID) ? PREY_MAX_SPEED : PREDATOR_MAX_SPEED;
         swarm.physics.force[i] = (species == PREY_ID) ? PREY_FORCE : PREDATOR_FORCE;
 
-        swarm.perceptions.viewRadius[i] = (species == PREY_ID) ? PREY_VIEW_RADIUS : PREDATOR_VIEW_RADIUS;
+        swarm.perceptions.viewRadius[i] = (species == PREY_ID) ? PREY_VIEW_RADIUS : predViewRadius;
         swarm.perceptions.fovAngle[i] = (species == PREY_ID) ? PREY_FOV_ANGLE : PREDATOR_FOV_ANGLE;
         swarm.perceptions.sensingRange[i] = SENSING_RANGE;
-        swarm.perceptions.grassViewRadius[i] = GRASS_SENSING_RADIUS;
+        swarm.perceptions.grassViewRadius[i] = grassRadius;
 
         swarm.fitnessMetrics.timeLived[i] = 0.0f;
         swarm.fitnessMetrics.energyGained[i] = 0.0f;
@@ -332,6 +332,11 @@ __global__ void handleBirthsKernel(SwarmData swarm, float mutationRate, float mu
             // Neural outputs
             swarm.neuralOutputs.thrustIntent[child_idx] = 0.0f;
             swarm.neuralOutputs.turnIntent[child_idx] = 0.0f;
+
+            // Reset critical sensory state for the newborn agent
+            swarm.sensors.lockedEnemyIndex[child_idx] = NO_LOCKED_TARGET;
+            swarm.sensors.closestEnemyIndex[child_idx] = -1;
+            swarm.sensors.cachedFoodChunk[child_idx]  = -1;
 
             // Copies parent's brain
             const int cap = swarm.max_capacity;

@@ -14,4 +14,7 @@
 
 # Sistema operativo
 .DS_Store
-Thumbs.db
+Thumbs.dbsweep_build/
+sweep_bins/
+sweep_results.jsonl
+include/Core/SweepConfig.h

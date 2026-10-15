@@ -76,7 +76,7 @@ constexpr float MAXIMUM_GENERATION_DURATION = 180.0f;
 constexpr float GENERATION_SCALING_FACTOR = 3.0f;
 
 // Batch size - number of simulation ticks processed in parallel when rendering is disabled
-const int MAXIMUM_BATCH_SIZE = 1 / FIXED_TIME_STEP; // sets it to 1 second
+const int MAXIMUM_BATCH_SIZE = 200; // sets it to 1 second
 
 // Sets how often the hall of fame is updated (in generations)
 constexpr int HOF_GENERATION_UPDATE_RATE = 3;

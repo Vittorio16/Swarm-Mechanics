@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
         }
     }
 #else
-    if (!cfg.emitJson) cout << "Running simulation in headless mode..." << endl;\
+    if (!cfg.emitJson) cout << "Running simulation in headless mode..." << endl;
     
     while (!simManager.finished()) {
         simManager.update(FIXED_TIME_STEP, false);
