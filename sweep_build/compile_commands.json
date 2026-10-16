@@ -1,0 +1,74 @@
+[
+{
+  "directory": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/sweep_build",
+  "command": "/usr/bin/c++ -DCUDA_API_PER_THREAD_DEFAULT_STREAM -I/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/include -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/SwarmSim.dir/src/Core/GlobalHelpers.cpp.o -c /home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/Core/GlobalHelpers.cpp",
+  "file": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/Core/GlobalHelpers.cpp",
+  "output": "CMakeFiles/SwarmSim.dir/src/Core/GlobalHelpers.cpp.o"
+},
+{
+  "directory": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/sweep_build",
+  "command": "/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler -DCUDA_API_PER_THREAD_DEFAULT_STREAM --options-file CMakeFiles/SwarmSim.dir/includes_CUDA.rsp -O3 -DNDEBUG -std=c++17 -arch=native --default-stream=per-thread -x cu -c /home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/Core/GpuConfig.cu -o CMakeFiles/SwarmSim.dir/src/Core/GpuConfig.cu.o",
+  "file": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/Core/GpuConfig.cu",
+  "output": "CMakeFiles/SwarmSim.dir/src/Core/GpuConfig.cu.o"
+},
+{
+  "directory": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/sweep_build",
+  "command": "/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler -DCUDA_API_PER_THREAD_DEFAULT_STREAM --options-file CMakeFiles/SwarmSim.dir/includes_CUDA.rsp -O3 -DNDEBUG -std=c++17 -arch=native --default-stream=per-thread -x cu -c /home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/SimulationManager.cu -o CMakeFiles/SwarmSim.dir/src/SimulationManager.cu.o",
+  "file": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/SimulationManager.cu",
+  "output": "CMakeFiles/SwarmSim.dir/src/SimulationManager.cu.o"
+},
+{
+  "directory": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/sweep_build",
+  "command": "/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler -DCUDA_API_PER_THREAD_DEFAULT_STREAM --options-file CMakeFiles/SwarmSim.dir/includes_CUDA.rsp -O3 -DNDEBUG -std=c++17 -arch=native --default-stream=per-thread -x cu -c /home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/World.cu -o CMakeFiles/SwarmSim.dir/src/World.cu.o",
+  "file": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/World.cu",
+  "output": "CMakeFiles/SwarmSim.dir/src/World.cu.o"
+},
+{
+  "directory": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/sweep_build",
+  "command": "/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler -DCUDA_API_PER_THREAD_DEFAULT_STREAM --options-file CMakeFiles/SwarmSim.dir/includes_CUDA.rsp -O3 -DNDEBUG -std=c++17 -arch=native --default-stream=per-thread -x cu -c /home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/functions/BrainSystem.cu -o CMakeFiles/SwarmSim.dir/src/functions/BrainSystem.cu.o",
+  "file": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/functions/BrainSystem.cu",
+  "output": "CMakeFiles/SwarmSim.dir/src/functions/BrainSystem.cu.o"
+},
+{
+  "directory": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/sweep_build",
+  "command": "/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler -DCUDA_API_PER_THREAD_DEFAULT_STREAM --options-file CMakeFiles/SwarmSim.dir/includes_CUDA.rsp -O3 -DNDEBUG -std=c++17 -arch=native --default-stream=per-thread -x cu -c /home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/functions/EnergySystem.cu -o CMakeFiles/SwarmSim.dir/src/functions/EnergySystem.cu.o",
+  "file": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/functions/EnergySystem.cu",
+  "output": "CMakeFiles/SwarmSim.dir/src/functions/EnergySystem.cu.o"
+},
+{
+  "directory": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/sweep_build",
+  "command": "/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler -DCUDA_API_PER_THREAD_DEFAULT_STREAM --options-file CMakeFiles/SwarmSim.dir/includes_CUDA.rsp -O3 -DNDEBUG -std=c++17 -arch=native --default-stream=per-thread -x cu -c /home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/functions/FoodLatticeSystem.cu -o CMakeFiles/SwarmSim.dir/src/functions/FoodLatticeSystem.cu.o",
+  "file": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/functions/FoodLatticeSystem.cu",
+  "output": "CMakeFiles/SwarmSim.dir/src/functions/FoodLatticeSystem.cu.o"
+},
+{
+  "directory": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/sweep_build",
+  "command": "/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler -DCUDA_API_PER_THREAD_DEFAULT_STREAM --options-file CMakeFiles/SwarmSim.dir/includes_CUDA.rsp -O3 -DNDEBUG -std=c++17 -arch=native --default-stream=per-thread -x cu -c /home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/functions/LatticeSystem.cu -o CMakeFiles/SwarmSim.dir/src/functions/LatticeSystem.cu.o",
+  "file": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/functions/LatticeSystem.cu",
+  "output": "CMakeFiles/SwarmSim.dir/src/functions/LatticeSystem.cu.o"
+},
+{
+  "directory": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/sweep_build",
+  "command": "/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler -DCUDA_API_PER_THREAD_DEFAULT_STREAM --options-file CMakeFiles/SwarmSim.dir/includes_CUDA.rsp -O3 -DNDEBUG -std=c++17 -arch=native --default-stream=per-thread -x cu -c /home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/functions/LifeSystem.cu -o CMakeFiles/SwarmSim.dir/src/functions/LifeSystem.cu.o",
+  "file": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/functions/LifeSystem.cu",
+  "output": "CMakeFiles/SwarmSim.dir/src/functions/LifeSystem.cu.o"
+},
+{
+  "directory": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/sweep_build",
+  "command": "/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler -DCUDA_API_PER_THREAD_DEFAULT_STREAM --options-file CMakeFiles/SwarmSim.dir/includes_CUDA.rsp -O3 -DNDEBUG -std=c++17 -arch=native --default-stream=per-thread -x cu -c /home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/functions/PhysicsSystem.cu -o CMakeFiles/SwarmSim.dir/src/functions/PhysicsSystem.cu.o",
+  "file": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/functions/PhysicsSystem.cu",
+  "output": "CMakeFiles/SwarmSim.dir/src/functions/PhysicsSystem.cu.o"
+},
+{
+  "directory": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/sweep_build",
+  "command": "/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler -DCUDA_API_PER_THREAD_DEFAULT_STREAM --options-file CMakeFiles/SwarmSim.dir/includes_CUDA.rsp -O3 -DNDEBUG -std=c++17 -arch=native --default-stream=per-thread -x cu -c /home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/functions/SensorySystem.cu -o CMakeFiles/SwarmSim.dir/src/functions/SensorySystem.cu.o",
+  "file": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/functions/SensorySystem.cu",
+  "output": "CMakeFiles/SwarmSim.dir/src/functions/SensorySystem.cu.o"
+},
+{
+  "directory": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/sweep_build",
+  "command": "/opt/cuda/bin/nvcc -forward-unknown-to-host-compiler -DCUDA_API_PER_THREAD_DEFAULT_STREAM --options-file CMakeFiles/SwarmSim.dir/includes_CUDA.rsp -O3 -DNDEBUG -std=c++17 -arch=native --default-stream=per-thread -x cu -c /home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/main.cu -o CMakeFiles/SwarmSim.dir/src/main.cu.o",
+  "file": "/home/vittorio/Coding/SantAnna/Fondamenti_AI/Swarm-Mechanics/src/main.cu",
+  "output": "CMakeFiles/SwarmSim.dir/src/main.cu.o"
+}
+]
