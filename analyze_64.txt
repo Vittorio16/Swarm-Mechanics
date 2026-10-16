@@ -1,0 +1,85 @@
+
+=== brain_size (median over seeds) ===
+                          ticks_per_s  us_total  ...  sense_frac  agents
+config.HIDDEN_LAYER_SIZE                         ...                    
+4                              3227.0    510.21  ...        0.59  2215.0
+8                              2896.0    563.73  ...        0.54  2228.0
+16                             2366.5    681.68  ...        0.46  2201.0
+32                             1461.5    890.82  ...        0.35  2219.5
+
+[4 rows x 5 columns]
+
+=== const_count (median over seeds) ===
+                    ticks_per_s  us_total  us_per_agent  sense_frac  agents
+config.NUM_CELLE_X                                                         
+480                      3026.0    625.25          0.38        0.65  1803.0
+960                      2951.5    556.26          0.25        0.55  2225.5
+1920                     2854.0    516.69          0.14        0.50  3750.5
+3840                     2795.5    493.41          0.11        0.51  4396.0
+
+=== const_density (median over seeds) ===
+                    ticks_per_s  us_total  us_per_agent  sense_frac   agents
+config.NUM_CELLE_X                                                          
+480                      3551.0    471.50          0.85        0.57    553.5
+960                      2968.5    570.38          0.26        0.53   2194.5
+1920                     1461.0   1031.12          0.12        0.48   8974.5
+3840                      453.0   3277.48          0.10        0.66  34966.5
+
+=== food_refresh (median over seeds) ===
+                                    ticks_per_s  us_total  ...  sense_frac  agents
+config.FOOD_CHUNK_REFRESH_INTERVAL                         ...                    
+1                                        2806.5    578.21  ...        0.55  2218.5
+5                                        2892.5    565.01  ...        0.53  2201.5
+10                                       2934.5    567.87  ...        0.52  2237.5
+20                                       2960.5    555.81  ...        0.55  2187.5
+50                                       2999.5    570.82  ...        0.51  2202.5
+
+[5 rows x 5 columns]
+
+=== grid_mult (median over seeds) ===
+                  ticks_per_s  us_total  us_per_agent  sense_frac  agents
+config.grid_mult                                                         
+1                      3073.0    558.93          0.25        0.54  2195.5
+2                      3077.5    541.68          0.25        0.55  2199.0
+4                      2890.0    573.12          0.25        0.53  2241.0
+8                      2979.5    571.14          0.25        0.51  2229.5
+16                     2958.0    555.90          0.25        0.55  2231.5
+
+=== lattice_cell (median over seeds) ===
+                           ticks_per_s  us_total  ...  sense_frac  agents
+config.LATTICE_CELL_WIDTH                         ...                    
+10                              2390.0    641.02  ...        0.60  2244.0
+15                              2551.0    600.64  ...        0.60  2214.0
+20                              2739.5    549.20  ...        0.59  2235.5
+30                              2973.0    578.06  ...        0.51  2214.5
+60                              2873.0    578.72  ...        0.56  2229.5
+
+[5 rows x 5 columns]
+
+=== population (median over seeds) ===
+             ticks_per_s  us_total  us_per_agent  sense_frac   agents
+config.prey                                                          
+512               4769.0    404.59          0.80        0.54    509.0
+1024              4231.0    417.92          0.45        0.55    971.0
+2048              3375.0    460.34          0.27        0.54   1706.0
+4096              2523.0    555.63          0.18        0.54   3024.5
+8192              1574.0    774.67          0.15        0.59   5464.0
+16384              781.0   1432.06          0.13        0.68  10508.0
+
+=== sensing_radius (median over seeds) ===
+                     ticks_per_s  us_total  us_per_agent  sense_frac  agents
+config.grass_radius                                                         
+20.0                      3437.0    512.66          0.23        0.51  2187.5
+35.0                      3094.5    528.00          0.24        0.54  2213.5
+50.0                      2975.5    558.54          0.26        0.53  2221.0
+75.0                      2434.5    642.53          0.29        0.56  2239.0
+100.0                     2131.0    686.03          0.31        0.63  2210.5
+
+=== world_count (median over seeds) ===
+               ticks_per_s  us_total  us_per_agent  sense_frac  agents
+config.worlds                                                         
+1                   4937.0    399.02          0.92        0.53   424.0
+2                   3431.5    424.48          0.51        0.54   856.5
+4                   1592.0   1235.73          0.72        0.21  1714.5
+8                    734.5   2068.09          0.61        0.16  3433.0
+11                   473.0   3183.66          0.70        0.14  4646.5
