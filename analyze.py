@@ -2,7 +2,7 @@ import json
 import sys
 import pandas as pd
 
-rows = [json.loads(l) for l in open("sweep_results.jsonl")]
+rows = [json.loads(l) for l in open("jetson64_sweep_results.jsonl")]
 df = pd.json_normalize(rows)
 
 # Generation 0 is cold: caches, clock ramp, population still settling.
